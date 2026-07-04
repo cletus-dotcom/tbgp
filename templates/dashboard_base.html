@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block page_title %}Dashboard{% endblock %} — TBGP Portal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tbgp-theme.css') }}">
+    <style>
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body class="dashboard-body">
+    <header class="topbar">
+        <button class="btn-menu" id="menuToggle" aria-label="Toggle menu">
+            <i class="bi bi-list"></i>
+        </button>
+        <span class="topbar-title">{% block topbar_title %}Dashboard{% endblock %}</span>
+        <div class="topbar-actions">
+            <span class="topbar-time" id="ph-time">Loading...</span>
+            <div class="user-chip" title="{{ fullname }}">
+                <span class="user-avatar">{{ fullname[:1]|upper if fullname else 'A' }}</span>
+                <span class="user-chip-text">
+                    <strong>{{ role }}</strong>
+                    {{ fullname|truncate(14, True, '…') }}
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <aside id="sidebar" class="sidebar" aria-label="Main navigation">
+        <p class="sidebar-label">Navigation</p>
+        <ul class="sidebar-nav">
+            <li>
+                <a href="{{ url_for('main_routes.dashboard') }}" class="{% if active_page == 'dashboard' %}active{% endif %}">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+            </li>
+            {% if is_member_role(session.get('role')) %}
+            <li>
+                <a href="{{ url_for('main_routes.members') }}" class="{% if active_page == 'members' %}active{% endif %}">
+                    <i class="bi bi-person-vcard"></i> My Information
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main_routes.member_ledger') }}" class="{% if active_page == 'member_ledger' %}active{% endif %}">
+                    <i class="bi bi-journal-text"></i> My Ledger
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main_routes.hierarchy') }}" class="{% if active_page == 'hierarchy' %}active{% endif %}">
+                    <i class="bi bi-diagram-3"></i> My Hierarchy
+                </a>
+            </li>
+            {% else %}
+            <li>
+                <a href="{{ url_for('main_routes.members') }}" class="{% if active_page == 'members' %}active{% endif %}">
+                    <i class="bi bi-people"></i> Members
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main_routes.member_ledger') }}" class="{% if active_page == 'member_ledger' %}active{% endif %}">
+                    <i class="bi bi-journal-text"></i> Member Ledger
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main_routes.contractors') }}" class="{% if active_page == 'contractors' %}active{% endif %}">
+                    <i class="bi bi-building"></i> Contractors
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main_routes.hierarchy') }}" class="{% if active_page == 'hierarchy' %}active{% endif %}">
+                    <i class="bi bi-diagram-3"></i> Hierarchy Tree
+                </a>
+            </li>
+            {% endif %}
+            <li>
+                <a href="{{ url_for('main_routes.index') }}">
+                    <i class="bi bi-house"></i> Home
+                </a>
+            </li>
+        </ul>
+
+        {% if can_manage_data(session.get('role')) %}
+        <p class="sidebar-label">Payouts</p>
+        <ul class="sidebar-nav">
+            {% if can_view_payout_scheme(session.get('role')) %}
+            <li>
+                <a href="{{ url_for('main_routes.payout_scheme') }}"
+                   class="{% if active_page == 'payout_scheme' %}active{% endif %}">
+                    <i class="bi bi-percent"></i> Payout Scheme
+                </a>
+            </li>
+            {% endif %}
+            <li>
+                <a href="{{ url_for('main_routes.payout_queue') }}"
+                   class="{% if active_page == 'payout_queue' %}active{% endif %}">
+                    <i class="bi bi-cash-coin"></i> Payout Queue
+                    {% set payout_badges = payout_queue_counts.pending_requests + payout_queue_counts.pending_releases + payout_queue_counts.awaiting_release %}
+                    {% if payout_badges %}<span class="badge bg-danger ms-auto">{{ payout_badges }}</span>{% endif %}
+                </a>
+            </li>
+            {% if can_view_payout_reports(session.get('role')) %}
+            <li>
+                <a href="{{ url_for('main_routes.payout_reports') }}"
+                   class="{% if active_page == 'payout_reports' %}active{% endif %}">
+                    <i class="bi bi-receipt"></i> Fund Release Reports
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+        {% endif %}
+
+        {% if can_access_admin_options(session.get('role')) or can_manage_data(session.get('role')) %}
+        <p class="sidebar-label">Administration</p>
+        <ul class="sidebar-nav">
+            {% if can_access_admin_options(session.get('role')) %}
+            <li>
+                <button class="sidebar-link" id="adminOptionsBtn" type="button">
+                    <i class="bi bi-gear"></i> Admin Options
+                    <i class="bi bi-chevron-down ms-auto" id="adminChevron" style="font-size:0.75rem;"></i>
+                </button>
+                <div id="adminSubMenu" class="sidebar-submenu d-none">
+                    <button id="manageUsersBtn" class="sidebar-sublink" type="button"
+                        data-bs-toggle="modal" data-bs-target="#listUsersModal">Manage Users</button>
+                    {% if can_purge_member_database(session.get('role')) %}
+                    <button id="purgeMembersBtn" class="sidebar-sublink text-danger" type="button">Delete All Members</button>
+                    {% endif %}
+                </div>
+            </li>
+            {% endif %}
+            {% if can_manage_data(session.get('role')) %}
+            <li>
+                <button class="sidebar-link" id="incomeManagementBtn" type="button">
+                    <i class="bi bi-wallet2"></i> Income Management
+                    <i class="bi bi-chevron-down ms-auto income-management-chevron" style="font-size:0.75rem;"></i>
+                </button>
+            </li>
+            {% endif %}
+        </ul>
+        {% if can_manage_data(session.get('role')) %}
+        <div id="incomeManagementSubMenu" class="sidebar-submenu {% if not active_page or not active_page.startswith('prof_') %}d-none{% endif %}">
+            <button class="sidebar-sublink d-flex align-items-center w-100" id="commissionBtn" type="button">
+                <i class="bi bi-cash-stack me-1"></i> Commission
+                <i class="bi bi-chevron-down ms-auto commission-chevron" style="font-size:0.75rem;"></i>
+            </button>
+            <div id="commissionSubMenu" class="sidebar-submenu ps-2 {% if not active_page or not active_page.startswith('prof_') %}d-none{% endif %}">
+                <a href="{{ url_for('main_routes.prof_project_commission') }}"
+                   class="sidebar-sublink {% if active_page == 'prof_project_commission' %}active{% endif %}">
+                    Project Commission
+                </a>
+                {% if can_manage_commission_levels(session.get('role')) %}
+                <a href="{{ url_for('main_routes.prof_commission_levels') }}"
+                   class="sidebar-sublink {% if active_page == 'prof_commission_levels' %}active{% endif %}">
+                    Commission Management
+                </a>
+                {% endif %}
+                <a href="{{ url_for('main_routes.prof_generate_sharing') }}"
+                   class="sidebar-sublink {% if active_page == 'prof_generate_sharing' %}active{% endif %}">
+                    Generate Sharing
+                </a>
+                {% if can_access_prof_reports(session.get('role')) %}
+                <p class="sidebar-sublabel px-3 mb-1 mt-2">Reports</p>
+                <a href="{{ url_for('main_routes.prof_reports_project_list') }}"
+                   class="sidebar-sublink {% if active_page == 'prof_reports_project_list' %}active{% endif %}">
+                    Project List
+                </a>
+                <a href="{{ url_for('main_routes.prof_reports_commission_summary') }}"
+                   class="sidebar-sublink {% if active_page == 'prof_reports_commission_summary' %}active{% endif %}">
+                    Commission Summary
+                </a>
+                {% endif %}
+            </div>
+            <span class="sidebar-sublink disabled d-flex align-items-center" title="Coming soon">
+                <i class="bi bi-briefcase me-1"></i> Services
+                <span class="badge bg-secondary ms-auto" style="font-size:0.6rem;">Soon</span>
+            </span>
+            <span class="sidebar-sublink disabled d-flex align-items-center" title="Coming soon">
+                <i class="bi bi-box-seam me-1"></i> Supplies
+                <span class="badge bg-secondary ms-auto" style="font-size:0.6rem;">Soon</span>
+            </span>
+            <span class="sidebar-sublink disabled d-flex align-items-center" title="Coming soon">
+                <i class="bi bi-grid me-1"></i> Other Services
+                <span class="badge bg-secondary ms-auto" style="font-size:0.6rem;">Soon</span>
+            </span>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <p class="sidebar-label">About</p>
+        <ul class="sidebar-nav">
+            <li>
+                <a href="{{ url_for('main_routes.about_features_process_flow') }}"
+                   class="{% if active_page == 'about_features_process_flow' %}active{% endif %}">
+                    <i class="bi bi-info-circle"></i> Features &amp; Process Flow
+                </a>
+            </li>
+        </ul>
+
+        <p class="sidebar-label">Help</p>
+        <ul class="sidebar-nav">
+            <li>
+                <a href="{{ url_for('main_routes.user_manual') }}"
+                   class="{% if active_page == 'user_manual' %}active{% endif %}">
+                    <i class="bi bi-question-circle"></i> User Manual
+                </a>
+            </li>
+        </ul>
+
+        <ul class="sidebar-nav mt-2">
+            <li>
+                <a href="{{ url_for('main_routes.logout') }}">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-logo"><i class="bi bi-diagram-3"></i></div>
+            <div class="text-white-50 small mt-2">&copy; TBGP Portal</div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="container-fluid px-0 pt-2">
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+
+    {% if can_access_admin_options(session.get('role')) %}
+  {% include 'admin_modals.html' %}
+    {% endif %}
+
+    {% include 'partials/idle_screensaver.html' %}
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/idle-screensaver.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            const body = document.body;
+            const phTimeEl = document.getElementById('ph-time');
+            const isDesktop = () => window.matchMedia('(min-width: 992px)').matches;
+
+            function closeSidebar() {
+                if (isDesktop()) return;
+                sidebar.classList.remove('visible');
+                body.classList.remove('no-scroll', 'sidebar-open');
+            }
+
+            menuToggle?.addEventListener('click', e => {
+                e.stopPropagation();
+                if (isDesktop()) return;
+                const isOpen = sidebar.classList.toggle('visible');
+                body.classList.toggle('no-scroll', isOpen);
+                body.classList.toggle('sidebar-open', isOpen);
+            });
+
+            document.addEventListener('click', e => {
+                if (isDesktop()) return;
+                const clickInside = sidebar.contains(e.target) || menuToggle?.contains(e.target);
+                if (!clickInside) closeSidebar();
+            });
+
+            document.getElementById('adminOptionsBtn')?.addEventListener('click', e => {
+                e.stopPropagation();
+                const sub = document.getElementById('adminSubMenu');
+                const chevron = document.getElementById('adminChevron');
+                sub?.classList.toggle('d-none');
+                if (chevron) {
+                    chevron.classList.toggle('bi-chevron-down');
+                    chevron.classList.toggle('bi-chevron-up');
+                }
+            });
+
+            function toggleSubmenu(subId, chevronSelector) {
+                const sub = document.getElementById(subId);
+                const chevron = document.querySelector(chevronSelector);
+                sub?.classList.toggle('d-none');
+                if (chevron) {
+                    chevron.classList.toggle('bi-chevron-down');
+                    chevron.classList.toggle('bi-chevron-up');
+                }
+            }
+
+            document.getElementById('incomeManagementBtn')?.addEventListener('click', e => {
+                e.stopPropagation();
+                toggleSubmenu('incomeManagementSubMenu', '.income-management-chevron');
+            });
+
+            document.getElementById('commissionBtn')?.addEventListener('click', e => {
+                e.stopPropagation();
+                toggleSubmenu('commissionSubMenu', '.commission-chevron');
+            });
+
+            {% if active_page and active_page.startswith('prof_') %}
+            const incomeChevron = document.querySelector('.income-management-chevron');
+            const commissionChevron = document.querySelector('.commission-chevron');
+            if (incomeChevron) {
+                incomeChevron.classList.remove('bi-chevron-down');
+                incomeChevron.classList.add('bi-chevron-up');
+            }
+            if (commissionChevron) {
+                commissionChevron.classList.remove('bi-chevron-down');
+                commissionChevron.classList.add('bi-chevron-up');
+            }
+            {% endif %}
+
+            const updateTime = () => {
+                const opts = {
+                    timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit',
+                    year: 'numeric', month: 'short', day: 'numeric', hour12: true
+                };
+                if (phTimeEl) phTimeEl.textContent = new Intl.DateTimeFormat([], opts).format(new Date());
+            };
+            updateTime();
+            setInterval(updateTime, 60000);
+
+            document.getElementById('purgeMembersBtn')?.addEventListener('click', async () => {
+                if (!confirm('This will permanently delete all members and related ledger, payout, sharing, project, and contractor records. Continue?')) return;
+                const confirmation = prompt('Type DELETE ALL MEMBERS to permanently delete member data.');
+                if (confirmation !== 'DELETE ALL MEMBERS') {
+                    alert('Delete cancelled. Confirmation phrase did not match.');
+                    return;
+                }
+                closeSidebar();
+                try {
+                    const res = await fetch('/admin/purge-members', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ confirmation }),
+                    });
+                    const data = await res.json();
+                    alert(data.msg || data.status);
+                    if (data.status === 'success') location.reload();
+                } catch (err) {
+                    alert('Delete failed: ' + err.message);
+                }
+            });
+
+            document.querySelectorAll('.section-search').forEach(wrapper => {
+                const input = wrapper.querySelector('.search-input, input[type="text"]');
+                const clearBtn = wrapper.querySelector('.search-clear-btn');
+                if (!input || !clearBtn) return;
+
+                const toggleClear = () => {
+                    clearBtn.classList.toggle('d-none', !input.value);
+                };
+
+                input.addEventListener('input', toggleClear);
+                clearBtn.addEventListener('click', () => {
+                    input.value = '';
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.focus();
+                    toggleClear();
+                });
+
+                toggleClear();
+            });
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

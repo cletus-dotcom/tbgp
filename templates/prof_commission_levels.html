@@ -1,0 +1,261 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Commission Management{% endblock %}
+{% block topbar_title %}Commission Management{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card mb-3">
+    <h6 class="text-brand fw-bold mb-2"><i class="bi bi-info-circle"></i> ProF Sharing Scheme</h6>
+    <p class="text-muted small mb-2">
+        Each project commission is split:
+        <strong>{{ client_pool_percent }}% Ref-Client</strong>,
+        <strong>{{ contractor_pool_percent }}% Ref-Contractor</strong>, and
+        <strong>{{ admin_account_percent }}% PLATFORM</strong>.
+        Ref-Client and Ref-Contractor pools each use a 7-level upline table (levels 1–6 for referrers/uplines,
+        level 7 credited to the <strong>Mandate account</strong> with sub-accounts per MLM stream).
+        Unallocated pool amounts go to <strong>POP</strong>.
+    </p>
+    <p class="text-muted small mb-0">
+        Member earnings caps (per project, lifetime order):
+        1st project {{ '{:,.0f}'.format(member_earnings_cap_first) }},
+        2nd {{ '{:,.0f}'.format(member_earnings_cap_second) }},
+        3rd+ {{ '{:,.0f}'.format(member_earnings_cap_nth) }}.
+        Excess is flushed to POP.
+    </p>
+</div>
+
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-person-check"></i> Ref-Client % Commission</h5>
+            <p class="section-subtitle">
+                7-level scheme for project client referrer ({{ client_pool_percent }}% of commission)
+                {% if client_levels %}
+                &middot; Total: <strong class="{% if client_total_pct != 100 %}text-danger{% endif %}">{{ '{:.2f}'.format(client_total_pct) }}%</strong>
+                {% endif %}
+            </p>
+        </div>
+        <button type="button" class="btn btn-brand btn-sm add-level-btn" data-scheme="client">
+            <i class="bi bi-plus-circle"></i> Add Level
+        </button>
+    </div>
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th>Level</th>
+                    <th>% of Pool</th>
+                    <th>Description</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in client_levels %}
+                <tr>
+                    <td>
+                        <span class="badge bg-brand">Level {{ row.level }}</span>
+                        {% if row.level == 7 %}<span class="badge bg-secondary ms-1">Mandate account</span>{% endif %}
+                    </td>
+                    <td>{{ '{:.2f}'.format(row.percentage) }}%</td>
+                    <td>{{ row.description or '—' }}</td>
+                    <td class="text-end text-nowrap">
+                        <button type="button" class="btn btn-sm btn-outline-dark level-edit-btn"
+                            data-level="{{ row.to_dict() | tojson | forceescape }}">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                        {% if row.level != 7 %}
+                        <button type="button" class="btn btn-sm btn-outline-danger level-delete-btn"
+                            data-level-id="{{ row.level_id }}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="text-muted">No Ref-Client levels configured.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-person-gear"></i> Ref-Contractor % Commission</h5>
+            <p class="section-subtitle">
+                7-level scheme for contractor member referrer ({{ contractor_pool_percent }}% of commission)
+                {% if contractor_levels %}
+                &middot; Total: <strong class="{% if contractor_total_pct != 100 %}text-danger{% endif %}">{{ '{:.2f}'.format(contractor_total_pct) }}%</strong>
+                {% endif %}
+            </p>
+        </div>
+        <button type="button" class="btn btn-brand btn-sm add-level-btn" data-scheme="contractor">
+            <i class="bi bi-plus-circle"></i> Add Level
+        </button>
+    </div>
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th>Level</th>
+                    <th>% of Pool</th>
+                    <th>Description</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in contractor_levels %}
+                <tr>
+                    <td>
+                        <span class="badge bg-brand">Level {{ row.level }}</span>
+                        {% if row.level == 7 %}<span class="badge bg-secondary ms-1">Mandate account</span>{% endif %}
+                    </td>
+                    <td>{{ '{:.2f}'.format(row.percentage) }}%</td>
+                    <td>{{ row.description or '—' }}</td>
+                    <td class="text-end text-nowrap">
+                        <button type="button" class="btn btn-sm btn-outline-dark level-edit-btn"
+                            data-level="{{ row.to_dict() | tojson | forceescape }}">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                        {% if row.level != 7 %}
+                        <button type="button" class="btn btn-sm btn-outline-danger level-delete-btn"
+                            data-level-id="{{ row.level_id }}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="text-muted">No Ref-Contractor levels configured.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="levelModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-brand text-white">
+                <h5 class="modal-title" id="levelModalTitle"><i class="bi bi-percent"></i> Add Commission Level</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="levelForm">
+                <div class="modal-body">
+                    <div id="levelAlert" class="alert alert-danger d-none py-2 small"></div>
+                    <input type="hidden" id="levelId" name="level_id">
+                    <input type="hidden" id="levelScheme" name="scheme" value="client">
+                    <div class="mb-3">
+                        <label class="form-label">Level <span class="text-danger">*</span></label>
+                        <input type="number" id="levelNo" name="level" class="form-control" min="1" max="7" step="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Percentage <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="number" id="levelPercentage" name="percentage" class="form-control" min="0" max="100" step="0.01" required>
+                            <span class="input-group-text">%</span>
+                        </div>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label">Description</label>
+                        <input type="text" id="levelDescription" name="description" class="form-control">
+                        <p class="text-muted small mt-2 mb-0" id="levelSevenNote" style="display:none;">
+                            Level 7 is credited to the Mandate account (one pooled entry per MLM stream).
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-brand">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const levelModal = document.getElementById('levelModal');
+    const levelForm = document.getElementById('levelForm');
+    const levelAlert = document.getElementById('levelAlert');
+    const levelModalTitle = document.getElementById('levelModalTitle');
+    const levelNoInput = document.getElementById('levelNo');
+    const levelSchemeInput = document.getElementById('levelScheme');
+    const levelSevenNote = document.getElementById('levelSevenNote');
+
+    const schemeLabels = {
+        client: 'Ref-Client',
+        contractor: 'Ref-Contractor',
+    };
+
+    function showAlert(msg) {
+        levelAlert.textContent = msg;
+        levelAlert.classList.remove('d-none');
+    }
+    function hideAlert() {
+        levelAlert.classList.add('d-none');
+    }
+
+    function toggleLevelSevenNote() {
+        const isSeven = Number(levelNoInput.value) === 7;
+        levelSevenNote.style.display = isSeven ? '' : 'none';
+    }
+
+    function setLevelFields(row = {}) {
+        const scheme = row.scheme || 'client';
+        document.getElementById('levelId').value = row.level_id || '';
+        levelSchemeInput.value = scheme;
+        levelNoInput.value = row.level ?? '';
+        document.getElementById('levelPercentage').value = row.percentage ?? '';
+        document.getElementById('levelDescription').value = row.description || '';
+        levelModalTitle.innerHTML = `<i class="bi bi-percent"></i> ${row.level_id ? 'Edit' : 'Add'} ${schemeLabels[scheme] || scheme} Level`;
+        toggleLevelSevenNote();
+    }
+
+    levelNoInput?.addEventListener('input', toggleLevelSevenNote);
+
+    document.querySelectorAll('.add-level-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            hideAlert();
+            levelForm.reset();
+            setLevelFields({ scheme: btn.dataset.scheme });
+            bootstrap.Modal.getOrCreateInstance(levelModal).show();
+        });
+    });
+
+    document.querySelectorAll('.level-edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            hideAlert();
+            setLevelFields(JSON.parse(btn.dataset.level));
+            bootstrap.Modal.getOrCreateInstance(levelModal).show();
+        });
+    });
+
+    document.querySelectorAll('.level-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (!confirm('Delete this commission level?')) return;
+            const res = await fetch(`/admin/prof/commission-levels/${btn.dataset.levelId}`, { method: 'DELETE' });
+            const data = await res.json();
+            alert(data.msg || data.status);
+            if (data.status === 'success') location.reload();
+        });
+    });
+
+    levelForm?.addEventListener('submit', async e => {
+        e.preventDefault();
+        hideAlert();
+        const res = await fetch('/admin/prof/commission-levels', {
+            method: 'POST',
+            body: new FormData(levelForm),
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            bootstrap.Modal.getInstance(levelModal)?.hide();
+            location.reload();
+            return;
+        }
+        showAlert(data.msg || 'Save failed.');
+    });
+</script>
+{% endblock %}

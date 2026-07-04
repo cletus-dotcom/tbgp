@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+{% block title %}TBGP — Building the Nation. Powering the People.{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+{% endblock %}
+
+{% block body_class %}landing-body{% endblock %}
+
+{% block body %}
+
+<div class="nation-loader" id="nationLoader" aria-live="polite" aria-label="Loading">
+    <div class="loader-scene" aria-hidden="true">
+        <div class="structure-build">
+            <div class="build-layer"></div>
+            <div class="build-layer"></div>
+            <div class="build-layer"></div>
+            <div class="build-layer"></div>
+        </div>
+        <div class="lowbed-truck">
+            <div class="truck-load"></div>
+            <div class="truck-bed"></div>
+            <div class="truck-cab"></div>
+            <div class="truck-wheel"></div>
+            <div class="truck-wheel"></div>
+            <div class="truck-wheel"></div>
+        </div>
+        <div class="loader-ground"></div>
+    </div>
+    <p class="loader-tagline">Building the <span>Nation</span></p>
+    <div class="loader-progress"><div class="loader-progress-bar"></div></div>
+</div>
+
+<nav class="navbar navbar-expand-lg landing-nav">
+    <div class="container">
+        <a class="navbar-brand" href="{{ url_for('main_routes.index') }}">
+            <span class="brand-icon" aria-hidden="true">
+                <span></span><span></span><span></span><span></span>
+            </span>
+            TBGP
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#landingNav"
+                aria-controls="landingNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="landingNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link active" href="{{ url_for('main_routes.index') }}">Home</a>
+                </li>
+            </ul>
+            <a href="{{ url_for('main_routes.login') }}" class="btn-login">Login</a>
+        </div>
+    </div>
+</nav>
+
+<section class="hero-banner">
+    <div class="container hero-top">
+        <div class="hero-content">
+            <h1>Building the Nation.<span class="accent">Powering the People.</span></h1>
+            <a href="#portals" class="btn-hero">Get Started</a>
+        </div>
+
+        <div id="noticeCarousel" class="carousel slide notice-carousel" data-bs-ride="carousel" data-bs-interval="6000">
+            <div class="carousel-inner">
+                <div class="carousel-item active">
+                    <h5>Members Management System</h5>
+                    <p>
+                        Track members, referrals, and hierarchy across every batch.
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#featuresModal">Learn more</a>
+                    </p>
+                </div>
+                <div class="carousel-item">
+                    <h5>Lowbed Hub</h5>
+                    <p>
+                        Coordinate lowbed fleet operations and logistics in one hub.
+                        <a href="#" data-coming-soon>Learn more</a>
+                    </p>
+                </div>
+                <div class="carousel-item">
+                    <h5>Success Showcase</h5>
+                    <p>
+                        Spotlight achievements and growth across the network.
+                        <a href="#" data-coming-soon>Learn more</a>
+                    </p>
+                </div>
+                <div class="carousel-item">
+                    <h5>Information Pool Management System</h5>
+                    <p>
+                        Centralize shared knowledge, updates, and operational resources.
+                        <a href="#" data-coming-soon>Learn more</a>
+                    </p>
+                </div>
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#noticeCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#noticeCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
+            <div class="carousel-indicators">
+                <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Notice 1"></button>
+                <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="1" aria-label="Notice 2"></button>
+                <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="2" aria-label="Notice 3"></button>
+                <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="3" aria-label="Notice 4"></button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="portal-section" id="portals">
+    <div class="container">
+        <h4>Choose your portal</h4>
+
+        <div class="portal-cards">
+            <div class="portal-card">
+                <h5>Members Management System</h5>
+                <p class="portal-desc">Track members, referrals, and hierarchy across every batch.</p>
+                <div class="btn-row">
+                    <a href="{{ url_for('main_routes.login', next='/members') }}" class="btn-proceed">Proceed</a>
+                </div>
+            </div>
+
+            <div class="portal-card">
+                <h5>Lowbed Hub</h5>
+                <p class="portal-desc">Coordinate lowbed fleet operations and logistics in one hub.</p>
+                <div class="btn-row">
+                    <a href="#" class="btn-proceed" data-coming-soon>Proceed</a>
+                </div>
+            </div>
+
+            <div class="portal-card">
+                <h5>Success Showcase</h5>
+                <p class="portal-desc">Spotlight achievements and growth across the network.</p>
+                <div class="btn-row">
+                    <a href="#" class="btn-proceed" data-coming-soon>Proceed</a>
+                </div>
+            </div>
+
+            <div class="portal-card">
+                <h5>INFORMATION POOL MANAGEMENT SYSTEM</h5>
+                <p class="portal-desc">Centralize shared knowledge, updates, and operational resources.</p>
+                <div class="btn-row">
+                    <a href="#" class="btn-proceed" data-coming-soon>Proceed</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="landing-footer">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-6 col-lg-3">
+                <div class="footer-seal">
+                    <i class="bi bi-building"></i>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <h5>Address</h5>
+                <p>
+                    The Big Group Philippines<br>
+                    Metro Manila, Philippines
+                </p>
+                <h5 class="mt-3">Follow Us</h5>
+                <div class="social-row">
+                    <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                    <a href="#" aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <h5>Contact Us</h5>
+                <p>For further inquiries and assistance, please contact your TBGP network administrator.</p>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <h5>Links</h5>
+                <ul class="footer-links">
+                    <li><a href="{{ url_for('main_routes.login', next='/members') }}">Members Management System</a></li>
+                    <li><a href="#" data-coming-soon>Lowbed Hub</a></li>
+                    <li><a href="#" data-coming-soon>Success Showcase</a></li>
+                    <li><a href="#" data-coming-soon>Information Pool Management System</a></li>
+                </ul>
+            </div>
+        </div>
+        <p class="text-center mt-4 mb-0" style="font-size: 0.8rem; color: rgba(255,255,255,0.35);">
+            &copy; 2026 TBGP — Building the Nation. Powering the People.
+        </p>
+    </div>
+</footer>
+
+<button class="back-to-top" id="backToTop" aria-label="Back to top">
+    <i class="bi bi-chevron-up"></i>
+</button>
+
+<div class="modal fade feature-modal" id="featuresModal" tabindex="-1" aria-labelledby="featuresModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="featuresModalLabel">Platform Capabilities</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    TBGP gives administrators a single command center to manage member data, monitor network health,
+                    and understand how referrals flow through your organization.
+                </p>
+                <h4>Mobile-First Design</h4>
+                <h5>Access the dashboard, member list, and hierarchy tree from any device — built for teams in the field.</h5>
+                <h4>Excel Import</h4>
+                <h5>Upload member spreadsheets in a standard format to bulk-import or update records with preview and progress feedback.</h5>
+                <h4>Secure Admin Access</h4>
+                <h5>Role-based login keeps member data protected while giving admins the tools to manage users and re-import data when needed.</h5>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade feature-modal" id="comingSoonModal" tabindex="-1" aria-labelledby="comingSoonModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="comingSoonModalLabel">Portal Coming Soon</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">This portal is coming soon, please bear with us.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-brand" data-bs-dismiss="modal">Understood</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        var loader = document.getElementById("nationLoader");
+        document.body.classList.add("landing-loading");
+
+        function dismissLoader() {
+            if (!loader || loader.classList.contains("done")) return;
+            loader.classList.add("done");
+            document.body.classList.remove("landing-loading");
+        }
+
+        var minDisplay = 2400;
+        var start = Date.now();
+
+        window.addEventListener("load", function () {
+            var elapsed = Date.now() - start;
+            var remaining = Math.max(0, minDisplay - elapsed);
+            setTimeout(dismissLoader, remaining);
+        });
+
+        setTimeout(dismissLoader, 5000);
+
+        document.querySelectorAll(".notice-carousel h5").forEach(function (el) {
+            el.innerHTML = el.textContent.replace(/([A-Z])/g, '<span class="title-cap">$1</span>');
+        });
+
+        document.querySelectorAll("[data-coming-soon]").forEach(function (el) {
+            el.addEventListener("click", function (event) {
+                event.preventDefault();
+                var modalEl = document.getElementById("comingSoonModal");
+                if (modalEl && window.bootstrap) {
+                    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                    return;
+                }
+                alert("This portal is coming soon, please bear with us.");
+            });
+        });
+
+        var btn = document.getElementById("backToTop");
+        if (btn) {
+            window.addEventListener("scroll", function () {
+                btn.classList.toggle("visible", window.scrollY > 300);
+            });
+            btn.addEventListener("click", function () {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            });
+        }
+    })();
+</script>
+{% endblock %}

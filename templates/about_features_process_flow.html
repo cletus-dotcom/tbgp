@@ -1,0 +1,57 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}App Features & Process Flow{% endblock %}
+{% block topbar_title %}App Features & Process Flow{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card about-hero mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-info-circle"></i> App Features &amp; Process Flow</h5>
+            <p class="section-subtitle">
+                Overview of the TBGP portal modules and the usual operating flow from data setup to payout reporting.
+            </p>
+        </div>
+        <span class="badge bg-brand text-dark">TBGP Portal</span>
+    </div>
+</div>
+
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header mb-3">
+        <div>
+            <h5><i class="bi bi-grid-3x3-gap"></i> App Features</h5>
+            <p class="section-subtitle">Core capabilities available across the portal.</p>
+        </div>
+    </div>
+    <div class="row g-3">
+        {% for feature in features %}
+        <div class="col-md-6 col-xl-3">
+            <div class="about-feature-card h-100">
+                <div class="about-feature-icon"><i class="bi {{ feature["icon"] }}"></i></div>
+                <h6>{{ feature["title"] }}</h6>
+                <p>{{ feature["description"] }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="dashboard-card section-card">
+    <div class="section-header mb-3">
+        <div>
+            <h5><i class="bi bi-diagram-2"></i> Process Flow</h5>
+            <p class="section-subtitle">Recommended flow for operating the system.</p>
+        </div>
+    </div>
+    <div class="about-flow">
+        {% for step in process_flow %}
+        <div class="about-flow-step">
+            <div class="about-flow-number">{{ loop.index }}</div>
+            <div>
+                <h6>{{ step["title"] }}</h6>
+                <p>{{ step["description"] }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

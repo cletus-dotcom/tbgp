@@ -1,0 +1,231 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}{% if is_own_ledger_view %}My Ledger{% else %}Member Ledger{% endif %}{% endblock %}
+{% block topbar_title %}{% if is_own_ledger_view %}My Ledger{% else %}Member Ledger{% endif %}{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-journal-text"></i> {% if is_own_ledger_view %}My Ledger{% else %}Member Ledger{% endif %}</h5>
+            <p class="section-subtitle">
+                {% if is_own_ledger_view %}Your profit-sharing credits, payouts, and earnings history
+                {% else %}Profit-sharing credits and fund release debits{% endif %}
+            </p>
+        </div>
+    </div>
+
+    {% if not is_own_ledger_view %}
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-6">
+            <label for="memberFilter" class="form-label">Filter by Member</label>
+            <select id="memberFilter" name="member_id" class="form-select" onchange="this.form.submit()">
+                <option value="">— All members —</option>
+                {% for m in members %}
+                <option value="{{ m.member_id }}" {% if selected_member_id == m.member_id %}selected{% endif %}>
+                    #{{ m.member_id }} — {{ m.last_name }}, {{ m.first_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if selected_member %}
+        <div class="col-md-6">
+            <p class="text-muted small mb-0">
+                Showing ledger for <strong>{{ selected_member.full_name }}</strong>
+            </p>
+        </div>
+        {% endif %}
+    </form>
+    {% endif %}
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="dashboard-card section-card h-100">
+            <h6 class="text-muted small text-uppercase mb-1">Transactions</h6>
+            <p class="h4 mb-0 text-brand">{{ stats.transaction_count }}</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card section-card h-100">
+            <h6 class="text-muted small text-uppercase mb-1">Total Credits</h6>
+            <p class="h4 mb-0 text-brand">{{ '{:,.2f}'.format(stats.total_credits) }}</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card section-card h-100">
+            <h6 class="text-muted small text-uppercase mb-1">Total Debits</h6>
+            <p class="h4 mb-0 text-brand">{{ '{:,.2f}'.format(stats.total_debits) }}</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card section-card h-100">
+            <h6 class="text-muted small text-uppercase mb-1">
+                {% if selected_member_id or is_own_ledger_view %}Available Balance{% else %}Net Balance{% endif %}
+            </h6>
+            <p class="h4 mb-0 text-brand">{{ '{:,.2f}'.format(stats.available_balance) }}</p>
+            {% if selected_member_id or is_own_ledger_view %}
+            {% if stats.reserved_payout %}
+            <p class="small text-muted mb-0">{{ '{:,.2f}'.format(stats.reserved_payout) }} reserved in pending payouts</p>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if can_request_payout %}
+<div class="dashboard-card section-card mb-3">
+    <h6 class="mb-2"><i class="bi bi-cash-coin"></i> Request Payout</h6>
+    <div class="payout-notice small mb-3">
+        <strong>{{ payout_scheme.ompd_percent }}% OMPD deduction applies.</strong>
+        {{ payout_scheme.ompd_percent }}% of your requested amount goes to the
+        {{ payout_scheme.ompd_label }} ({{ payout_scheme.ompd_description }}).
+        You receive the remaining {{ payout_scheme.member_receives_percent }}% as net release.
+    </div>
+    <form method="post" action="{{ url_for('main_routes.member_payout_request') }}" class="row g-3 align-items-end" id="payoutRequestForm">
+        <div class="col-md-3">
+            <label class="form-label">Gross Amount</label>
+            <input type="number" name="amount" id="payoutAmount" class="form-control" step="0.01" min="0.01"
+                   max="{{ stats.available_balance }}" placeholder="0.00" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Estimated Breakdown</label>
+            <div class="payout-breakdown small border rounded p-2">
+                OMPD ({{ payout_scheme.ompd_percent }}%): <strong id="payoutOmpd">0.00</strong><br>
+                Net release to you: <strong id="payoutNet">0.00</strong>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Note (optional)</label>
+            <input type="text" name="member_note" id="payoutMemberNote" class="form-control" placeholder="Optional message for staff/admin">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-brand w-100" {% if stats.available_balance <= 0 %}disabled{% endif %}>
+                Submit Request
+            </button>
+        </div>
+    </form>
+    <p class="small text-muted mt-2 mb-0">
+        Available balance: {{ '{:,.2f}'.format(stats.available_balance) }}.
+        Your ledger will be debited the full gross amount when the payout is completed.
+    </p>
+</div>
+
+{% if payout_requests %}
+<div class="dashboard-card section-card mb-3">
+    <h6 class="mb-3">Your Payout Requests</h6>
+    <div class="section-table-wrap">
+        <table class="table table-sm section-table mb-0">
+            <thead>
+                <tr><th>Date</th><th>Gross</th><th>OMPD</th><th>Net</th><th>Status</th><th>Note</th></tr>
+            </thead>
+            <tbody>
+                {% for p in payout_requests %}
+                <tr>
+                    <td>{{ p.requested_at[:19].replace('T', ' ') if p.requested_at else '—' }}</td>
+                    <td>{{ '{:,.2f}'.format(p.requested_amount) }}</td>
+                    <td>{{ '{:,.2f}'.format(p.ompd_deduction) }}</td>
+                    <td>{{ '{:,.2f}'.format(p.net_release_amount) }}</td>
+                    <td><span class="badge bg-secondary">{{ p.status }}</span></td>
+                    <td>
+                        {% if p.request_review_note %}
+                            <span class="text-brand fw-semibold">Admin:</span> {{ p.request_review_note }}
+                        {% elif p.rejection_reason %}
+                            <span class="text-brand fw-semibold">Admin:</span> {{ p.rejection_reason }}
+                        {% elif p.member_note %}
+                            {{ p.member_note }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+
+<div class="dashboard-card section-card">
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    {% if not selected_member_id %}<th>Member</th>{% endif %}
+                    <th>Type</th>
+                    <th>Project</th>
+                    <th>Description</th>
+                    <th>Scheme</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transactions %}
+                <tr>
+                    <td>{{ t.billing_date }}</td>
+                    {% if not selected_member_id %}
+                    <td>
+                        <a href="{{ url_for('main_routes.member_ledger', member_id=t.member_id) }}">
+                            #{{ t.member_id }} — {{ t.member_name }}
+                        </a>
+                    </td>
+                    {% endif %}
+                    <td>
+                        {% if t.transaction_type == 'debit' %}
+                        <span class="badge bg-dark">Debit</span>
+                        {% else %}
+                        <span class="badge bg-success">Credit</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ t.project_title }}</td>
+                    <td class="small">{{ t.description or '—' }}</td>
+                    <td>
+                        {% if t.recipient_type == 'payout' %}Payout
+                        {% elif t.share_scheme == 'client' %}Ref-Client
+                        {% elif t.share_scheme == 'contractor' %}Ref-Contractor
+                        {% elif t.recipient_type == 'admin' %}PLATFORM
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="{% if t.signed_amount < 0 %}text-danger{% endif %}">
+                        {% if t.signed_amount < 0 %}-{% endif %}{{ '{:,.2f}'.format(t.share_amount) }}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="{% if selected_member_id %}6{% else %}7{% endif %}" class="text-muted">
+                        No ledger transactions yet. Generate sharing to record member earnings.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% if can_request_payout %}
+<script>
+(function () {
+    const amountInput = document.getElementById('payoutAmount');
+    const noteInput = document.getElementById('payoutMemberNote');
+    const ompdEl = document.getElementById('payoutOmpd');
+    const netEl = document.getElementById('payoutNet');
+    if (!amountInput || !ompdEl || !netEl) return;
+    const ompdPercent = {{ payout_scheme.ompd_percent }};
+    function updateBreakdown() {
+        const gross = parseFloat(amountInput.value) || 0;
+        const ompd = Math.round(gross * ompdPercent * 100) / 10000;
+        const net = Math.round((gross - ompd) * 100) / 100;
+        ompdEl.textContent = ompd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        netEl.textContent = net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    amountInput.addEventListener('input', updateBreakdown);
+    amountInput.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' || !noteInput) return;
+        event.preventDefault();
+        noteInput.focus();
+    });
+    updateBreakdown();
+})();
+</script>
+{% endif %}
+{% endblock %}

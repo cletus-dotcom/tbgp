@@ -1,0 +1,182 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Dashboard{% endblock %}
+{% block topbar_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-card welcome-card">
+    <h4>Welcome, {{ fullname }}!</h4>
+    <p>{% if is_personal_dashboard %}Your TBGP member portal{% else %}TBGP Portal Dashboard{% endif %}</p>
+    <div class="welcome-meta">
+        <span><i class="bi bi-person-badge"></i> {{ role }}</span>
+        {% if is_personal_dashboard and personal_stats %}
+        <span><i class="bi bi-hash"></i> Member #{{ personal_stats.member_id }}</span>
+        <span><i class="bi bi-people"></i> {{ personal_stats.direct_referrals }} Direct Referral(s)</span>
+        {% elif stats %}
+        <span><i class="bi bi-people"></i> {{ stats.total_members }} Members</span>
+        <span><i class="bi bi-building"></i> {{ stats.total_contractors }} Contractors</span>
+        {% endif %}
+        <span><i class="bi bi-calendar3"></i> <span id="welcomeDate">—</span></span>
+    </div>
+</div>
+
+{% if is_personal_dashboard %}
+<div class="dashboard-card">
+    <h5 class="text-brand fw-bold mb-3">My Summary</h5>
+    {% if personal_stats %}
+    <div class="stats-grid">
+        <div class="stat-tile">
+            <div class="stat-value">{{ personal_stats.batch }}</div>
+            <div class="stat-label">Batch</div>
+        </div>
+        <div class="stat-tile">
+            <div class="stat-value">{{ personal_stats.direct_referrals }}</div>
+            <div class="stat-label">Direct Referrals</div>
+        </div>
+        <div class="stat-tile">
+            <div class="stat-value">{{ personal_stats.downline_count }}</div>
+            <div class="stat-label">Total Downline</div>
+        </div>
+        <div class="stat-tile">
+            <div class="stat-value">{{ '{:,.2f}'.format(personal_stats.ledger_total) }}</div>
+            <div class="stat-label">Ledger Earnings</div>
+        </div>
+    </div>
+    <p class="text-muted small mb-0 mt-3">
+        Status: {{ personal_stats.status or '—' }}
+        &middot; {{ personal_stats.ledger_transactions }} ledger transaction(s)
+    </p>
+    {% else %}
+    <p class="text-muted mb-0">Your account is not linked to a member record. Contact an administrator.</p>
+    {% endif %}
+</div>
+{% else %}
+
+<div class="dashboard-card">
+    <h5 class="text-brand fw-bold mb-3">Statistics</h5>
+
+    <div class="stats-section">
+        <h6 class="stats-section-title"><i class="bi bi-people"></i> Members</h6>
+        <div class="stats-grid">
+            <div class="stat-tile">
+                <div class="stat-value">{{ stats.total_members }}</div>
+                <div class="stat-label">Total Members</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value">{{ stats.root_members }}</div>
+                <div class="stat-label">Root Members</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value">{{ stats.referred_members }}</div>
+                <div class="stat-label">Referred</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value">{{ stats.max_batch }}</div>
+                <div class="stat-label">Latest Batch</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats-section">
+        <h6 class="stats-section-title"><i class="bi bi-building"></i> Contractors</h6>
+        <div class="stats-grid">
+            <div class="stat-tile">
+                <div class="stat-value">{{ stats.total_contractors }}</div>
+                <div class="stat-label">Total Contractors</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value">{{ stats.contractor_member_referrers }}</div>
+                <div class="stat-label">Member Referrers</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value">{{ stats.contractor_batch_counts|length }}</div>
+                <div class="stat-label">Active Batches</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value">{{ stats.max_contractor_batch }}</div>
+                <div class="stat-label">Latest Batch</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-bar-chart-steps"></i> Members by Batch</h5>
+            <p class="section-subtitle">Distribution across referral batches</p>
+        </div>
+    </div>
+    <div class="stats-grid">
+        {% for batch, count in stats.batch_counts.items() %}
+        <div class="stat-tile">
+            <div class="stat-value">{{ count }}</div>
+            <div class="stat-label">Batch {{ batch }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-trophy"></i> Top Referrers</h5>
+            <p class="section-subtitle">Members with the most direct referrals</p>
+        </div>
+    </div>
+    {% if stats.top_referrers %}
+    <div class="section-mobile-list">
+        {% for ref in stats.top_referrers %}
+        <div class="member-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="member-id">#{{ ref.member_id }} — {{ ref.full_name }}</div>
+                    <div class="member-meta">Batch {{ ref.batch }} &middot; {{ ref.referral_count }} referral(s)</div>
+                </div>
+                <span class="badge bg-brand">{{ ref.referral_count }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="section-desktop-table section-table-wrap">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Batch</th>
+                    <th>Referrals</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ref in stats.top_referrers %}
+                <tr>
+                    <td>{{ ref.member_id }}</td>
+                    <td>{{ ref.full_name }}</td>
+                    <td>{{ ref.batch }}</td>
+                    <td><span class="badge bg-brand">{{ ref.referral_count }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No referral data yet.</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const welcomeDateEl = document.getElementById('welcomeDate');
+    if (welcomeDateEl) {
+        welcomeDateEl.textContent = new Intl.DateTimeFormat([], {
+            timeZone: 'Asia/Manila',
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        }).format(new Date());
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,251 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Payout Queue{% endblock %}
+{% block topbar_title %}Payout Queue{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-cash-coin"></i> Payout Queue</h5>
+            <p class="section-subtitle">Review payout requests and process fund releases</p>
+        </div>
+    </div>
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'pending' %}active{% endif %}"
+               href="{{ url_for('main_routes.payout_queue', tab='pending') }}">
+                Pending Approval
+                {% if payout_queue_counts.pending_requests %}<span class="badge bg-danger ms-1">{{ payout_queue_counts.pending_requests }}</span>{% endif %}
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'approved' %}active{% endif %}"
+               href="{{ url_for('main_routes.payout_queue', tab='approved') }}">
+                Awaiting Release
+                {% if payout_queue_counts.awaiting_release %}<span class="badge bg-warning text-dark ms-1">{{ payout_queue_counts.awaiting_release }}</span>{% endif %}
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'release' %}active{% endif %}"
+               href="{{ url_for('main_routes.payout_queue', tab='release') }}">
+                Release Review
+                {% if payout_queue_counts.pending_releases %}<span class="badge bg-danger ms-1">{{ payout_queue_counts.pending_releases }}</span>{% endif %}
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'released' %}active{% endif %}"
+               href="{{ url_for('main_routes.payout_queue', tab='released') }}">Completed</a>
+        </li>
+    </ul>
+</div>
+
+{% for payout in payouts %}
+<div class="dashboard-card section-card mb-3">
+    <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+        <div>
+            <h6 class="mb-1">Payout #{{ payout.payout_id }} — #{{ payout.member_id }} {{ payout.member_name }}</h6>
+            <p class="text-muted small mb-0">
+                Requested {{ payout.requested_at[:19].replace('T', ' ') if payout.requested_at else '—' }}
+                · Gross <strong>{{ '{:,.2f}'.format(payout.requested_amount) }}</strong>
+                · OMPD <strong>{{ '{:,.2f}'.format(payout.ompd_deduction) }}</strong>
+                · Net release <strong>{{ '{:,.2f}'.format(payout.net_release_amount) }}</strong>
+                · Status <span class="badge bg-secondary">{{ payout.status }}</span>
+            </p>
+            {% if payout.member_note %}
+            <p class="small mb-0 mt-1"><em>Member note:</em> {{ payout.member_note }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if tab == 'pending' and can_approve_payout_request %}
+    <div class="row g-2">
+        <div class="col-md-6">
+            <form method="post" action="{{ url_for('main_routes.payout_request_approve', payout_id=payout.payout_id) }}">
+                <div class="mb-2">
+                    <input type="text" name="note" class="form-control form-control-sm" placeholder="Optional approval note">
+                </div>
+                <button type="submit" class="btn btn-brand btn-sm">Approve Request</button>
+            </form>
+        </div>
+        <div class="col-md-6">
+            <form method="post" action="{{ url_for('main_routes.payout_request_reject', payout_id=payout.payout_id) }}">
+                <div class="mb-2">
+                    <input type="text" name="reason" class="form-control form-control-sm" placeholder="Rejection reason" required>
+                </div>
+                <button type="submit" class="btn btn-outline-danger btn-sm">Reject Request</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if tab == 'approved' and can_submit_payout_release %}
+    <p class="small text-muted mb-2">
+        Release <strong>{{ '{:,.2f}'.format(payout.net_release_amount) }}</strong> to the member
+        (gross {{ '{:,.2f}'.format(payout.requested_amount) }}, OMPD {{ '{:,.2f}'.format(payout.ompd_deduction) }}).
+    </p>
+    <form method="post" action="{{ url_for('main_routes.payout_request_release', payout_id=payout.payout_id) }}" class="row g-2 payout-release-form">
+        <div class="col-md-3">
+            <label class="form-label small">Release Method</label>
+            <select name="release_method" class="form-select form-select-sm payout-release-method" required>
+                <option value="">— Select —</option>
+                {% for method in payout_release_methods %}
+                <option value="{{ method }}">{{ method }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3 d-none payout-other-method-wrap">
+            <label class="form-label small">Other Method</label>
+            <input type="text" name="release_method_other" class="form-control form-control-sm payout-other-method"
+                   maxlength="40" placeholder="Enter release method" disabled>
+        </div>
+        <div class="col-md-3 d-none payout-bank-detail-wrap">
+            <label class="form-label small">Bank Name</label>
+            <input type="text" name="release_bank_name" class="form-control form-control-sm payout-bank-detail"
+                   maxlength="120" placeholder="Bank name" disabled>
+        </div>
+        <div class="col-md-3 d-none payout-bank-detail-wrap">
+            <label class="form-label small">Branch</label>
+            <input type="text" name="release_bank_branch" class="form-control form-control-sm payout-bank-detail"
+                   maxlength="120" placeholder="Branch" disabled>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">Reference No.</label>
+            <input type="text" name="release_reference" class="form-control form-control-sm" required placeholder="Txn / ref #">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small payout-account-label">Account / Recipient</label>
+            <input type="text" name="release_account_info" class="form-control form-control-sm payout-account-info"
+                   placeholder="Account no. or email">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">Notes</label>
+            <input type="text" name="release_notes" class="form-control form-control-sm" placeholder="Optional">
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-brand btn-sm">Submit Fund Release</button>
+        </div>
+    </form>
+    {% endif %}
+
+    {% if tab == 'release' %}
+    <div class="small mb-2">
+        <div><strong>Net release:</strong> {{ '{:,.2f}'.format(payout.net_release_amount) }}
+            (OMPD {{ '{:,.2f}'.format(payout.ompd_deduction) }} from gross {{ '{:,.2f}'.format(payout.requested_amount) }})</div>
+        <div><strong>Method:</strong> {{ payout.release_method or '—' }}</div>
+        <div><strong>Reference:</strong> {{ payout.release_reference or '—' }}</div>
+        <div><strong>Account:</strong> {{ payout.release_account_info or '—' }}</div>
+        <div><strong>Submitted:</strong> {{ payout.release_submitted_at[:19].replace('T', ' ') if payout.release_submitted_at else '—' }}
+            {% if payout.release_submitted_by %} by {{ payout.release_submitted_by }}{% endif %}
+        </div>
+        {% if payout.release_notes %}<div><strong>Notes:</strong> {{ payout.release_notes }}</div>{% endif %}
+    </div>
+    {% if can_approve_payout_release %}
+    <div class="row g-2">
+        <div class="col-md-6">
+            <form method="post" action="{{ url_for('main_routes.payout_release_approve', payout_id=payout.payout_id) }}">
+                <button type="submit" class="btn btn-brand btn-sm">Approve Release &amp; Record Ledger</button>
+            </form>
+        </div>
+        <div class="col-md-6">
+            <form method="post" action="{{ url_for('main_routes.payout_release_reject', payout_id=payout.payout_id) }}">
+                <div class="mb-2">
+                    <input type="text" name="reason" class="form-control form-control-sm" placeholder="Rejection reason" required>
+                </div>
+                <button type="submit" class="btn btn-outline-danger btn-sm">Reject Release</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if tab == 'released' %}
+    <div class="small">
+        <div><strong>Released:</strong> {{ payout.released_at[:19].replace('T', ' ') if payout.released_at else '—' }}
+            {% if payout.release_approved_by %} by {{ payout.release_approved_by }}{% endif %}
+        </div>
+        <div><strong>Net to member:</strong> {{ '{:,.2f}'.format(payout.net_release_amount) }}
+            · <strong>OMPD:</strong> {{ '{:,.2f}'.format(payout.ompd_deduction) }}
+            · <strong>Gross:</strong> {{ '{:,.2f}'.format(payout.requested_amount) }}</div>
+        <div><strong>Method:</strong> {{ payout.release_method or '—' }} · <strong>Ref:</strong> {{ payout.release_reference or '—' }}</div>
+        {% if payout.ledger_id %}<div><strong>Ledger entry:</strong> #{{ payout.ledger_id }}</div>{% endif %}
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="dashboard-card section-card">
+    <p class="text-muted mb-0">No payout records in this queue.</p>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    document.querySelectorAll('.payout-release-form').forEach(form => {
+        const methodSelect = form.querySelector('.payout-release-method');
+        const otherWrap = form.querySelector('.payout-other-method-wrap');
+        const otherInput = form.querySelector('.payout-other-method');
+        const bankWraps = form.querySelectorAll('.payout-bank-detail-wrap');
+        const bankInputs = form.querySelectorAll('.payout-bank-detail');
+        const accountLabel = form.querySelector('.payout-account-label');
+        const accountInput = form.querySelector('.payout-account-info');
+        if (!methodSelect || !otherWrap || !otherInput) return;
+
+        function syncMethodFields() {
+            const needsOtherMethod = methodSelect.value === 'Other';
+            const needsBankDetails = methodSelect.value === 'Bank Deposit';
+
+            otherWrap.classList.toggle('d-none', !needsOtherMethod);
+            otherInput.disabled = !needsOtherMethod;
+            otherInput.required = needsOtherMethod;
+            if (!needsOtherMethod) {
+                otherInput.value = '';
+            }
+
+            bankWraps.forEach(wrap => wrap.classList.toggle('d-none', !needsBankDetails));
+            bankInputs.forEach(input => {
+                input.disabled = !needsBankDetails;
+                input.required = needsBankDetails;
+                if (!needsBankDetails) input.value = '';
+            });
+
+            if (accountLabel && accountInput) {
+                accountLabel.textContent = needsBankDetails ? 'Account No.' : 'Account / Recipient';
+                accountInput.placeholder = needsBankDetails ? 'Bank account no. (optional)' : 'Account no. or email';
+            }
+
+            if (needsOtherMethod) {
+                otherInput.focus();
+            } else if (needsBankDetails && bankInputs[0]) {
+                bankInputs[0].focus();
+            }
+        }
+
+        function releaseFields() {
+            return Array.from(form.querySelectorAll('select, input, textarea')).filter(field => {
+                return !field.disabled && field.offsetParent !== null;
+            });
+        }
+
+        function focusNextReleaseField(event) {
+            if (event.key !== 'Enter' || event.isComposing) return;
+            if (!event.target.matches('select, input, textarea')) return;
+
+            event.preventDefault();
+            const fields = releaseFields();
+            const nextField = fields[fields.indexOf(event.target) + 1];
+            if (!nextField) return;
+
+            nextField.focus();
+            if (typeof nextField.select === 'function') {
+                nextField.select();
+            }
+        }
+
+        methodSelect.addEventListener('change', syncMethodFields);
+        form.addEventListener('keydown', focusNextReleaseField);
+        syncMethodFields();
+    });
+})();
+</script>
+{% endblock %}

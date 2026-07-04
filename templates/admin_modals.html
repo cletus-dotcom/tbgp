@@ -1,0 +1,240 @@
+<div class="modal fade" id="listUsersModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-brand text-white">
+                <h5 class="modal-title">Manage Users</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-end mb-3">
+                    <button class="btn btn-brand" data-bs-toggle="modal" data-bs-target="#addUserModal">+ Add User</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle text-center admin-users-table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Full Name</th>
+                                <th>Role</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr><td colspan="4" class="text-muted">Loading users...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-brand text-white">
+                <h5 class="modal-title">Add User</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addUserForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" name="username" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" name="full_name" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role</label>
+                        <select name="role" id="addUserRole" class="form-select">
+                            {% for user_role in assignable_user_roles %}
+                            <option value="{{ user_role }}">{{ user_role }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3 d-none" id="addUserMemberIdWrap">
+                        <label class="form-label">Linked Member ID</label>
+                        <input type="number" name="member_id" id="addUserMemberId" class="form-control" min="1" placeholder="Required for Member role">
+                        <p class="text-muted small mb-0 mt-1">The login will only see this member's profile, ledger, and downline.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-brand">Add User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-brand text-white">
+                <h5 class="modal-title">Edit User</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editUserForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editUserId">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" id="editUsername" name="username" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password (leave blank to keep)</label>
+                        <input type="password" id="editPassword" name="password" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" id="editFullname" name="full_name" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role</label>
+                        <select id="editRole" name="role" class="form-select">
+                            {% for user_role in assignable_user_roles %}
+                            <option value="{{ user_role }}">{{ user_role }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3 d-none" id="editUserMemberIdWrap">
+                        <label class="form-label">Linked Member ID</label>
+                        <input type="number" name="member_id" id="editUserMemberId" class="form-control" min="1">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-brand">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const listUsersModal = document.getElementById('listUsersModal');
+        const tbody = document.getElementById('usersTableBody');
+
+        const addUserRole = document.getElementById('addUserRole');
+        const addUserMemberIdWrap = document.getElementById('addUserMemberIdWrap');
+        const editUserRole = document.getElementById('editRole');
+        const editUserMemberIdWrap = document.getElementById('editUserMemberIdWrap');
+
+        function toggleMemberIdField(roleSelect, wrapEl) {
+            if (!roleSelect || !wrapEl) return;
+            const show = roleSelect.value === 'Member';
+            wrapEl.classList.toggle('d-none', !show);
+        }
+
+        addUserRole?.addEventListener('change', () => toggleMemberIdField(addUserRole, addUserMemberIdWrap));
+        editUserRole?.addEventListener('change', () => toggleMemberIdField(editUserRole, editUserMemberIdWrap));
+        toggleMemberIdField(addUserRole, addUserMemberIdWrap);
+
+        listUsersModal?.addEventListener('shown.bs.modal', async () => {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Loading...</td></tr>';
+            try {
+                const res = await fetch('/list_users');
+                const data = await res.json();
+                if (data.users?.length) {
+                    renderUsers(data.users);
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-muted">No users found</td></tr>';
+                }
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-danger">Error: ${err.message}</td></tr>`;
+            }
+        });
+
+        function appendCell(row, text) {
+            const cell = document.createElement('td');
+            cell.textContent = text || '-';
+            row.appendChild(cell);
+            return cell;
+        }
+
+        function renderUsers(users) {
+            tbody.replaceChildren();
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                appendCell(row, user.username);
+                appendCell(row, user.full_name);
+                appendCell(row, user.role);
+
+                const actionsCell = document.createElement('td');
+                if (user.can_manage) {
+                    const editBtn = document.createElement('button');
+                    editBtn.type = 'button';
+                    editBtn.className = 'btn btn-sm btn-info me-1';
+                    editBtn.textContent = 'Edit';
+                    editBtn.addEventListener('click', () => openEditUserModal(user));
+                    actionsCell.appendChild(editBtn);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.type = 'button';
+                    deleteBtn.className = 'btn btn-sm btn-danger';
+                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.addEventListener('click', async () => {
+                        if (!confirm(`Delete "${user.username}"?`)) return;
+                        const res = await fetch('/admin/delete_user', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ user_id: user.id })
+                        });
+                        const data = await res.json();
+                        alert(data.msg);
+                        if (data.status === 'success') row.remove();
+                    });
+                    actionsCell.appendChild(deleteBtn);
+                } else {
+                    const restricted = document.createElement('span');
+                    restricted.className = 'text-muted small';
+                    restricted.textContent = 'Restricted';
+                    actionsCell.appendChild(restricted);
+                }
+                row.appendChild(actionsCell);
+                tbody.appendChild(row);
+            });
+        }
+
+        function openEditUserModal(user) {
+            document.getElementById('editUserId').value = user.id;
+            document.getElementById('editUsername').value = user.username || '';
+            document.getElementById('editFullname').value = user.full_name || '';
+            document.getElementById('editRole').value = user.role || 'Staff';
+            document.getElementById('editUserMemberId').value = user.member_id || '';
+            toggleMemberIdField(editUserRole, editUserMemberIdWrap);
+            new bootstrap.Modal(document.getElementById('editUserModal')).show();
+        }
+
+        document.getElementById('addUserForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const res = await fetch('/admin/add_user', { method: 'POST', body: new FormData(this) });
+            const data = await res.json();
+            alert(data.msg);
+            if (data.status === 'success') {
+                bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide();
+                bootstrap.Modal.getInstance(document.getElementById('listUsersModal')).show();
+                this.reset();
+            }
+        });
+
+        document.getElementById('editUserForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const userId = document.getElementById('editUserId').value;
+            const res = await fetch(`/admin/update_user/${userId}`, { method: 'POST', body: new FormData(this) });
+            const data = await res.json();
+            alert(data.msg);
+            if (data.status === 'success') {
+                bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+                bootstrap.Modal.getInstance(document.getElementById('listUsersModal')).show();
+            }
+        });
+    });
+</script>

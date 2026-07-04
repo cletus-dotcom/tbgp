@@ -1,0 +1,112 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Hierarchy Tree{% endblock %}
+{% block topbar_title %}Hierarchy{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-diagram-3"></i> {% if hierarchy_scope == 'own' %}My Referral Network{% else %}Referral Hierarchy{% endif %}</h5>
+            <p class="section-subtitle">
+                {% if hierarchy_scope == 'own' %}Your downline network — click a member to view upline and direct referrals
+                {% else %}Click a member to view upline and direct downline{% endif %}
+            </p>
+        </div>
+        {% with search_id='treeSearch', search_placeholder='Filter tree...' %}
+        {% include 'partials/search_input.html' %}
+        {% endwith %}
+    </div>
+
+    <div class="tree-container" id="treeContainer"></div>
+    <div id="lineagePanel" class="lineage-panel d-none">
+        <h6><i class="bi bi-person-lines-fill"></i> Member Lineage</h6>
+        <div id="lineageContent"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const treeData = {{ tree|tojson }};
+
+    function renderTree(nodes, container) {
+        const ul = document.createElement('ul');
+        ul.className = container ? 'tree-children' : 'tree-root-list';
+
+        nodes.forEach(node => {
+            const li = document.createElement('li');
+            li.className = 'tree-node';
+            li.dataset.search = `${node.member_id} ${node.full_name} batch ${node.batch}`.toLowerCase();
+
+            const card = document.createElement('div');
+            card.className = 'tree-node-card';
+            card.innerHTML = `
+                <span class="node-id">#${node.member_id}</span>
+                <span>${node.full_name}</span>
+                <span class="node-batch">B${node.batch}</span>
+                ${node.referral_count ? `<span class="badge bg-brand">${node.referral_count}</span>` : ''}`;
+            card.addEventListener('click', e => {
+                e.stopPropagation();
+                document.querySelectorAll('.tree-node-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                loadLineage(node.member_id);
+            });
+
+            li.appendChild(card);
+            if (node.children?.length) {
+                renderTree(node.children, li);
+            }
+            ul.appendChild(li);
+        });
+
+        container.appendChild(ul);
+    }
+
+    async function loadLineage(memberId) {
+        const panel = document.getElementById('lineagePanel');
+        const content = document.getElementById('lineageContent');
+        panel.classList.remove('d-none');
+        content.innerHTML = '<p class="text-muted mb-0">Loading...</p>';
+
+        try {
+            const res = await fetch(`/api/member/${memberId}/lineage`);
+            const data = await res.json();
+            if (data.error) {
+                content.innerHTML = `<p class="text-danger">${data.error}</p>`;
+                return;
+            }
+
+            const uplineHtml = data.upline.length
+                ? `<ul class="lineage-list">${data.upline.map(u => `<li><strong>#${u.member_id}</strong> ${u.full_name} (Batch ${u.batch})</li>`).join('')}</ul>`
+                : '<p class="text-muted small mb-2">No upline (root member)</p>';
+
+            const downlineHtml = data.downline.length
+                ? `<ul class="lineage-list">${data.downline.map(d => `<li><strong>#${d.member_id}</strong> ${d.full_name} (Batch ${d.batch})</li>`).join('')}</ul>`
+                : '<p class="text-muted small mb-0">No direct referrals</p>';
+
+            content.innerHTML = `
+                <p class="mb-2"><strong>Selected:</strong> #${data.member.member_id} ${data.member.full_name} (Batch ${data.member.batch})</p>
+                <p class="fw-semibold small text-brand mb-1">Upline</p>${uplineHtml}
+                <p class="fw-semibold small text-brand mb-1 mt-3">Direct Downline</p>${downlineHtml}`;
+        } catch (err) {
+            content.innerHTML = `<p class="text-danger">${err.message}</p>`;
+        }
+    }
+
+    const treeContainer = document.getElementById('treeContainer');
+    if (treeData.length) {
+        renderTree(treeData, treeContainer);
+    } else {
+        treeContainer.innerHTML = '<p class="text-muted">No hierarchy data available.</p>';
+    }
+
+    document.getElementById('treeSearch')?.addEventListener('input', e => {
+        const q = e.target.value.trim().toLowerCase();
+        document.querySelectorAll('.tree-node').forEach(node => {
+            const haystack = node.dataset.search || '';
+            const match = !q || haystack.includes(q);
+            node.style.display = match ? '' : 'none';
+        });
+    });
+</script>
+{% endblock %}

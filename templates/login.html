@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Login — TBGP Portal{% endblock %}
+{% block body_class %}login-body{% endblock %}
+
+{% block body %}
+<div class="login-page">
+    <div class="login-icon"><i class="bi bi-diagram-3"></i></div>
+    <div class="login-card">
+        <div class="card-header">
+            <h4>TBGP Admin Portal</h4>
+        </div>
+        <div class="card-body">
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            {% for msg in messages %}
+            <div class="alert alert-warning py-2 small">{{ msg }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <input type="hidden" id="nextUrl" value="{{ next_url or '/dashboard' }}">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" id="username" name="username" class="form-control" required autofocus>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" id="password" name="password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-brand w-100 py-2">Login</button>
+            </form>
+        </div>
+    </div>
+    <a href="{{ url_for('main_routes.index') }}" class="back-home"><i class="bi bi-arrow-left"></i> Back to Home</a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function handleLogin(event) {
+        event.preventDefault();
+        const username = document.querySelector("#username").value.trim();
+        const password = document.querySelector("#password").value.trim();
+        const next = document.querySelector("#nextUrl").value.trim();
+
+        const response = await fetch("/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password, next })
+        });
+        const result = await response.json();
+        if (result.success) {
+            window.location.href = result.redirect;
+        } else {
+            alert(result.message || "Login failed");
+        }
+    }
+</script>
+{% endblock %}

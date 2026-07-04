@@ -1,0 +1,557 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}{% if is_own_profile_view %}My Information{% else %}Members{% endif %}{% endblock %}
+{% block topbar_title %}{% if is_own_profile_view %}My Information{% else %}Members{% endif %}{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5>
+                <i class="bi {% if is_own_profile_view %}bi-person-vcard{% else %}bi-people{% endif %}"></i>
+                {% if is_own_profile_view %}My Information{% else %}All Members{% endif %}
+            </h5>
+            <p class="section-subtitle">
+                {% if is_own_profile_view %}Your membership profile and referral details
+                {% else %}{{ members|length }} members across all batches{% endif %}
+            </p>
+        </div>
+        <div class="section-actions">
+            {% if can_manage_data(session.get('role')) %}
+            <button type="button" class="btn-add-member" data-bs-toggle="modal" data-bs-target="#manualAddMemberModal">
+                <i class="bi bi-person-plus"></i> + Add Member
+            </button>
+            <button type="button" class="btn-import-member" data-bs-toggle="modal" data-bs-target="#addMemberModal">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Import Members
+            </button>
+            {% endif %}
+            {% if not is_own_profile_view %}
+            {% with search_id='memberSearch', search_placeholder='Search members...' %}
+            {% include 'partials/search_input.html' %}
+            {% endwith %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="section-mobile-list" id="membersMobile">
+        {% for m in members %}
+        <div class="member-card" data-search="{{ m.search_text() }}" data-member-id="{{ m.member_id }}">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <div>
+                    <div class="member-id">#{{ m.member_id }} — {{ m.full_name }}</div>
+                    <div class="member-meta">
+                        Batch {{ m.batch }}
+                        {% if m.status %}
+                        &middot; {{ m.status }}
+                        {% endif %}
+                        {% if m.referrer %}
+                        &middot; Referred by #{{ m.referrer_id }}
+                        {% else %}
+                        &middot; <span class="badge bg-secondary">Root</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <button type="button" class="btn btn-link expand-mobile-btn text-brand">View details</button>
+            </div>
+            <div class="detail-panel-mobile">
+                {% include 'partials/member_detail.html' %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="section-desktop-table section-table-wrap">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 36px;"></th>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Batch</th>
+                    <th>Status</th>
+                    <th>Date Joined</th>
+                    <th>Referrer</th>
+                    <th>Referrals</th>
+                </tr>
+            </thead>
+            <tbody id="membersTableBody">
+                {% for m in members %}
+                <tr class="member-row"
+                    data-search="{{ m.search_text() }}"
+                    data-member-id="{{ m.member_id }}"
+                    data-member="{{ m.edit_payload() | tojson }}">
+                    <td>
+                        <button type="button" class="expand-btn" aria-label="Expand row">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </td>
+                    <td>{{ m.member_id }}</td>
+                    <td>{{ m.full_name }}</td>
+                    <td>{{ m.batch }}</td>
+                    <td>{{ m.status or '—' }}</td>
+                    <td>{{ m.date_joined.strftime('%Y-%m-%d') if m.date_joined else '—' }}</td>
+                    <td>
+                        {% if m.referrer %}
+                        #{{ m.referrer_id }} — {{ m.referrer.full_name }}
+                        {% else %}
+                        <span class="badge bg-secondary">Root</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ m.referrals|length }}</td>
+                </tr>
+                <tr class="detail-row d-none" data-parent-search="{{ m.search_text() }}">
+                    <td colspan="8">
+                        <div class="detail-panel">
+                            {% include 'partials/member_detail.html' %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if can_manage_data(session.get('role')) %}
+{% include 'partials/manual_add_member_modal.html' %}
+{% include 'partials/add_member_modal.html' %}
+{% endif %}
+{% include 'partials/import_progress.html' %}
+{% if can_manage_data(session.get('role')) %}
+{% include 'partials/edit_member_modal.html' %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleDesktopRow(row) {
+        const detailRow = row.nextElementSibling;
+        if (!detailRow?.classList.contains('detail-row')) return;
+        const expanded = row.classList.toggle('expanded');
+        detailRow.classList.toggle('d-none', !expanded);
+        if (expanded) {
+            const memberId = row.dataset.memberId;
+            if (memberId) loadMemberLedgerSummary(memberId);
+        }
+    }
+
+    function toggleMobileCard(card) {
+        card.classList.toggle('expanded');
+        const btn = card.querySelector('.expand-mobile-btn');
+        if (btn) {
+            btn.textContent = card.classList.contains('expanded') ? 'Hide details' : 'View details';
+        }
+        if (card.classList.contains('expanded')) {
+            const memberId = card.dataset.memberId;
+            if (memberId) loadMemberLedgerSummary(memberId);
+        }
+    }
+
+    const ledgerSummaryCache = {};
+
+    async function loadMemberLedgerSummary(memberId) {
+        const el = document.getElementById(`memberLedgerSummary-${memberId}`);
+        if (!el || ledgerSummaryCache[memberId]) return;
+        ledgerSummaryCache[memberId] = true;
+        try {
+            const res = await fetch(`/api/members/${memberId}/ledger?limit=5`);
+            const data = await res.json();
+            if (data.status !== 'success') {
+                el.textContent = 'Unable to load ledger.';
+                return;
+            }
+            const { stats, transactions } = data;
+            if (!stats.transaction_count) {
+                el.innerHTML = '<span class="text-muted">No profit-sharing credits recorded yet.</span>';
+                return;
+            }
+            let html = `<strong>${stats.transaction_count}</strong> transaction(s) &middot; `;
+            html += `<strong>${Number(stats.total_earnings).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> total`;
+            if (transactions.length) {
+                html += '<ul class="mb-0 mt-1 ps-3">';
+                transactions.forEach(t => {
+                    const amt = Number(t.share_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    html += `<li>${t.billing_date} — ${t.project_title}: ${amt}</li>`;
+                });
+                html += '</ul>';
+            }
+            el.innerHTML = html;
+        } catch {
+            el.textContent = 'Unable to load ledger.';
+        }
+    }
+
+    document.querySelectorAll('.member-row').forEach(row => {
+        row.addEventListener('click', e => {
+            if (e.target.closest('.expand-btn')) {
+                toggleDesktopRow(row);
+                return;
+            }
+            toggleDesktopRow(row);
+        });
+    });
+
+    document.querySelectorAll('#membersMobile .member-card').forEach(card => {
+        card.querySelector('.expand-mobile-btn')?.addEventListener('click', e => {
+            e.stopPropagation();
+            toggleMobileCard(card);
+        });
+    });
+
+    {% if is_own_profile_view %}
+    const ownRow = document.querySelector('.member-row');
+    if (ownRow) {
+        ownRow.classList.add('expanded');
+        const ownDetail = ownRow.nextElementSibling;
+        ownDetail?.classList.remove('d-none');
+        if (ownRow.dataset.memberId) loadMemberLedgerSummary(ownRow.dataset.memberId);
+    }
+    const ownCard = document.querySelector('#membersMobile .member-card');
+    if (ownCard) {
+        ownCard.classList.add('expanded');
+        const btn = ownCard.querySelector('.expand-mobile-btn');
+        if (btn) btn.textContent = 'Hide details';
+        if (ownCard.dataset.memberId) loadMemberLedgerSummary(ownCard.dataset.memberId);
+    }
+    {% endif %}
+
+    document.getElementById('memberSearch')?.addEventListener('input', e => {
+        const q = e.target.value.trim().toLowerCase();
+
+        document.querySelectorAll('#membersTableBody tr.member-row').forEach(row => {
+            const haystack = row.dataset.search || '';
+            const visible = !q || haystack.includes(q);
+            row.style.display = visible ? '' : 'none';
+            const detailRow = row.nextElementSibling;
+            if (detailRow?.classList.contains('detail-row')) {
+                if (!visible) {
+                    detailRow.classList.add('d-none');
+                    row.classList.remove('expanded');
+                }
+                detailRow.style.display = visible ? '' : 'none';
+            }
+        });
+
+        document.querySelectorAll('#membersMobile .member-card').forEach(card => {
+            const haystack = card.dataset.search || '';
+            card.style.display = !q || haystack.includes(q) ? '' : 'none';
+        });
+    });
+
+    const isAdminRole = {{ 'true' if can_manage_data(session.get('role')) else 'false' }};
+    const isAppAdmin = {{ 'true' if is_admin_role(session.get('role')) else 'false' }};
+
+    function showFormError(alertEl, message) {
+        if (!alertEl) return;
+        alertEl.textContent = message;
+        alertEl.classList.remove('d-none');
+    }
+
+    function hideFormError(alertEl) {
+        alertEl?.classList.add('d-none');
+    }
+
+    function getMemberDataFromDom(memberId) {
+        const row = document.querySelector(`.member-row[data-member-id=\"${memberId}\"]`);
+        const json = row?.dataset.member;
+        if (!json) return null;
+        try { return JSON.parse(json); } catch { return null; }
+    }
+
+    if (isAdminRole) {
+        const editModalEl = document.getElementById('editMemberModal');
+        const editForm = document.getElementById('editMemberForm');
+        const editAlert = document.getElementById('editMemberAlert');
+        const manualAddMemberModal = document.getElementById('manualAddMemberModal');
+        const manualAddMemberForm = document.getElementById('manualAddMemberForm');
+        const manualAddMemberAlert = document.getElementById('manualAddMemberAlert');
+
+        const formatLifetimeCap = (value) => {
+            if (value === null || value === undefined || value === '') return '';
+            const amount = Number(String(value).replace(/,/g, ''));
+            if (Number.isNaN(amount)) return '';
+            return amount.toLocaleString('en-US', { maximumFractionDigits: 2 });
+        };
+
+        document.querySelectorAll('.lifetime-cap-input').forEach(input => {
+            input.addEventListener('focus', () => {
+                input.value = String(input.value || '').replace(/,/g, '');
+            });
+            input.addEventListener('blur', () => {
+                input.value = formatLifetimeCap(input.value);
+            });
+        });
+
+        const setEditFields = (m) => {
+            document.getElementById('editMemberId').value = m.member_id;
+            document.getElementById('editMemberIdDisplay').value = m.member_id;
+            document.getElementById('editBatch').value = m.batch;
+            document.getElementById('editDateJoined').value = (m.date_joined || '').slice(0, 10);
+            document.getElementById('editStatus').value = m.status || 'Active';
+            document.getElementById('editReferrerId').value = m.referrer_id ?? '';
+            document.getElementById('editFirstName').value = m.first_name || '';
+            document.getElementById('editMiddleName').value = m.middle_name || '';
+            document.getElementById('editLastName').value = m.last_name || '';
+            document.getElementById('editSuffix').value = m.suffix || '';
+            document.getElementById('editBirthDate').value = (m.birth_date || '').slice(0, 10);
+            document.getElementById('editGender').value = m.gender || '';
+            document.getElementById('editCivilStatus').value = m.civil_status || '';
+            document.getElementById('editPhone').value = m.phone || '';
+            document.getElementById('editEmail').value = m.email || '';
+            document.getElementById('editAddress').value = m.address || '';
+            document.getElementById('editHighestEducation').value = m.highest_education || '';
+            document.getElementById('editOccupation').value = m.occupation_income_source || '';
+            document.getElementById('editMonthlyIncome').value = m.monthly_income || '';
+            document.getElementById('editDependents').value = m.number_of_dependents ?? '';
+            document.getElementById('editBeneficiaryName').value = m.beneficiary_name || '';
+            document.getElementById('editBeneficiaryPhone').value = m.beneficiary_phone || '';
+            document.getElementById('editBeneficiaryAddress').value = m.beneficiary_address || '';
+            document.getElementById('editTerminationDate').value = (m.termination_date || '').slice(0, 10);
+            document.getElementById('editTerminationType').value = m.termination_type || '';
+            const lifetimeCapEnabled = document.getElementById('editLifetimeCapEnabled');
+            const lifetimeCapAmount = document.getElementById('editLifetimeCapAmount');
+            if (lifetimeCapEnabled) {
+                lifetimeCapEnabled.checked = m.lifetime_cap_enabled !== false;
+            }
+            if (lifetimeCapAmount) {
+                lifetimeCapAmount.value = formatLifetimeCap(m.lifetime_cap_amount ?? {{ member_lifetime_earnings_cap }});
+            }
+        };
+
+        function getMemberDataFromEditButton(btn) {
+            const json = btn?.dataset?.member;
+            if (!json) return null;
+            try { return JSON.parse(json); } catch { return null; }
+        }
+
+        document.addEventListener('click', e => {
+            const editBtn = e.target.closest('.member-edit-btn');
+            if (editBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                hideFormError(editAlert);
+                const memberId = Number(editBtn.dataset.memberId);
+                const member = getMemberDataFromEditButton(editBtn) || getMemberDataFromDom(memberId);
+                if (!member) {
+                    showFormError(editAlert, 'Could not load member data from the page. Please refresh.');
+                    return;
+                }
+                setEditFields(member);
+                bootstrap.Modal.getOrCreateInstance(editModalEl).show();
+                return;
+            }
+
+            const deleteBtn = e.target.closest('.member-delete-btn');
+            if (deleteBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const memberId = Number(deleteBtn.dataset.memberId);
+                if (!confirm(`Delete member #${memberId}? This cannot be undone.`)) return;
+                (async () => {
+                    try {
+                        const res = await fetch(`/admin/members/${memberId}`, { method: 'DELETE' });
+                        const data = await res.json();
+                        alert(data.msg || data.status);
+                        if (data.status === 'success') window.location.reload();
+                    } catch (err) {
+                        alert(err.message || 'Delete failed.');
+                    }
+                })();
+                return;
+            }
+        });
+
+        editForm?.addEventListener('submit', async e => {
+            e.preventDefault();
+            hideFormError(editAlert);
+
+            const memberId = document.getElementById('editMemberId').value;
+            const formData = new FormData(editForm);
+
+            try {
+                const res = await fetch(`/admin/members/${memberId}`, { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    bootstrap.Modal.getInstance(editModalEl)?.hide();
+                    window.location.reload();
+                    return;
+                }
+                showFormError(editAlert, data.msg || 'Update failed.');
+            } catch (err) {
+                showFormError(editAlert, err.message || 'Update failed.');
+            }
+        });
+
+        manualAddMemberModal?.addEventListener('shown.bs.modal', () => {
+            hideFormError(manualAddMemberAlert);
+            manualAddMemberForm?.reset();
+            const lifetimeCapEnabled = document.getElementById('manualLifetimeCapEnabled');
+            const lifetimeCapAmount = document.getElementById('manualLifetimeCapAmount');
+            if (lifetimeCapEnabled) {
+                lifetimeCapEnabled.checked = true;
+            }
+            if (lifetimeCapAmount) {
+                lifetimeCapAmount.value = formatLifetimeCap({{ member_lifetime_earnings_cap }});
+            }
+            document.getElementById('manualMemberId')?.focus();
+        });
+
+        manualAddMemberForm?.addEventListener('submit', async e => {
+            e.preventDefault();
+            hideFormError(manualAddMemberAlert);
+
+            try {
+                const formData = new FormData(manualAddMemberForm);
+                const res = await fetch('/admin/members', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    bootstrap.Modal.getInstance(manualAddMemberModal)?.hide();
+                    window.location.reload();
+                    return;
+                }
+                showFormError(manualAddMemberAlert, data.msg || 'Add member failed.');
+            } catch (err) {
+                showFormError(manualAddMemberAlert, err.message || 'Add member failed.');
+            }
+        });
+    }
+
+    const addMemberModal = document.getElementById('addMemberModal');
+    const addMemberForm = document.getElementById('addMemberForm');
+    const addMemberAlert = document.getElementById('addMemberAlert');
+    const memberFileInput = document.getElementById('memberFile');
+    const importPreview = document.getElementById('importPreview');
+    const importPreviewBody = document.getElementById('importPreviewBody');
+    const importRowCount = document.getElementById('importRowCount');
+    const importPreviewNote = document.getElementById('importPreviewNote');
+    const importSubmitBtn = document.getElementById('importSubmitBtn');
+    const importProgressOverlay = document.getElementById('importProgressOverlay');
+    const importProgressMessage = document.getElementById('importProgressMessage');
+    const importCancelBtn = document.getElementById('importCancelBtn');
+
+    const PROGRESS_READING = 'Reading in progress, please wait a moment.';
+    const PROGRESS_RECORDING = 'Recording data in progress, please wait a moment.';
+
+    function showAddMemberError(message) { showFormError(addMemberAlert, message); }
+    function hideAddMemberError() { hideFormError(addMemberAlert); }
+
+    function resetImportPreview() {
+        importPreview?.classList.add('d-none');
+        if (importPreviewBody) importPreviewBody.innerHTML = '';
+        if (importRowCount) importRowCount.textContent = '0 rows';
+        if (importPreviewNote) importPreviewNote.textContent = '';
+        if (importSubmitBtn) importSubmitBtn.disabled = true;
+    }
+
+    function setImportBusy(isBusy, message = '') {
+        if (importProgressOverlay) {
+            importProgressOverlay.classList.toggle('d-none', !isBusy);
+        }
+        if (importProgressMessage && message) {
+            importProgressMessage.textContent = message;
+        }
+        if (memberFileInput) memberFileInput.disabled = isBusy;
+        if (importSubmitBtn) importSubmitBtn.disabled = isBusy || !memberFileInput?.files?.[0];
+        if (importCancelBtn) importCancelBtn.disabled = isBusy;
+        if (addMemberModal) {
+            addMemberModal.setAttribute('data-bs-keyboard', isBusy ? 'false' : 'true');
+            addMemberModal.setAttribute('data-bs-backdrop', isBusy ? 'static' : 'true');
+        }
+    }
+
+    function renderImportPreview(data) {
+        if (!importPreviewBody || !importPreview) return;
+        importPreviewBody.innerHTML = data.preview.map(row => `
+            <tr>
+                <td>${row.member_id}</td>
+                <td>${row.full_name || '—'}</td>
+                <td>${row.batch}</td>
+                <td>${row.status || '—'}</td>
+            </tr>
+        `).join('');
+        importRowCount.textContent = `${data.row_count} row${data.row_count === 1 ? '' : 's'}`;
+        importPreviewNote.textContent = data.row_count > data.preview.length
+            ? `Showing first ${data.preview.length} of ${data.row_count} rows.`
+            : 'All rows parsed successfully.';
+        importPreview.classList.remove('d-none');
+        if (importSubmitBtn) importSubmitBtn.disabled = false;
+    }
+
+    addMemberModal?.addEventListener('shown.bs.modal', () => {
+        hideAddMemberError();
+        addMemberForm?.reset();
+        resetImportPreview();
+        setImportBusy(false);
+    });
+
+    addMemberModal?.addEventListener('hidden.bs.modal', () => {
+        setImportBusy(false);
+    });
+
+    memberFileInput?.addEventListener('change', async () => {
+        hideAddMemberError();
+        resetImportPreview();
+
+        const file = memberFileInput.files?.[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        setImportBusy(true, PROGRESS_READING);
+
+        try {
+            const res = await fetch('/members/preview', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.status !== 'success') {
+                showAddMemberError(data.msg || 'Could not parse file.');
+                memberFileInput.value = '';
+                return;
+            }
+            renderImportPreview(data);
+        } catch (err) {
+            showAddMemberError(err.message || 'Could not parse file.');
+            memberFileInput.value = '';
+        } finally {
+            setImportBusy(false);
+            if (memberFileInput.files?.[0] && importSubmitBtn) {
+                importSubmitBtn.disabled = false;
+            }
+        }
+    });
+
+    addMemberForm?.addEventListener('submit', async e => {
+        e.preventDefault();
+        hideAddMemberError();
+
+        const file = memberFileInput?.files?.[0];
+        if (!file) {
+            showAddMemberError('Please choose an Excel file.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        setImportBusy(true, PROGRESS_RECORDING);
+
+        try {
+            const res = await fetch('/members/add', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            if (data.status === 'success') {
+                bootstrap.Modal.getInstance(addMemberModal)?.hide();
+                window.location.reload();
+                return;
+            }
+
+            showAddMemberError(data.msg || 'Import failed.');
+            setImportBusy(false);
+            if (importSubmitBtn) importSubmitBtn.disabled = false;
+        } catch (err) {
+            showAddMemberError(err.message || 'Import failed.');
+            setImportBusy(false);
+            if (importSubmitBtn) importSubmitBtn.disabled = false;
+        }
+    });
+</script>
+{% endblock %}

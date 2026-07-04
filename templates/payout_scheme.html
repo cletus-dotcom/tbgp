@@ -1,0 +1,120 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Payout Scheme{% endblock %}
+{% block topbar_title %}Payout Scheme{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-percent"></i> Payout Scheme</h5>
+            <p class="section-subtitle">
+                {{ scheme.ompd_label }} — {{ scheme.ompd_description }}
+            </p>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="payout-scheme-step h-100">
+                <h6 class="text-muted small text-uppercase">Member Request</h6>
+                <p class="mb-0">Member requests a payout from available ledger balance (gross amount).</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="payout-scheme-step h-100">
+                <h6 class="text-muted small text-uppercase">{{ scheme.ompd_percent }}% OMPD Deduction</h6>
+                <p class="mb-0">
+                    {{ scheme.ompd_percent }}% of the requested amount is allocated to the
+                    <strong>{{ scheme.ompd_label }}</strong> for platform operations and development.
+                </p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="payout-scheme-step h-100">
+                <h6 class="text-muted small text-uppercase">{{ scheme.member_receives_percent }}% Net Release</h6>
+                <p class="mb-0">
+                    Staff releases the net amount to the member via bank deposit, GCash, Maya, PayPal, or other methods.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="payout-notice mt-3 mb-0 small">
+        <strong>Example:</strong> A member requests <strong>1,000.00</strong> →
+        OMPD deduction <strong>100.00</strong> ({{ scheme.ompd_percent }}%) →
+        net release to member <strong>900.00</strong>.
+        The member ledger is debited the full <strong>1,000.00</strong> gross amount.
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="dashboard-card section-card h-100">
+            <h6 class="text-muted small text-uppercase mb-1">{{ scheme.ompd_label }} Balance</h6>
+            <p class="h4 mb-0 text-brand">{{ '{:,.2f}'.format(fund_summary.total_ompd) }}</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card section-card h-100">
+            <h6 class="text-muted small text-uppercase mb-1">Contributions</h6>
+            <p class="h4 mb-0 text-brand">{{ fund_summary.entry_count }}</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card section-card h-100">
+            <h6 class="text-muted small text-uppercase mb-1">Gross Payouts</h6>
+            <p class="h4 mb-0 text-brand">{{ '{:,.2f}'.format(fund_summary.total_gross) }}</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card section-card h-100">
+            <h6 class="text-muted small text-uppercase mb-1">Net Released to Members</h6>
+            <p class="h4 mb-0 text-brand">{{ '{:,.2f}'.format(fund_summary.total_net_released) }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-card section-card mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h6 class="mb-0">Recent OMPD Contributions</h6>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('main_routes.payout_queue') }}" class="btn btn-outline-secondary btn-sm">Payout Queue</a>
+            <a href="{{ url_for('main_routes.payout_reports') }}" class="btn btn-outline-secondary btn-sm">Fund Release Reports</a>
+        </div>
+    </div>
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Payout</th>
+                    <th>Member</th>
+                    <th>Gross</th>
+                    <th>OMPD ({{ scheme.ompd_percent }}%)</th>
+                    <th>Net Released</th>
+                    <th>Method</th>
+                    <th>Reference</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in recent_entries %}
+                <tr>
+                    <td>{{ row.recorded_at[:19].replace('T', ' ') if row.recorded_at else '—' }}</td>
+                    <td>#{{ row.payout_id }}</td>
+                    <td>#{{ row.member_id }} — {{ row.member_name }}</td>
+                    <td>{{ '{:,.2f}'.format(row.gross_amount) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.deduction_amount) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.net_released) }}</td>
+                    <td>{{ row.release_method or '—' }}</td>
+                    <td>{{ row.release_reference or '—' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-muted">No OMPD contributions recorded yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

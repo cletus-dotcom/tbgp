@@ -1,0 +1,173 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Fund Release Reports{% endblock %}
+{% block topbar_title %}Fund Release Reports{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-receipt"></i> Fund Release Reports</h5>
+            <p class="section-subtitle">
+                Completed releases with {{ payout_scheme.ompd_percent }}% OMPD deduction and net member payouts
+            </p>
+        </div>
+        {% if rows %}
+        <a href="{{ url_for('main_routes.payout_reports_pdf', member_id=filters.member_id or '', method=filters.method, date_from=filters.date_from, date_to=filters.date_to) }}"
+           class="btn btn-outline-dark btn-sm report-export-pdf-btn">
+            <i class="bi bi-file-earmark-pdf"></i> Export PDF
+        </a>
+        {% endif %}
+    </div>
+
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">Member</label>
+            <select name="member_id" class="form-select">
+                <option value="">— All members —</option>
+                {% for m in members %}
+                <option value="{{ m.member_id }}" {% if filters.member_id == m.member_id %}selected{% endif %}>
+                    #{{ m.member_id }} — {{ m.last_name }}, {{ m.first_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Method</label>
+            <select name="method" class="form-select">
+                <option value="">— All —</option>
+                {% for method in payout_release_methods %}
+                <option value="{{ method }}" {% if filters.method == method %}selected{% endif %}>{{ method }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">From</label>
+            <input type="date" name="date_from" class="form-control" value="{{ filters.date_from }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">To</label>
+            <input type="date" name="date_to" class="form-control" value="{{ filters.date_to }}">
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-brand">Apply Filters</button>
+            <a href="{{ url_for('main_routes.payout_reports') }}" class="btn btn-outline-secondary">Reset</a>
+        </div>
+    </form>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="dashboard-card section-card h-100">
+            <h6 class="text-muted small text-uppercase mb-1">Releases</h6>
+            <p class="h4 mb-0 text-brand">{{ summary.release_count }}</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card section-card h-100">
+            <h6 class="text-muted small text-uppercase mb-1">Gross Payouts</h6>
+            <p class="h4 mb-0 text-brand">{{ '{:,.2f}'.format(summary.total_gross) }}</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card section-card h-100">
+            <h6 class="text-muted small text-uppercase mb-1">OMPD ({{ summary.ompd_percent }}%)</h6>
+            <p class="h4 mb-0 text-brand">{{ '{:,.2f}'.format(summary.total_ompd) }}</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card section-card h-100">
+            <h6 class="text-muted small text-uppercase mb-1">Net Released</h6>
+            <p class="h4 mb-0 text-brand">{{ '{:,.2f}'.format(summary.total_net_released) }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-5">
+        <div class="dashboard-card section-card h-100">
+            <h6 class="mb-3">Summary by Method</h6>
+            <div class="section-table-wrap">
+                <table class="table table-sm section-table mb-0">
+                    <thead>
+                        <tr><th>Method</th><th>Count</th><th>Net</th><th>OMPD</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for row in summary.by_method %}
+                        <tr>
+                            <td>{{ row.method }}</td>
+                            <td>{{ row.count }}</td>
+                            <td>{{ '{:,.2f}'.format(row.total) }}</td>
+                            <td>{{ '{:,.2f}'.format(row.total_ompd) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-muted">No releases yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="dashboard-card section-card h-100">
+            <h6 class="mb-3">Summary by Member</h6>
+            <div class="section-table-wrap">
+                <table class="table table-sm section-table mb-0">
+                    <thead>
+                        <tr><th>Member</th><th>Count</th><th>Net</th><th>OMPD</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for row in summary.by_member %}
+                        <tr>
+                            <td>#{{ row.member_id }} — {{ row.member_name }}</td>
+                            <td>{{ row.count }}</td>
+                            <td>{{ '{:,.2f}'.format(row.total) }}</td>
+                            <td>{{ '{:,.2f}'.format(row.total_ompd) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-muted">No releases yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-card section-card">
+    <h6 class="mb-3">Release List</h6>
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th>Released</th>
+                    <th>Member</th>
+                    <th>Gross</th>
+                    <th>OMPD</th>
+                    <th>Net</th>
+                    <th>Method</th>
+                    <th>Reference</th>
+                    <th>Account / Recipient</th>
+                    <th>Processed By</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td>{{ row.released_at[:19].replace('T', ' ') if row.released_at else '—' }}</td>
+                    <td>#{{ row.member_id }} — {{ row.member_name }}</td>
+                    <td>{{ '{:,.2f}'.format(row.requested_amount) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.ompd_deduction) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.net_release_amount) }}</td>
+                    <td>{{ row.release_method or '—' }}</td>
+                    <td>{{ row.release_reference or '—' }}</td>
+                    <td>{{ row.release_account_info or '—' }}</td>
+                    <td>{{ row.release_submitted_by or '—' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="9" class="text-muted">No fund releases match your filters.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

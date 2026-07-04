@@ -1,0 +1,55 @@
+<div class="dashboard-card section-card mt-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-people"></i> {{ title or 'Summary by Member / Account' }}</h5>
+            <p class="section-subtitle">
+                {% if subtitle %}{{ subtitle }}{% else %}Totals across {{ recipient_summary.account_count }} recipient(s){% endif %}
+            </p>
+        </div>
+        {% if show_search %}
+        {% with search_id=search_id or 'recipientSummarySearch', search_placeholder='Search members or accounts...' %}
+        {% include 'partials/search_input.html' %}
+        {% endwith %}
+        {% endif %}
+    </div>
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0" id="{{ table_id or 'recipientSummaryTable' }}">
+            <thead>
+                <tr>
+                    <th>Account</th>
+                    <th>Member ID</th>
+                    <th>Type</th>
+                    <th>Entries</th>
+                    <th>Ref-Client</th>
+                    <th>Ref-Contractor</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in recipient_summary.rows %}
+                <tr data-search="{{ row.search_text }}">
+                    <td>{{ row.account_name }}</td>
+                    <td>{% if row.member_id %}#{{ row.member_id }}{% else %}—{% endif %}</td>
+                    <td>{{ row.account_type }}</td>
+                    <td>{{ row.transaction_count }}</td>
+                    <td>{{ '{:,.2f}'.format(row.client_share) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.contractor_share) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.total_share) }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-muted">No recipient totals available.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% if recipient_summary.rows %}
+            <tfoot>
+                <tr class="table-light fw-bold">
+                    <td colspan="6">Grand Total ({{ recipient_summary.account_count }} accounts)</td>
+                    <td>{{ '{:,.2f}'.format(recipient_summary.grand_total) }}</td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>

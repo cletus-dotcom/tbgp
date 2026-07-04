@@ -1,0 +1,278 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Generate Sharing{% endblock %}
+{% block topbar_title %}Generate Sharing{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-share"></i> Generate Sharing</h5>
+            <p class="section-subtitle">
+                Compute profit sharing by billing date
+                ({{ client_pool_percent }}% Ref-Client / {{ contractor_pool_percent }}% Ref-Contractor / {{ admin_account_percent }}% PLATFORM)
+            </p>
+        </div>
+    </div>
+
+    <form id="generateForm" class="row g-3 align-items-end">
+        <div class="col-md-5">
+            <label for="commissionDateSelect" class="form-label">Billing Date <span class="text-danger">*</span></label>
+            <select id="commissionDateSelect" name="commission_date" class="form-select" required>
+                <option value="">— Select un-generated billing date —</option>
+                {% for d in pending_dates %}
+                <option value="{{ d.isoformat() }}" {% if selected_date == d.isoformat() %}selected{% endif %}>
+                    {{ d.strftime('%B %d, %Y') }}
+                </option>
+                {% endfor %}
+            </select>
+            <p class="text-muted small mt-1 mb-0">
+                Only billing dates without sharing are listed ({{ pending_dates|length }} available).
+            </p>
+        </div>
+        <div class="col-md-4">
+            <button type="button" class="btn btn-outline-dark generate-preview-btn" id="previewBtn">
+                <i class="bi bi-eye"></i> Preview Billings
+            </button>
+            <button type="submit" class="btn btn-brand" id="generateBtn"
+                {% if not can_generate_selected %}disabled{% endif %}>
+                <i class="bi bi-lightning"></i> Generate Sharing
+            </button>
+        </div>
+    </form>
+    {% if selected_date and not can_generate_selected and batch_detail and can_view_sharing_result(session.get('role')) %}
+    <div class="alert alert-secondary py-2 small mt-3 mb-0">
+        Viewing generated sharing for {{ selected_date }}. Delete from history below to make this date available again.
+    </div>
+    {% elif not pending_dates and can_view_sharing_result(session.get('role')) %}
+    <div class="alert alert-info py-2 small mt-3 mb-0">
+        All billing dates have been generated. Delete a batch from history to regenerate a date.
+    </div>
+    {% elif not pending_dates %}
+    <div class="alert alert-info py-2 small mt-3 mb-0">
+        All billing dates have been generated. Contact an administrator to view or regenerate sharing.
+    </div>
+    {% endif %}
+    <div id="generateAlert" class="alert alert-danger d-none py-2 small mt-3"></div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="dashboard-card section-card h-100">
+            <h6 class="text-brand fw-bold mb-3"><i class="bi bi-pie-chart"></i> Commission Split</h6>
+            <p class="text-muted small mb-3">
+                {{ client_pool_percent }}% Ref-Client &middot;
+                {{ contractor_pool_percent }}% Ref-Contractor &middot;
+                {{ admin_account_percent }}% PLATFORM
+            </p>
+            <p class="text-muted small mb-3">
+                Member caps per project (lifetime):
+                1st {{ '{:,.0f}'.format(member_earnings_cap_first) }},
+                2nd {{ '{:,.0f}'.format(member_earnings_cap_second) }},
+                3rd+ {{ '{:,.0f}'.format(member_earnings_cap_nth) }}.
+                Overflow &rarr; POP.
+            </p>
+            {% if generated_dates %}
+            <p class="text-muted small mb-0">
+                <strong>{{ generated_dates|length }}</strong> billing date(s) already generated.
+            </p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="dashboard-card section-card h-100">
+            <h6 class="text-brand fw-bold mb-3"><i class="bi bi-briefcase"></i> Billings for Selected Date</h6>
+            {% if preview_billings %}
+            <table class="table table-sm section-table mb-0">
+                <thead>
+                    <tr>
+                        <th>Project</th>
+                        <th>Contractor</th>
+                        <th>Billing Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in preview_billings %}
+                    <tr>
+                        <td>{{ b.project.project_title if b.project else '—' }}</td>
+                        <td>{{ b.project.contractor.company_name if b.project and b.project.contractor else '—' }}</td>
+                        <td>{{ '{:,.2f}'.format(b.billing_amount) if b.billing_amount is not none else '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted mb-0">Select a billing date and preview billings to include in sharing.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if batch_detail and can_view_sharing_result(session.get('role')) %}
+<div class="dashboard-card section-card mt-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-receipt"></i> Sharing Result</h5>
+            <p class="section-subtitle">
+                Billing {{ batch_detail.commission_date }}
+                &middot; {{ batch_detail.project_count }} billing(s)
+                &middot; Total {{ '{:,.2f}'.format(batch_detail.total_commission) }}
+                &middot; To members {{ '{:,.2f}'.format(batch_detail.total_shared) }}
+            </p>
+        </div>
+    </div>
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Billing</th>
+                    <th>Scheme</th>
+                    <th>Recipient</th>
+                    <th>Level</th>
+                    <th>Share Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in batch_detail.entries %}
+                <tr>
+                    <td>{{ e.project_title }}</td>
+                    <td>
+                        {% if e.billing_date %}
+                        {{ e.billing_date }}{% if e.billing_amount is not none %} — {{ '{:,.2f}'.format(e.billing_amount) }}{% endif %}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if e.share_scheme == 'client' %}Ref-Client
+                        {% elif e.share_scheme == 'platform_ref_client' %}Platform Ref-Client
+                        {% elif e.share_scheme == 'contractor' %}Ref-Contractor
+                        {% elif e.share_scheme == 'platform_ref_contractor' %}Platform Ref-Contractor
+                        {% elif e.share_scheme == 'platform_pop' %}Platform POP
+                        {% elif e.recipient_type == 'admin' %}PLATFORM
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if e.member_id %}#{{ e.member_id }} — {{ e.member_name }}{% else %}{{ e.member_name or '—' }}{% endif %}
+                    </td>
+                    <td>{% if e.level == -1 %}PLATFORM{% elif e.level %}L{{ e.level }}{% else %}POP{% endif %}</td>
+                    <td>{{ '{:,.2f}'.format(e.share_amount) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if batches and can_view_sharing_result(session.get('role')) %}
+<div class="dashboard-card section-card mt-3">
+    <h6 class="text-brand fw-bold mb-3"><i class="bi bi-clock-history"></i> Generation History</h6>
+    <table class="table table-sm section-table mb-0">
+        <thead>
+            <tr>
+                <th>Billing Date</th>
+                <th>Generated</th>
+                <th>Billings</th>
+                <th>Shared</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in batches %}
+            <tr>
+                <td>{{ b.commission_date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ b.generated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>{{ b.project_count }}</td>
+                <td>{{ '{:,.2f}'.format(b.total_shared) if b.total_shared is not none else '0.00' }}</td>
+                <td class="text-end text-nowrap">
+                    <a href="{{ url_for('main_routes.prof_generate_sharing', commission_date=b.commission_date.isoformat()) }}"
+                       class="btn btn-sm btn-outline-dark">View</a>
+                    {% if can_delete_sharing_batch(session.get('role')) %}
+                    <button type="button" class="btn btn-sm btn-outline-danger delete-batch-btn"
+                        data-batch-id="{{ b.batch_id }}"
+                        data-billing-date="{{ b.commission_date.strftime('%Y-%m-%d') }}">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const commissionDateSelect = document.getElementById('commissionDateSelect');
+    const generateBtn = document.getElementById('generateBtn');
+    const generateAlert = document.getElementById('generateAlert');
+    const generateForm = document.getElementById('generateForm');
+    const canViewSharingResult = {{ 'true' if can_view_sharing_result(session.get('role')) else 'false' }};
+    const pendingDates = new Set([{% for d in pending_dates %}'{{ d.isoformat() }}'{% if not loop.last %},{% endif %}{% endfor %}]);
+
+    function showAlert(msg) {
+        generateAlert.textContent = msg;
+        generateAlert.classList.remove('d-none');
+    }
+    function hideAlert() {
+        generateAlert.classList.add('d-none');
+    }
+
+    function updateGenerateButton() {
+        const value = commissionDateSelect?.value || '';
+        generateBtn.disabled = !value || !pendingDates.has(value);
+    }
+
+    commissionDateSelect?.addEventListener('change', updateGenerateButton);
+    updateGenerateButton();
+
+    document.getElementById('previewBtn')?.addEventListener('click', () => {
+        const value = commissionDateSelect.value;
+        if (!value) {
+            showAlert('Please select a billing date.');
+            return;
+        }
+        hideAlert();
+        window.location.href = `{{ url_for('main_routes.prof_generate_sharing') }}?commission_date=${encodeURIComponent(value)}`;
+    });
+
+    generateForm?.addEventListener('submit', async e => {
+        e.preventDefault();
+        hideAlert();
+        if (!pendingDates.has(commissionDateSelect.value)) {
+            showAlert('This billing date has already been generated.');
+            return;
+        }
+        if (!confirm('Generate profit sharing for the selected billing date? Member ledger entries will be created.')) return;
+
+        const formData = new FormData(generateForm);
+        const res = await fetch('{{ url_for("main_routes.prof_generate_sharing_run") }}', {
+            method: 'POST',
+            body: formData,
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            if (canViewSharingResult) {
+                window.location.href = `{{ url_for('main_routes.prof_generate_sharing') }}?commission_date=${encodeURIComponent(commissionDateSelect.value)}`;
+            } else {
+                alert(data.msg || 'Profit sharing generated successfully.');
+                window.location.href = `{{ url_for('main_routes.prof_generate_sharing') }}`;
+            }
+            return;
+        }
+        showAlert(data.msg || 'Generation failed.');
+    });
+
+    document.querySelectorAll('.delete-batch-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const date = btn.dataset.billingDate;
+            if (!confirm(`Delete generated sharing for ${date}? This removes ledger entries and makes the date available again.`)) return;
+            const res = await fetch(`/admin/prof/generate-sharing/batch/${btn.dataset.batchId}`, { method: 'DELETE' });
+            const data = await res.json();
+            alert(data.msg || data.status);
+            if (data.status === 'success') location.reload();
+        });
+    });
+</script>
+{% endblock %}

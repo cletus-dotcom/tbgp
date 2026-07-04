@@ -1,0 +1,766 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Commission Summary{% endblock %}
+{% block topbar_title %}Commission Summary{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-table"></i> Commission Summary Report</h5>
+            <p class="section-subtitle">
+                Seven-section breakdown of all generated commission sharing,
+                preceded by project details and Ref-Client / Ref-Contractor hierarchy maps.
+            </p>
+        </div>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            {% if report.has_data %}
+            <a href="{{ url_for('main_routes.prof_reports_commission_summary_pdf') }}"
+               class="btn btn-outline-dark btn-sm report-export-pdf-btn">
+                <i class="bi bi-file-earmark-pdf"></i> Export PDF
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if not report.has_data %}
+<div class="dashboard-card section-card">
+    <p class="text-muted mb-0">No commission summary data yet. Generate sharing first.</p>
+</div>
+{% else %}
+
+{# ── Project details ── #}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-building"></i> Project Details</h5>
+            <p class="section-subtitle">
+                Generated commission projects with contractor and referrer assignments.
+                {{ report.project_details.project_count }} project(s).
+            </p>
+        </div>
+        {% with search_id='projectDetailsSearch', search_placeholder='Search projects...' %}
+        {% include 'partials/search_input.html' %}
+        {% endwith %}
+    </div>
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0" id="projectDetailsTable">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Address</th>
+                    <th>Contractor</th>
+                    <th>Client Referrer</th>
+                    <th>Contractor Referrer</th>
+                    <th>Billings</th>
+                    <th>Total Commission</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.project_details.rows %}
+                <tr data-search="{{ row.search_text }}">
+                    <td>
+                        <a href="{{ url_for('main_routes.prof_reports_project_list', project_id=row.project_id) }}">
+                            {{ row.project_title }}
+                        </a>
+                    </td>
+                    <td>{{ row.address or '—' }}</td>
+                    <td>{{ row.contractor_name }}</td>
+                    <td>{{ row.client_referrer_label or '—' }}</td>
+                    <td>{{ row.contractor_referrer_label or '—' }}</td>
+                    <td>{{ row.billing_count }}</td>
+                    <td>{{ '{:,.2f}'.format(row.total_commission) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# ── Ref-Client hierarchy ── #}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-diagram-3"></i> Ref-Client Hierarchy Details</h5>
+            <p class="section-subtitle">
+                7-level upline chain from the project client referrer (L1–L6 members, L7 Mandate account).
+                Shows who receives each level share or when overflow goes to POP.
+            </p>
+        </div>
+        {% with search_id='clientHierarchySearch', search_placeholder='Search project or member...' %}
+        {% include 'partials/search_input.html' %}
+        {% endwith %}
+    </div>
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0" id="clientHierarchyTable">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Level</th>
+                    <th>Role</th>
+                    <th>%</th>
+                    <th>Member</th>
+                    <th>ID</th>
+                    <th>Account</th>
+                    <th>Assignment</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.client_hierarchy.rows %}
+                <tr data-search="{{ row.search_text }}">
+                    <td>{{ row.project_title }}</td>
+                    <td>{{ row.level_label }}</td>
+                    <td>{{ row.role_description }}</td>
+                    <td>{{ '{:,.2f}'.format(row.percentage) }}%</td>
+                    <td>{{ row.member_name }}</td>
+                    <td>{% if row.member_id %}#{{ row.member_id }}{% else %}—{% endif %}</td>
+                    <td>{{ row.account_type }}</td>
+                    <td class="text-muted small">{{ row.assignment }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="text-muted">No Ref-Client hierarchy data.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# ── Ref-Contractor hierarchy ── #}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-diagram-3-fill"></i> Ref-Contractor Hierarchy Details</h5>
+            <p class="section-subtitle">
+                7-level upline chain from the contractor member referrer (L1–L6 members, L7 Mandate account).
+            </p>
+        </div>
+        {% with search_id='contractorHierarchySearch', search_placeholder='Search project or member...' %}
+        {% include 'partials/search_input.html' %}
+        {% endwith %}
+    </div>
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0" id="contractorHierarchyTable">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Level</th>
+                    <th>Role</th>
+                    <th>%</th>
+                    <th>Member</th>
+                    <th>ID</th>
+                    <th>Account</th>
+                    <th>Assignment</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.contractor_hierarchy.rows %}
+                <tr data-search="{{ row.search_text }}">
+                    <td>{{ row.project_title }}</td>
+                    <td>{{ row.level_label }}</td>
+                    <td>{{ row.role_description }}</td>
+                    <td>{{ '{:,.2f}'.format(row.percentage) }}%</td>
+                    <td>{{ row.member_name }}</td>
+                    <td>{% if row.member_id %}#{{ row.member_id }}{% else %}—{% endif %}</td>
+                    <td>{{ row.account_type }}</td>
+                    <td class="text-muted small">{{ row.assignment }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="text-muted">No Ref-Contractor hierarchy data.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# ── Table 1: Main pools ── #}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-1-circle"></i> Main Commission Pools</h5>
+            <p class="section-subtitle">
+                Total commission per project split into the three top-level pools:
+                {{ report.main_pools.split.client_percent }}% Ref-Client,
+                {{ report.main_pools.split.contractor_percent }}% Ref-Contractor,
+                {{ report.main_pools.split.platform_percent }}% PLATFORM.
+            </p>
+        </div>
+        {% with search_id='mainPoolsSearch', search_placeholder='Search projects...' %}
+        {% include 'partials/search_input.html' %}
+        {% endwith %}
+    </div>
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0" id="mainPoolsTable">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Contractor</th>
+                    <th>Billings</th>
+                    <th>Total Commission</th>
+                    <th>Ref-Client Pool ({{ report.main_pools.split.client_percent }}%)</th>
+                    <th>Ref-Contractor Pool ({{ report.main_pools.split.contractor_percent }}%)</th>
+                    <th>PLATFORM Pool ({{ report.main_pools.split.platform_percent }}%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.main_pools.rows %}
+                <tr data-search="{{ row.search_text }}">
+                    <td>
+                        <a href="{{ url_for('main_routes.prof_reports_project_list', project_id=row.project_id) }}">
+                            {{ row.project_title }}
+                        </a>
+                    </td>
+                    <td>{{ row.contractor_name }}</td>
+                    <td>{{ row.billing_count }}</td>
+                    <td>{{ '{:,.2f}'.format(row.total_commission) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.client_pool) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.contractor_pool) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.platform_pool) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="table-light fw-bold">
+                    <td>Grand Total ({{ report.main_pools.totals.project_count }} projects)</td>
+                    <td></td>
+                    <td></td>
+                    <td>{{ '{:,.2f}'.format(report.main_pools.totals.total_commission) }}</td>
+                    <td>{{ '{:,.2f}'.format(report.main_pools.totals.client_pool) }}</td>
+                    <td>{{ '{:,.2f}'.format(report.main_pools.totals.contractor_pool) }}</td>
+                    <td>{{ '{:,.2f}'.format(report.main_pools.totals.platform_total) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+{# ── Table 2: Ref-Client details ── #}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-2-circle"></i> Ref-Client Sharing Details</h5>
+            <p class="section-subtitle">
+                Member, Mandate account, and POP allocations from the Ref-Client pool
+                ({{ report.main_pools.split.client_percent }}% of commission).
+                {{ report.client_details.member_count }} member entries
+                {% if report.client_details.mandate_row_count %}
+                &middot; {{ report.client_details.mandate_row_count }} Mandate row(s)
+                {% endif %}
+                {% if report.client_details.pop_row_count %}
+                &middot; {{ report.client_details.pop_row_count }} POP row(s)
+                {% endif %}
+                &middot; Pool total {{ '{:,.2f}'.format(report.client_details.total) }}.
+            </p>
+        </div>
+        {% with search_id='clientDetailsSearch', search_placeholder='Search project or member...' %}
+        {% include 'partials/search_input.html' %}
+        {% endwith %}
+    </div>
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0" id="clientDetailsTable">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Billing Date</th>
+                    <th>Member</th>
+                    <th>ID</th>
+                    <th>Account</th>
+                    <th>Level</th>
+                    <th>%</th>
+                    <th>Share Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.client_details.rows %}
+                <tr data-search="{{ row.search_text }}"{% if row.is_mandate_row %} class="table-info"{% elif row.is_pop_row %} class="table-secondary"{% endif %}>
+                    <td>{{ row.project_title }}</td>
+                    <td>{{ row.billing_date }}</td>
+                    <td>
+                        {% if row.is_pop_row %}
+                        <span class="text-muted fst-italic"><i class="bi bi-heart"></i> {{ row.member_name }}</span>
+                        {% elif row.is_mandate_row %}
+                        <span class="text-muted fst-italic"><i class="bi bi-bank"></i> {{ row.member_name }}</span>
+                        {% else %}
+                        {{ row.member_name }}
+                        {% endif %}
+                    </td>
+                    <td>{% if row.member_id %}#{{ row.member_id }}{% else %}—{% endif %}</td>
+                    <td>{{ row.account_type }}</td>
+                    <td>{{ row.level_label }}</td>
+                    <td>{% if row.percentage is not none %}{{ '{:,.2f}'.format(row.percentage) }}%{% else %}—{% endif %}</td>
+                    <td>{{ '{:,.2f}'.format(row.share_amount) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="text-muted">No Ref-Client sharing entries.</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if report.client_details.rows %}
+            <tfoot>
+                <tr class="table-light">
+                    <td colspan="7">Member shares</td>
+                    <td>{{ '{:,.2f}'.format(report.client_details.member_total) }}</td>
+                </tr>
+                <tr class="table-light">
+                    <td colspan="7">Mandate account (Level 7)</td>
+                    <td>{{ '{:,.2f}'.format(report.client_details.mandate_total) }}</td>
+                </tr>
+                <tr class="table-light">
+                    <td colspan="7">POP (unfilled upline / overflow)</td>
+                    <td>{{ '{:,.2f}'.format(report.client_details.pop_total) }}</td>
+                </tr>
+                <tr class="table-light fw-bold">
+                    <td colspan="7">Ref-Client pool total ({{ report.client_details.pool_percent }}%)</td>
+                    <td>{{ '{:,.2f}'.format(report.client_details.total) }}</td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+{# ── Table 3: Ref-Contractor details ── #}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-3-circle"></i> Ref-Contractor Sharing Details</h5>
+            <p class="section-subtitle">
+                Member, Mandate account, and POP allocations from the Ref-Contractor pool
+                ({{ report.main_pools.split.contractor_percent }}% of commission).
+                {{ report.contractor_details.member_count }} member entries
+                {% if report.contractor_details.mandate_row_count %}
+                &middot; {{ report.contractor_details.mandate_row_count }} Mandate row(s)
+                {% endif %}
+                {% if report.contractor_details.pop_row_count %}
+                &middot; {{ report.contractor_details.pop_row_count }} POP row(s)
+                {% endif %}
+                &middot; Pool total {{ '{:,.2f}'.format(report.contractor_details.total) }}.
+            </p>
+        </div>
+        {% with search_id='contractorDetailsSearch', search_placeholder='Search project or member...' %}
+        {% include 'partials/search_input.html' %}
+        {% endwith %}
+    </div>
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0" id="contractorDetailsTable">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Billing Date</th>
+                    <th>Member</th>
+                    <th>ID</th>
+                    <th>Account</th>
+                    <th>Level</th>
+                    <th>%</th>
+                    <th>Share Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.contractor_details.rows %}
+                <tr data-search="{{ row.search_text }}"{% if row.is_mandate_row %} class="table-info"{% elif row.is_pop_row %} class="table-secondary"{% endif %}>
+                    <td>{{ row.project_title }}</td>
+                    <td>{{ row.billing_date }}</td>
+                    <td>
+                        {% if row.is_pop_row %}
+                        <span class="text-muted fst-italic"><i class="bi bi-heart"></i> {{ row.member_name }}</span>
+                        {% elif row.is_mandate_row %}
+                        <span class="text-muted fst-italic"><i class="bi bi-bank"></i> {{ row.member_name }}</span>
+                        {% else %}
+                        {{ row.member_name }}
+                        {% endif %}
+                    </td>
+                    <td>{% if row.member_id %}#{{ row.member_id }}{% else %}—{% endif %}</td>
+                    <td>{{ row.account_type }}</td>
+                    <td>{{ row.level_label }}</td>
+                    <td>{% if row.percentage is not none %}{{ '{:,.2f}'.format(row.percentage) }}%{% else %}—{% endif %}</td>
+                    <td>{{ '{:,.2f}'.format(row.share_amount) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="text-muted">No Ref-Contractor sharing entries.</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if report.contractor_details.rows %}
+            <tfoot>
+                <tr class="table-light">
+                    <td colspan="7">Member shares</td>
+                    <td>{{ '{:,.2f}'.format(report.contractor_details.member_total) }}</td>
+                </tr>
+                <tr class="table-light">
+                    <td colspan="7">Mandate account (Level 7)</td>
+                    <td>{{ '{:,.2f}'.format(report.contractor_details.mandate_total) }}</td>
+                </tr>
+                <tr class="table-light">
+                    <td colspan="7">POP (unfilled upline / overflow)</td>
+                    <td>{{ '{:,.2f}'.format(report.contractor_details.pop_total) }}</td>
+                </tr>
+                <tr class="table-light fw-bold">
+                    <td colspan="7">Ref-Contractor pool total ({{ report.contractor_details.pool_percent }}%)</td>
+                    <td>{{ '{:,.2f}'.format(report.contractor_details.total) }}</td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+{# ── Table 4: PLATFORM breakdown ── #}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-4-circle"></i> PLATFORM Pool Breakdown</h5>
+            <p class="section-subtitle">
+                How each project's {{ report.main_pools.split.platform_percent }}% PLATFORM pool is allocated:
+                {{ report.platform_breakdown.founders_prerogative }}% Founders Prerogative,
+                {{ report.platform_breakdown.platform_ref_client }}% Platform Ref-Client sharing,
+                {{ report.platform_breakdown.platform_ref_contractor }}% Platform Ref-Contractor sharing,
+                {{ report.platform_breakdown.platform_pop }}% Platform POP,
+                {{ report.platform_breakdown.platform_main }}% PLATFORM account.
+            </p>
+        </div>
+        {% with search_id='platformDetailsSearch', search_placeholder='Search projects...' %}
+        {% include 'partials/search_input.html' %}
+        {% endwith %}
+    </div>
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0" id="platformDetailsTable">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Contractor</th>
+                    <th>Commission</th>
+                    <th>PLATFORM Pool</th>
+                    <th>Founders ({{ report.platform_breakdown.founders_prerogative }}%)</th>
+                    <th>Plat. Ref-Client ({{ report.platform_breakdown.platform_ref_client }}%)</th>
+                    <th>Plat. Ref-Contractor ({{ report.platform_breakdown.platform_ref_contractor }}%)</th>
+                    <th>Platform POP ({{ report.platform_breakdown.platform_pop }}%)</th>
+                    <th>PLATFORM ({{ report.platform_breakdown.platform_main }}%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.platform_details.rows %}
+                <tr data-search="{{ row.search_text }}">
+                    <td>{{ row.project_title }}</td>
+                    <td>{{ row.contractor_name }}</td>
+                    <td>{{ '{:,.2f}'.format(row.total_commission) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.platform_pool) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.platform_founders) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.platform_ref_client) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.platform_ref_contractor) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.platform_pop) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.platform_main) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="table-light fw-bold">
+                    <td colspan="3">Grand Total</td>
+                    <td>{{ '{:,.2f}'.format(report.platform_details.totals.platform_pool) }}</td>
+                    <td>{{ '{:,.2f}'.format(report.platform_details.totals.platform_founders) }}</td>
+                    <td>{{ '{:,.2f}'.format(report.platform_details.totals.platform_ref_client) }}</td>
+                    <td>{{ '{:,.2f}'.format(report.platform_details.totals.platform_ref_contractor) }}</td>
+                    <td>{{ '{:,.2f}'.format(report.platform_details.totals.platform_pop) }}</td>
+                    <td>{{ '{:,.2f}'.format(report.platform_details.totals.platform_main) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+{# ── Table 5: Member summary ── #}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-5-circle"></i> Member Earnings Summary</h5>
+            <p class="section-subtitle">
+                Combined totals per member across all four MLM sharing streams
+                (Ref-Client, Ref-Contractor, Platform Ref-Client, Platform Ref-Contractor).
+                {{ report.member_summary.member_count }} member(s).
+            </p>
+        </div>
+        {% with search_id='memberSummarySearch', search_placeholder='Search members...' %}
+        {% include 'partials/search_input.html' %}
+        {% endwith %}
+    </div>
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0" id="memberSummaryTable">
+            <thead>
+                <tr>
+                    <th>Member</th>
+                    <th>ID</th>
+                    <th>Entries</th>
+                    <th>Ref-Client</th>
+                    <th>Ref-Contractor</th>
+                    <th>Platform Ref-Client</th>
+                    <th>Platform Ref-Contractor</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.member_summary.rows %}
+                <tr data-search="{{ row.search_text }}">
+                    <td>{{ row.member_name }}</td>
+                    <td>{% if row.member_id %}#{{ row.member_id }}{% else %}—{% endif %}</td>
+                    <td>{{ row.transaction_count }}</td>
+                    <td>{{ '{:,.2f}'.format(row.ref_client) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.ref_contractor) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.platform_ref_client) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.platform_ref_contractor) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.total) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="text-muted">No member earnings recorded.</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if report.member_summary.rows %}
+            <tfoot>
+                <tr class="table-light fw-bold">
+                    <td colspan="3">Grand Total ({{ report.member_summary.member_count }} members)</td>
+                    <td>{{ '{:,.2f}'.format(report.member_summary.column_totals.ref_client) }}</td>
+                    <td>{{ '{:,.2f}'.format(report.member_summary.column_totals.ref_contractor) }}</td>
+                    <td>{{ '{:,.2f}'.format(report.member_summary.column_totals.platform_ref_client) }}</td>
+                    <td>{{ '{:,.2f}'.format(report.member_summary.column_totals.platform_ref_contractor) }}</td>
+                    <td>{{ '{:,.2f}'.format(report.member_summary.column_totals.total) }}</td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+{# ── Table 6: Mandate account ── #}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-6-circle"></i> Mandate Account Summary</h5>
+            <p class="section-subtitle">
+                Level 7 (6%) allocations credited to the {{ report.mandate_account.mandate_label }}
+                across Ref-Client, Ref-Contractor, Platform Ref-Client, and Platform Ref-Contractor.
+            </p>
+        </div>
+    </div>
+
+    <h6 class="px-3 pt-2 mb-1">Mandate — by sub-account</h6>
+    <div class="section-table-wrap px-3">
+        <table class="table table-hover section-table mb-3">
+            <thead>
+                <tr>
+                    <th>Sub-account</th>
+                    <th>Entries</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.mandate_account.by_source %}
+                <tr>
+                    <td>{{ row.source_label }}</td>
+                    <td>{{ row.entry_count }}</td>
+                    <td>{{ '{:,.2f}'.format(row.amount) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="3" class="text-muted">No Mandate account entries.</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if report.mandate_account.by_source %}
+            <tfoot>
+                <tr class="table-light fw-bold">
+                    <td>Total Mandate Account</td>
+                    <td></td>
+                    <td>{{ '{:,.2f}'.format(report.mandate_account.source_total) }}</td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+
+    <h6 class="px-3 mb-1">Mandate — by project</h6>
+    <div class="section-table-wrap px-3 pb-3">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Ref-Client</th>
+                    <th>Ref-Contractor</th>
+                    <th>Platform Ref-Client</th>
+                    <th>Platform Ref-Contractor</th>
+                    <th>Total Mandate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.mandate_account.by_project %}
+                <tr>
+                    <td>{{ row.project_title }}</td>
+                    <td>{{ '{:,.2f}'.format(row.ref_client) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.ref_contractor) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.platform_ref_client) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.platform_ref_contractor) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.total) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-muted">No Mandate by project.</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if report.mandate_account.by_project %}
+            <tfoot>
+                <tr class="table-light fw-bold">
+                    <td>Grand Total</td>
+                    <td colspan="4"></td>
+                    <td>{{ '{:,.2f}'.format(report.mandate_account.project_total) }}</td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+{# ── Table 7: POP & PLATFORM accounts ── #}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-7-circle"></i> POP &amp; PLATFORM Account Summary</h5>
+            <p class="section-subtitle">
+                {{ report.pop_label }} (POP) receipts by source and project;
+                PLATFORM account credits (Founders Prerogative + main PLATFORM share).
+            </p>
+        </div>
+    </div>
+
+    <h6 class="px-3 pt-2 mb-1">POP — by source</h6>
+    <p class="section-subtitle px-3 mb-2">
+        Where POP funds originate: Ref-Client overflow, Platform POP allocation, Platform Ref-Client / Ref-Contractor overflow, and earnings-cap redirects.
+    </p>
+    <div class="section-table-wrap px-3">
+        <table class="table table-hover section-table mb-3">
+            <thead>
+                <tr>
+                    <th>Source</th>
+                    <th>Entries</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.pop_and_platform.pop_summary.by_source %}
+                <tr>
+                    <td>{{ row.source_label }}</td>
+                    <td>{{ row.entry_count }}</td>
+                    <td>{{ '{:,.2f}'.format(row.amount) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="3" class="text-muted">No POP entries.</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if report.pop_and_platform.pop_summary.by_source %}
+            <tfoot>
+                <tr class="table-light fw-bold">
+                    <td>Total POP</td>
+                    <td></td>
+                    <td>{{ '{:,.2f}'.format(report.pop_and_platform.pop_summary.source_total) }}</td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+
+    <h6 class="px-3 mb-1">POP — by project</h6>
+    <div class="section-table-wrap px-3">
+        <table class="table table-hover section-table mb-3">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Ref-Client POP</th>
+                    <th>Ref-Contractor POP</th>
+                    <th>Platform POP</th>
+                    <th>Plat. Ref-Client POP</th>
+                    <th>Plat. Ref-Contractor POP</th>
+                    <th>Cap Overflow</th>
+                    <th>Total POP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.pop_and_platform.pop_summary.by_project %}
+                <tr>
+                    <td>{{ row.project_title }}</td>
+                    <td>{{ '{:,.2f}'.format(row.ref_client) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.ref_contractor) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.platform_pop) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.platform_ref_client) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.platform_ref_contractor) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.cap_flush) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.total) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="text-muted">No POP by project.</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if report.pop_and_platform.pop_summary.by_project %}
+            <tfoot>
+                <tr class="table-light fw-bold">
+                    <td colspan="7">Grand Total</td>
+                    <td>{{ '{:,.2f}'.format(report.pop_and_platform.pop_summary.project_total) }}</td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+
+    <h6 class="px-3 mb-1">PLATFORM account — by project</h6>
+    <p class="section-subtitle px-3 mb-2">
+        Credits to the PLATFORM account: Founders Prerogative (5% of PLATFORM pool) and main PLATFORM share (65% of PLATFORM pool).
+    </p>
+    <div class="section-table-wrap px-3 pb-3">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Founders Prerogative (5%)</th>
+                    <th>PLATFORM Main (65%)</th>
+                    <th>Total PLATFORM Account</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report.pop_and_platform.platform.by_project %}
+                <tr>
+                    <td>{{ row.project_title }}</td>
+                    <td>{{ '{:,.2f}'.format(row.founders) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.platform_main) }}</td>
+                    <td>{{ '{:,.2f}'.format(row.total) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="text-muted">No PLATFORM account credits.</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if report.pop_and_platform.platform.by_project %}
+            <tfoot>
+                <tr class="table-light fw-bold">
+                    <td>Grand Total</td>
+                    <td>{{ '{:,.2f}'.format(report.pop_and_platform.platform.founders_total) }}</td>
+                    <td>{{ '{:,.2f}'.format(report.pop_and_platform.platform.platform_main_total) }}</td>
+                    <td>{{ '{:,.2f}'.format(report.pop_and_platform.platform.grand_total) }}</td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function bindTableSearch(inputId, tableId) {
+        document.getElementById(inputId)?.addEventListener('input', e => {
+            const q = e.target.value.trim().toLowerCase();
+            document.querySelectorAll(`#${tableId} tbody tr[data-search]`).forEach(row => {
+                const haystack = row.dataset.search || '';
+                row.style.display = !q || haystack.includes(q) ? '' : 'none';
+            });
+        });
+    }
+    bindTableSearch('projectDetailsSearch', 'projectDetailsTable');
+    bindTableSearch('clientHierarchySearch', 'clientHierarchyTable');
+    bindTableSearch('contractorHierarchySearch', 'contractorHierarchyTable');
+    bindTableSearch('mainPoolsSearch', 'mainPoolsTable');
+    bindTableSearch('clientDetailsSearch', 'clientDetailsTable');
+    bindTableSearch('contractorDetailsSearch', 'contractorDetailsTable');
+    bindTableSearch('platformDetailsSearch', 'platformDetailsTable');
+    bindTableSearch('memberSummarySearch', 'memberSummaryTable');
+</script>
+{% endblock %}

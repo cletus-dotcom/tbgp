@@ -1,0 +1,53 @@
+<div class="modal fade" id="addMemberModal" tabindex="-1" aria-labelledby="addMemberModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-brand text-white">
+                <h5 class="modal-title" id="addMemberModalLabel"><i class="bi bi-file-earmark-spreadsheet"></i> Import Members</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="addMemberForm">
+                <div class="modal-body">
+                    <div id="addMemberAlert" class="alert alert-danger d-none py-2 small" role="alert"></div>
+
+                    <p class="text-muted small mb-3">
+                        Upload an Excel file (<code>.xlsx</code>) with a <code>members</code> sheet matching
+                        the generated <a href="{{ url_for('main_routes.members_template') }}" class="text-brand">blank members template</a>.
+                        Required columns include
+                        <code>member_id</code>, <code>batch</code>, <code>referrer_id</code>,
+                        name fields, contact fields, beneficiary fields, and <code>status</code>.
+                    </p>
+
+                    <div class="mb-3">
+                        <label for="memberFile" class="form-label">Excel File</label>
+                        <input type="file" id="memberFile" name="file" class="form-control" accept=".xlsx,.xls" required>
+                    </div>
+
+                    <div id="importPreview" class="d-none">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="text-brand mb-0"><i class="bi bi-table"></i> Parsed Preview</h6>
+                            <span class="badge bg-brand" id="importRowCount">0 rows</span>
+                        </div>
+                        <div class="section-table-wrap" style="max-height: 220px;">
+                            <table class="table table-sm section-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Batch</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="importPreviewBody"></tbody>
+                            </table>
+                        </div>
+                        <p class="text-muted small mt-2 mb-0" id="importPreviewNote"></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="importCancelBtn">Cancel</button>
+                    <button type="submit" class="btn btn-brand" id="importSubmitBtn" disabled>Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

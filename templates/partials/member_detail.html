@@ -1,0 +1,148 @@
+<div class="detail-grid">
+    <div class="detail-item">
+        <label>Member ID</label>
+        <span>#{{ m.member_id }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Batch</label>
+        <span>{{ m.batch }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Date Joined</label>
+        <span>{{ m.date_joined.strftime('%B %d, %Y') if m.date_joined else '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Status</label>
+        <span>{{ m.status or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>First Name</label>
+        <span>{{ m.first_name or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Middle Name</label>
+        <span>{{ m.middle_name or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Last Name</label>
+        <span>{{ m.last_name or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Suffix</label>
+        <span>{{ m.suffix or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Birth Date</label>
+        <span>{{ m.birth_date.strftime('%B %d, %Y') if m.birth_date else '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Gender</label>
+        <span>{{ m.gender or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Civil Status</label>
+        <span>{{ m.civil_status or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Phone</label>
+        <span>{{ m.phone or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Email</label>
+        <span>{{ m.email or '—' }}</span>
+    </div>
+    <div class="detail-item" style="grid-column: 1 / -1;">
+        <label>Address</label>
+        <span>{{ m.address or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Highest Education</label>
+        <span>{{ m.highest_education or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Occupation / Income Source</label>
+        <span>{{ m.occupation_income_source or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Monthly Income</label>
+        <span>{{ m.monthly_income or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Number of Dependents</label>
+        <span>{{ m.number_of_dependents if m.number_of_dependents is not none else '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Beneficiary Name</label>
+        <span>{{ m.beneficiary_name or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Beneficiary Phone</label>
+        <span>{{ m.beneficiary_phone or '—' }}</span>
+    </div>
+    <div class="detail-item" style="grid-column: 1 / -1;">
+        <label>Beneficiary Address</label>
+        <span>{{ m.beneficiary_address or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Separation Date</label>
+        <span>{{ m.termination_date.strftime('%B %d, %Y') if m.termination_date else '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Separation Type</label>
+        <span>{{ m.termination_type or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Referrer</label>
+        <span>
+            {% if m.referrer %}
+            #{{ m.referrer_id }} — {{ m.referrer.full_name }}
+            {% else %}
+            Root member (no referrer)
+            {% endif %}
+        </span>
+    </div>
+    <div class="detail-item">
+        <label>Direct Referrals</label>
+        <span>{{ m.referrals|length }}</span>
+    </div>
+    {% if m.referrals %}
+    <div class="detail-item" style="grid-column: 1 / -1;">
+        <label>Downline</label>
+        <ul class="downline-list">
+            {% for ref in m.referrals|sort(attribute='member_id') %}
+            <li><strong>#{{ ref.member_id }}</strong> {{ ref.full_name }} <span class="text-muted">(Batch {{ ref.batch }})</span></li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="detail-item" style="grid-column: 1 / -1;">
+        <label>Ledger Summary</label>
+        <div id="memberLedgerSummary-{{ m.member_id }}" class="small text-muted">Loading ledger…</div>
+        <div class="mt-2">
+            <a href="{{ url_for('main_routes.member_ledger', member_id=m.member_id) }}"
+               class="btn btn-sm btn-brand">
+                <i class="bi bi-journal-text"></i> View Full Ledger
+            </a>
+        </div>
+    </div>
+
+    {% if can_manage_data(session.get('role')) %}
+    <div class="detail-item" style="grid-column: 1 / -1;">
+        <label>Admin Actions</label>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button"
+                class="btn btn-sm btn-outline-dark member-edit-btn"
+                data-member-id="{{ m.member_id }}"
+                data-member="{{ m.edit_payload() | tojson | forceescape }}">
+                <i class="bi bi-pencil-square"></i> Edit
+            </button>
+            <button type="button"
+                class="btn btn-sm btn-outline-danger member-delete-btn"
+                data-member-id="{{ m.member_id }}">
+                <i class="bi bi-trash"></i> Delete
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>

@@ -1,0 +1,440 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Contractors{% endblock %}
+{% block topbar_title %}Contractors{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-building"></i> All Contractors</h5>
+            <p class="section-subtitle">{{ contractors|length }} contractors across all batches</p>
+        </div>
+        <div class="section-actions">
+            {% if can_manage_data(session.get('role')) %}
+            <button type="button" class="btn-add-contractor" data-bs-toggle="modal" data-bs-target="#manualAddContractorModal">
+                <i class="bi bi-building-add"></i> + Add Contractor
+            </button>
+            <button type="button" class="btn-import-contractors" data-bs-toggle="modal" data-bs-target="#addContractorModal">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Import Contractors
+            </button>
+            {% endif %}
+            {% with search_id='contractorSearch', search_placeholder='Search contractors...' %}
+            {% include 'partials/search_input.html' %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <div class="section-mobile-list" id="contractorsMobile">
+        {% for c in contractors %}
+        <div class="contractor-card" data-search="{{ c.search_text() }}">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <div>
+                    <div class="member-id">#{{ c.contractor_id }} — {{ c.company_name }}</div>
+                    <div class="member-meta">
+                        Batch {{ c.batch }}
+                        {% if c.member_referrer %}
+                        &middot; Referred by #{{ c.member_referrer_id }} — {{ c.member_referrer.full_name }}
+                        {% else %}
+                        &middot; Member #{{ c.member_referrer_id }}
+                        {% endif %}
+                    </div>
+                </div>
+                <button type="button" class="btn btn-link expand-mobile-btn text-brand">View details</button>
+            </div>
+            <div class="detail-panel-mobile">
+                {% include 'partials/contractor_detail.html' %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="section-desktop-table section-table-wrap">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 36px;"></th>
+                    <th>ID</th>
+                    <th>Company</th>
+                    <th>Batch</th>
+                    <th>Member Referrer</th>
+                    <th>Representative</th>
+                    <th>Date Joined</th>
+                </tr>
+            </thead>
+            <tbody id="contractorsTableBody">
+                {% for c in contractors %}
+                <tr class="contractor-row"
+                    data-search="{{ c.search_text() }}"
+                    data-contractor-id="{{ c.contractor_id }}"
+                    data-contractor="{{ {
+                        'contractor_id': c.contractor_id,
+                        'batch': c.batch,
+                        'member_referrer_id': c.member_referrer_id,
+                        'company_name': c.company_name,
+                        'company_address': c.company_address,
+                        'representative_name': c.representative_name,
+                        'contact_no': c.contact_no,
+                        'date_joined': (c.date_joined.isoformat() if c.date_joined else ''),
+                    } | tojson }}">
+                    <td>
+                        <button type="button" class="expand-btn" aria-label="Expand row">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </td>
+                    <td>{{ c.contractor_id }}</td>
+                    <td>{{ c.company_name }}</td>
+                    <td>{{ c.batch }}</td>
+                    <td>
+                        {% if c.member_referrer %}
+                        #{{ c.member_referrer_id }} — {{ c.member_referrer.full_name }}
+                        {% else %}
+                        #{{ c.member_referrer_id }}
+                        {% endif %}
+                    </td>
+                    <td>{{ c.representative_name or '—' }}</td>
+                    <td>{{ c.date_joined.strftime('%Y-%m-%d') if c.date_joined else '—' }}</td>
+                </tr>
+                <tr class="detail-row d-none" data-parent-search="{{ c.search_text() }}">
+                    <td colspan="7">
+                        <div class="detail-panel">
+                            {% include 'partials/contractor_detail.html' %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if can_manage_data(session.get('role')) %}
+{% include 'partials/manual_add_contractor_modal.html' %}
+{% include 'partials/add_contractor_modal.html' %}
+{% endif %}
+{% include 'partials/import_progress.html' %}
+{% if can_manage_data(session.get('role')) %}
+{% include 'partials/edit_contractor_modal.html' %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleDesktopRow(row) {
+        const detailRow = row.nextElementSibling;
+        if (!detailRow?.classList.contains('detail-row')) return;
+        const expanded = row.classList.toggle('expanded');
+        detailRow.classList.toggle('d-none', !expanded);
+    }
+
+    function toggleMobileCard(card) {
+        card.classList.toggle('expanded');
+        const btn = card.querySelector('.expand-mobile-btn');
+        if (btn) {
+            btn.textContent = card.classList.contains('expanded') ? 'Hide details' : 'View details';
+        }
+    }
+
+    document.querySelectorAll('.contractor-row').forEach(row => {
+        row.addEventListener('click', () => toggleDesktopRow(row));
+    });
+
+    document.querySelectorAll('#contractorsMobile .contractor-card').forEach(card => {
+        card.querySelector('.expand-mobile-btn')?.addEventListener('click', e => {
+            e.stopPropagation();
+            toggleMobileCard(card);
+        });
+    });
+
+    document.getElementById('contractorSearch')?.addEventListener('input', e => {
+        const q = e.target.value.trim().toLowerCase();
+
+        document.querySelectorAll('#contractorsTableBody tr.contractor-row').forEach(row => {
+            const haystack = row.dataset.search || '';
+            const visible = !q || haystack.includes(q);
+            row.style.display = visible ? '' : 'none';
+            const detailRow = row.nextElementSibling;
+            if (detailRow?.classList.contains('detail-row')) {
+                if (!visible) {
+                    detailRow.classList.add('d-none');
+                    row.classList.remove('expanded');
+                }
+                detailRow.style.display = visible ? '' : 'none';
+            }
+        });
+
+        document.querySelectorAll('#contractorsMobile .contractor-card').forEach(card => {
+            const haystack = card.dataset.search || '';
+            card.style.display = !q || haystack.includes(q) ? '' : 'none';
+        });
+    });
+
+    const isAdminRole = {{ 'true' if can_manage_data(session.get('role')) else 'false' }};
+
+    function showFormError(alertEl, message) {
+        if (!alertEl) return;
+        alertEl.textContent = message;
+        alertEl.classList.remove('d-none');
+    }
+
+    function hideFormError(alertEl) {
+        alertEl?.classList.add('d-none');
+    }
+
+    function getContractorDataFromDom(contractorId) {
+        const row = document.querySelector(`.contractor-row[data-contractor-id="${contractorId}"]`);
+        const json = row?.dataset.contractor;
+        if (!json) return null;
+        try { return JSON.parse(json); } catch { return null; }
+    }
+
+    if (isAdminRole) {
+        const editModalEl = document.getElementById('editContractorModal');
+        const editForm = document.getElementById('editContractorForm');
+        const editAlert = document.getElementById('editContractorAlert');
+        const manualAddContractorModal = document.getElementById('manualAddContractorModal');
+        const manualAddContractorForm = document.getElementById('manualAddContractorForm');
+        const manualAddContractorAlert = document.getElementById('manualAddContractorAlert');
+
+        const setEditFields = (c) => {
+            document.getElementById('editContractorId').value = c.contractor_id;
+            document.getElementById('editContractorIdDisplay').value = c.contractor_id;
+            document.getElementById('editContractorBatch').value = c.batch;
+            document.getElementById('editMemberReferrerId').value = c.member_referrer_id ?? '';
+            document.getElementById('editCompanyName').value = c.company_name || '';
+            document.getElementById('editCompanyAddress').value = c.company_address || '';
+            document.getElementById('editRepresentativeName').value = c.representative_name || '';
+            document.getElementById('editContactNo').value = c.contact_no || '';
+            document.getElementById('editContractorDateJoined').value = (c.date_joined || '').slice(0, 10);
+        };
+
+        function getContractorDataFromEditButton(btn) {
+            const json = btn?.dataset?.contractor;
+            if (!json) return null;
+            try { return JSON.parse(json); } catch { return null; }
+        }
+
+        document.addEventListener('click', e => {
+            const editBtn = e.target.closest('.contractor-edit-btn');
+            if (editBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                hideFormError(editAlert);
+                const contractorId = Number(editBtn.dataset.contractorId);
+                const contractor = getContractorDataFromEditButton(editBtn) || getContractorDataFromDom(contractorId);
+                if (!contractor) {
+                    showFormError(editAlert, 'Could not load contractor data from the page. Please refresh.');
+                    return;
+                }
+                setEditFields(contractor);
+                bootstrap.Modal.getOrCreateInstance(editModalEl).show();
+                return;
+            }
+
+            const deleteBtn = e.target.closest('.contractor-delete-btn');
+            if (deleteBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const contractorId = Number(deleteBtn.dataset.contractorId);
+                if (!confirm(`Delete contractor #${contractorId}? This cannot be undone.`)) return;
+                (async () => {
+                    try {
+                        const res = await fetch(`/admin/contractors/${contractorId}`, { method: 'DELETE' });
+                        const data = await res.json();
+                        alert(data.msg || data.status);
+                        if (data.status === 'success') window.location.reload();
+                    } catch (err) {
+                        alert(err.message || 'Delete failed.');
+                    }
+                })();
+                return;
+            }
+        });
+
+        editForm?.addEventListener('submit', async e => {
+            e.preventDefault();
+            hideFormError(editAlert);
+
+            const contractorId = document.getElementById('editContractorId').value;
+            const formData = new FormData(editForm);
+
+            try {
+                const res = await fetch(`/admin/contractors/${contractorId}`, { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    bootstrap.Modal.getInstance(editModalEl)?.hide();
+                    window.location.reload();
+                    return;
+                }
+                showFormError(editAlert, data.msg || 'Update failed.');
+            } catch (err) {
+                showFormError(editAlert, err.message || 'Update failed.');
+            }
+        });
+
+        manualAddContractorModal?.addEventListener('shown.bs.modal', () => {
+            hideFormError(manualAddContractorAlert);
+            manualAddContractorForm?.reset();
+            document.getElementById('manualContractorId')?.focus();
+        });
+
+        manualAddContractorForm?.addEventListener('submit', async e => {
+            e.preventDefault();
+            hideFormError(manualAddContractorAlert);
+
+            try {
+                const formData = new FormData(manualAddContractorForm);
+                const res = await fetch('/admin/contractors', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    bootstrap.Modal.getInstance(manualAddContractorModal)?.hide();
+                    window.location.reload();
+                    return;
+                }
+                showFormError(manualAddContractorAlert, data.msg || 'Add contractor failed.');
+            } catch (err) {
+                showFormError(manualAddContractorAlert, err.message || 'Add contractor failed.');
+            }
+        });
+    }
+
+    const addContractorModal = document.getElementById('addContractorModal');
+    const addContractorForm = document.getElementById('addContractorForm');
+    const addContractorAlert = document.getElementById('addContractorAlert');
+    const contractorFileInput = document.getElementById('contractorFile');
+    const importPreview = document.getElementById('contractorImportPreview');
+    const importPreviewBody = document.getElementById('contractorImportPreviewBody');
+    const importRowCount = document.getElementById('contractorImportRowCount');
+    const importPreviewNote = document.getElementById('contractorImportPreviewNote');
+    const importSubmitBtn = document.getElementById('contractorImportSubmitBtn');
+    const importProgressOverlay = document.getElementById('importProgressOverlay');
+    const importProgressMessage = document.getElementById('importProgressMessage');
+    const importCancelBtn = document.getElementById('contractorImportCancelBtn');
+
+    const PROGRESS_READING = 'Reading in progress, please wait a moment.';
+    const PROGRESS_RECORDING = 'Recording data in progress, please wait a moment.';
+
+    function showAddContractorError(message) { showFormError(addContractorAlert, message); }
+    function hideAddContractorError() { hideFormError(addContractorAlert); }
+
+    function resetImportPreview() {
+        importPreview?.classList.add('d-none');
+        if (importPreviewBody) importPreviewBody.innerHTML = '';
+        if (importRowCount) importRowCount.textContent = '0 rows';
+        if (importPreviewNote) importPreviewNote.textContent = '';
+        if (importSubmitBtn) importSubmitBtn.disabled = true;
+    }
+
+    function setImportBusy(isBusy, message = '') {
+        if (importProgressOverlay) {
+            importProgressOverlay.classList.toggle('d-none', !isBusy);
+        }
+        if (importProgressMessage && message) {
+            importProgressMessage.textContent = message;
+        }
+        if (contractorFileInput) contractorFileInput.disabled = isBusy;
+        if (importSubmitBtn) importSubmitBtn.disabled = isBusy || !contractorFileInput?.files?.[0];
+        if (importCancelBtn) importCancelBtn.disabled = isBusy;
+        if (addContractorModal) {
+            addContractorModal.setAttribute('data-bs-keyboard', isBusy ? 'false' : 'true');
+            addContractorModal.setAttribute('data-bs-backdrop', isBusy ? 'static' : 'true');
+        }
+    }
+
+    function renderImportPreview(data) {
+        if (!importPreviewBody || !importPreview) return;
+        importPreviewBody.innerHTML = data.preview.map(row => `
+            <tr>
+                <td>${row.contractor_id}</td>
+                <td>${row.company_name || '—'}</td>
+                <td>${row.batch}</td>
+                <td>${row.member_referrer_id ?? '—'}</td>
+                <td>${row.date_joined || '—'}</td>
+            </tr>
+        `).join('');
+        importRowCount.textContent = `${data.row_count} row${data.row_count === 1 ? '' : 's'}`;
+        importPreviewNote.textContent = data.row_count > data.preview.length
+            ? `Showing first ${data.preview.length} of ${data.row_count} rows.`
+            : 'All rows parsed successfully.';
+        importPreview.classList.remove('d-none');
+        if (importSubmitBtn) importSubmitBtn.disabled = false;
+    }
+
+    addContractorModal?.addEventListener('shown.bs.modal', () => {
+        hideAddContractorError();
+        addContractorForm?.reset();
+        resetImportPreview();
+        setImportBusy(false);
+    });
+
+    addContractorModal?.addEventListener('hidden.bs.modal', () => {
+        setImportBusy(false);
+    });
+
+    contractorFileInput?.addEventListener('change', async () => {
+        hideAddContractorError();
+        resetImportPreview();
+
+        const file = contractorFileInput.files?.[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        setImportBusy(true, PROGRESS_READING);
+
+        try {
+            const res = await fetch('/contractors/preview', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.status !== 'success') {
+                showAddContractorError(data.msg || 'Could not parse file.');
+                contractorFileInput.value = '';
+                return;
+            }
+            renderImportPreview(data);
+        } catch (err) {
+            showAddContractorError(err.message || 'Could not parse file.');
+            contractorFileInput.value = '';
+        } finally {
+            setImportBusy(false);
+            if (contractorFileInput.files?.[0] && importSubmitBtn) {
+                importSubmitBtn.disabled = false;
+            }
+        }
+    });
+
+    addContractorForm?.addEventListener('submit', async e => {
+        e.preventDefault();
+        hideAddContractorError();
+
+        const file = contractorFileInput?.files?.[0];
+        if (!file) {
+            showAddContractorError('Please choose an Excel file.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        setImportBusy(true, PROGRESS_RECORDING);
+
+        try {
+            const res = await fetch('/contractors/add', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            if (data.status === 'success') {
+                bootstrap.Modal.getInstance(addContractorModal)?.hide();
+                window.location.reload();
+                return;
+            }
+
+            showAddContractorError(data.msg || 'Import failed.');
+            setImportBusy(false);
+            if (importSubmitBtn) importSubmitBtn.disabled = false;
+        } catch (err) {
+            showAddContractorError(err.message || 'Import failed.');
+            setImportBusy(false);
+            if (importSubmitBtn) importSubmitBtn.disabled = false;
+        }
+    });
+</script>
+{% endblock %}
