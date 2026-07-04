@@ -1,5 +1,10 @@
 import os
 from decimal import Decimal
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 DB_CONFIG = {
     "db_user": os.getenv("DB_USER", "postgres"),
@@ -8,6 +13,30 @@ DB_CONFIG = {
     "db_port": os.getenv("DB_PORT", "5432"),
     "db_name": os.getenv("DB_NAME", "tbgp"),
 }
+
+
+def _normalize_database_url(url):
+    if not url:
+        return None
+    value = url.strip()
+    if value.startswith("postgres://"):
+        return value.replace("postgres://", "postgresql+psycopg2://", 1)
+    if value.startswith("postgresql://"):
+        return value.replace("postgresql://", "postgresql+psycopg2://", 1)
+    return value
+
+
+DATABASE_URL = _normalize_database_url(os.getenv("DATABASE_URL"))
+
+
+def database_uri():
+    if DATABASE_URL:
+        return DATABASE_URL
+    return (
+        f"postgresql+psycopg2://{DB_CONFIG['db_user']}:{DB_CONFIG['db_pass']}@"
+        f"{DB_CONFIG['db_ip']}:{DB_CONFIG['db_port']}/{DB_CONFIG['db_name']}"
+    )
+
 
 SECRET_KEY = os.getenv("SECRET_KEY", "tbgp_referral_secret_key")
 

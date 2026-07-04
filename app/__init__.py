@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 
-from dotenv import load_dotenv
 from flask import Flask, session
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -13,7 +12,6 @@ from app.config import (
     BRAND_BLUE_LIGHT,
     CLIENT_POOL_PERCENT,
     CONTRACTOR_POOL_PERCENT,
-    DB_CONFIG,
     MAX_SHARING_LEVELS,
     MEMBER_EARNINGS_CAP_FIRST_PROJECT,
     MEMBER_LIFETIME_EARNINGS_CAP,
@@ -50,6 +48,7 @@ from app.config import (
     can_purge_member_database,
     assignable_user_roles,
     USER_ROLES,
+    database_uri,
     payout_scheme_summary,
 )
 
@@ -65,14 +64,9 @@ def create_app():
     app.secret_key = SECRET_KEY
     CORS(app)
 
-    load_dotenv(base.parent / ".env")
-
-    db_url = (
-        f"postgresql+psycopg2://{DB_CONFIG['db_user']}:{DB_CONFIG['db_pass']}@"
-        f"{DB_CONFIG['db_ip']}:{DB_CONFIG['db_port']}/{DB_CONFIG['db_name']}"
-    )
-    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_uri()
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
 
     db.init_app(app)
 
