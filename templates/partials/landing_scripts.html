@@ -1,0 +1,26 @@
+<script src="{{ url_for('static', filename='js/brand-tagline-marquee.js') }}"></script>
+<script>
+    (function () {
+        document.querySelectorAll("[data-coming-soon]").forEach(function (el) {
+            el.addEventListener("click", function (event) {
+                event.preventDefault();
+                var modalEl = document.getElementById("comingSoonModal");
+                if (modalEl && window.bootstrap) {
+                    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                    return;
+                }
+                alert("This portal is coming soon, please bear with us.");
+            });
+        });
+
+        var btn = document.getElementById("backToTop");
+        if (btn) {
+            window.addEventListener("scroll", function () {
+                btn.classList.toggle("visible", window.scrollY > 300);
+            });
+            btn.addEventListener("click", function () {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            });
+        }
+    })();
+</script>

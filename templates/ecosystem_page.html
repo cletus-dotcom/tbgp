@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}{{ page.meta_title }} — TBGP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+{% endblock %}
+
+{% block body_class %}landing-body{% endblock %}
+
+{% block body %}
+{% include 'partials/landing_nav.html' %}
+
+<section class="ecosystem-hero">
+    <div class="container">
+        <nav class="ecosystem-breadcrumb" aria-label="Breadcrumb">
+            <a href="{{ url_for('main_routes.index') }}">Home</a>
+            <span aria-hidden="true">/</span>
+            <a href="{{ url_for('main_routes.index') }}#ecosystem-pillars">Ecosystem</a>
+            <span aria-hidden="true">/</span>
+            <span>{{ page.label }}</span>
+        </nav>
+        <p class="ecosystem-hero-label">{{ page.label }}</p>
+        <p class="ecosystem-hero-subtitle">{{ page.subtitle }}</p>
+        <h1 class="ecosystem-hero-title">{{ page.title }}</h1>
+        <p class="ecosystem-hero-lead">{{ page.hero_lead }}</p>
+    </div>
+</section>
+
+<section class="ecosystem-detail">
+    <div class="container">
+        <div class="ecosystem-intro-panel">
+            <p>{{ page.intro }}</p>
+        </div>
+
+        <div class="ecosystem-highlights-grid">
+            {% for item in page.highlights %}
+            <article class="ecosystem-highlight-card">
+                <span class="ecosystem-highlight-icon" aria-hidden="true">{{ item.icon }}</span>
+                <h2>{{ item.title }}</h2>
+                <p>{{ item.body }}</p>
+            </article>
+            {% endfor %}
+        </div>
+
+        {% if page.social_feed %}
+        <section class="ecosystem-social-feed" aria-labelledby="social-feed-title">
+            <header class="ecosystem-social-feed-header">
+                <p class="ecosystem-social-feed-subtitle">{{ page.social_feed.subtitle }}</p>
+                <h2 class="ecosystem-social-feed-title" id="social-feed-title">{{ page.social_feed.title }}</h2>
+                <p class="ecosystem-social-feed-desc">{{ page.social_feed.description }}</p>
+            </header>
+
+            <div class="social-feed-devices">
+                <div class="social-device social-device-phone">
+                    <div class="phone-frame" aria-label="Facebook feed preview">
+                        <div class="phone-frame-bezel">
+                            <div class="phone-frame-notch" aria-hidden="true"></div>
+                            <div class="phone-frame-speaker" aria-hidden="true"></div>
+                            <div class="phone-frame-screen">
+                                <iframe
+                                    title="The Big Group Philippines - TBGP on Facebook"
+                                    src="https://www.facebook.com/plugins/page.php?href={{ page.social_feed.facebook_url | urlencode }}&amp;tabs=timeline&amp;width=500&amp;height=680&amp;small_header=true&amp;adapt_container_width=true&amp;hide_cover=false&amp;show_facepile=false"
+                                    scrolling="yes"
+                                    allow="encrypted-media"
+                                    allowfullscreen="true"
+                                    loading="lazy"
+                                    referrerpolicy="no-referrer-when-downgrade"></iframe>
+                            </div>
+                            <div class="phone-frame-home" aria-hidden="true"></div>
+                        </div>
+                    </div>
+                    <div class="social-device-meta">
+                        <p class="social-device-label"><i class="bi bi-facebook" aria-hidden="true"></i> {{ page.social_feed.facebook_caption }}</p>
+                        <a href="{{ page.social_feed.facebook_url }}" target="_blank" rel="noopener noreferrer" class="social-device-link">
+                            View on Facebook <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="social-device social-device-video">
+                    <div class="media-frame" aria-label="TBGP YouTube playlist">
+                        <div class="media-frame-bezel">
+                            <div class="media-frame-top-bar" aria-hidden="true">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <div class="media-frame-screen">
+                                {% if page.social_feed.youtube_embed_url %}
+                                <iframe
+                                    title="{{ page.social_feed.youtube_title }}"
+                                    src="{{ page.social_feed.youtube_embed_url }}"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowfullscreen
+                                    loading="lazy"
+                                    referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                                {% else %}
+                                <div class="media-frame-placeholder">
+                                    <i class="bi bi-youtube" aria-hidden="true"></i>
+                                    <h3>{{ page.social_feed.youtube_title }}</h3>
+                                    <p>{{ page.social_feed.youtube_placeholder }}</p>
+                                    <span class="media-frame-soon">Playlist link coming soon</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="media-frame-stand" aria-hidden="true"></div>
+                        </div>
+                    </div>
+                    <div class="social-device-meta">
+                        <p class="social-device-label"><i class="bi bi-youtube" aria-hidden="true"></i> {{ page.social_feed.youtube_title }}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <div class="ecosystem-portal-panel">
+            <div>
+                <p class="ecosystem-portal-kicker">TBGP Portal</p>
+                <h2>{{ page.portal_title }}</h2>
+                <p>{{ page.portal_body }}</p>
+            </div>
+            <div class="ecosystem-portal-actions">
+                <a href="{{ url_for('main_routes.login', next=page.portal_next) }}" class="btn-hero">{{ page.portal_cta_label }}</a>
+                <a href="{{ url_for('main_routes.index') }}#ecosystem-pillars" class="btn-ecosystem-secondary">View All Pillars</a>
+            </div>
+        </div>
+
+        {% if related_pages %}
+        <div class="ecosystem-related">
+            <h2 class="ecosystem-related-title">Explore More</h2>
+            <div class="ecosystem-related-grid">
+                {% for related in related_pages %}
+                <a href="{{ url_for('main_routes.ecosystem_page', slug=related.slug) }}" class="ecosystem-related-card">
+                    <span class="ecosystem-related-label">{{ related.label }}</span>
+                    <span class="ecosystem-related-name">{{ related.title }}</span>
+                    <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{% include 'partials/landing_footer.html' %}
+{% endblock %}
+
+{% block extra_js %}
+{% include 'partials/landing_scripts.html' %}
+{% endblock %}

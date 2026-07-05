@@ -2,6 +2,7 @@ import json
 from io import BytesIO
 from flask import (
     Blueprint,
+    abort,
     flash,
     jsonify,
     redirect,
@@ -19,7 +20,7 @@ from sqlalchemy import func, text
 from sqlalchemy.orm import joinedload
 from werkzeug.security import generate_password_hash
 
-from app import db
+from app.ecosystem_content import ECOSYSTEM_PAGES, ECOSYSTEM_SLUGS
 from app.auth import admin_required, login_required, staff_or_admin_required
 from app.config import (
     CLIENT_POOL_PERCENT,
@@ -432,6 +433,20 @@ def _blank_import_template(sheet_name, columns, reference_rows=None):
 @main_routes.route("/")
 def index():
     return render_template("index.html")
+
+
+@main_routes.route("/ecosystem/<slug>")
+def ecosystem_page(slug):
+    page = ECOSYSTEM_PAGES.get(slug)
+    if page is None:
+        abort(404)
+    related_pages = [ECOSYSTEM_PAGES[s] for s in ECOSYSTEM_SLUGS if s != slug]
+    return render_template(
+        "ecosystem_page.html",
+        page=page,
+        related_pages=related_pages,
+        landing_nav_active=None,
+    )
 
 
 @main_routes.route("/logout")
