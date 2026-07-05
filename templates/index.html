@@ -177,13 +177,25 @@
                 </p>
                 <h5 class="mt-3">Follow Us</h5>
                 <div class="social-row">
-                    <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
-                    <a href="#" aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
+                    <a href="https://www.facebook.com/share/1LaQMgh6mg/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
                 </div>
             </div>
             <div class="col-12 col-md-6 col-lg-3">
                 <h5>Contact Us</h5>
-                <p>For further inquiries and assistance, please contact your TBGP network administrator.</p>
+                <ul class="footer-contact">
+                    <li>
+                        <a href="tel:+639202023891">
+                            <i class="bi bi-telephone-fill" aria-hidden="true"></i>
+                            <span>+63 920 202 3891</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="mailto:thebiggroupp@gmail.com">
+                            <i class="bi bi-envelope-fill" aria-hidden="true"></i>
+                            <span>thebiggroupp@gmail.com</span>
+                        </a>
+                    </li>
+                </ul>
             </div>
             <div class="col-12 col-md-6 col-lg-3">
                 <h5>Links</h5>
@@ -251,6 +263,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/brand-tagline-marquee.js') }}"></script>
 <script>
     (function () {
         var loader = document.getElementById("nationLoader");

@@ -484,7 +484,8 @@ body.dashboard-body.sidebar-open::before {
     align-items: center;
     gap: 0.4rem;
     min-width: 0;
-    flex: 1 1 auto;
+    flex: 1 1 0;
+    width: 0;
     line-height: 1.25;
 }
 .topbar-brand-name {
@@ -501,7 +502,8 @@ body.dashboard-body.sidebar-open::before {
     flex-shrink: 0;
 }
 .topbar-brand-tagline {
-    flex: 1 1 auto;
+    flex: 1 1 0;
+    width: 0;
     min-width: 0;
     overflow: hidden;
     -webkit-mask-image: linear-gradient(
@@ -523,11 +525,10 @@ body.dashboard-body.sidebar-open::before {
     display: inline-flex;
     width: max-content;
     white-space: nowrap;
-    animation: topbarTaglineMarquee 28s linear infinite;
+    animation: topbarTaglineMarquee var(--marquee-duration, 28s) linear infinite;
 }
 .topbar-brand-tagline-item {
     display: inline-block;
-    padding-right: 3rem;
     font-size: 0.72rem;
     font-style: italic;
     font-weight: 400;
@@ -535,7 +536,7 @@ body.dashboard-body.sidebar-open::before {
 }
 @keyframes topbarTaglineMarquee {
     from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
+    to { transform: translateX(var(--marquee-distance, -100%)); }
 }
 .topbar-title {
     font-family: "Barlow Condensed", sans-serif;

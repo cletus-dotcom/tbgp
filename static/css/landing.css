@@ -254,7 +254,8 @@ body.landing-body {
         align-items: center;
         gap: 0.45rem;
         min-width: 0;
-        flex: 1 1 auto;
+        flex: 1 1 0;
+        width: 0;
     }
 
     .landing-nav .navbar-brand.landing-brand-mark {
@@ -285,7 +286,8 @@ body.landing-body {
     }
 
     .landing-brand-tagline {
-        flex: 1 1 auto;
+        flex: 1 1 0;
+        width: 0;
         min-width: 0;
         overflow: hidden;
         -webkit-mask-image: linear-gradient(
@@ -308,12 +310,11 @@ body.landing-body {
         display: inline-flex;
         width: max-content;
         white-space: nowrap;
-        animation: landingTaglineMarquee 28s linear infinite;
+        animation: landingTaglineMarquee var(--marquee-duration, 28s) linear infinite;
     }
 
     .landing-brand-tagline-item {
         display: inline-block;
-        padding-right: 3rem;
         font-size: 0.72rem;
         font-style: italic;
         font-weight: 400;
@@ -323,7 +324,7 @@ body.landing-body {
 
     @keyframes landingTaglineMarquee {
         from { transform: translateX(0); }
-        to { transform: translateX(-50%); }
+        to { transform: translateX(var(--marquee-distance, -100%)); }
     }
 
     .landing-nav .navbar-toggler {
@@ -810,6 +811,36 @@ body.landing-body {
 
     .footer-links li + li {
         margin-top: 0.35rem;
+    }
+
+    .footer-contact {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .footer-contact li + li {
+        margin-top: 0.65rem;
+    }
+
+    .footer-contact a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .footer-contact a:hover {
+        color: var(--amber);
+        text-decoration: none;
+    }
+
+    .footer-contact i {
+        color: var(--amber);
+        font-size: 0.95rem;
+        flex-shrink: 0;
     }
 
     /* ── Back to top ── */
