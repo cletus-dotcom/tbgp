@@ -447,11 +447,26 @@ body.dashboard-body.sidebar-open::before {
     color: var(--text-white);
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.75rem;
     padding: 0 1rem;
     z-index: 1300;
     border-bottom: 2px solid var(--amber);
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+}
+.topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+    margin-left: 0.5rem;
 }
 .btn-menu {
     background: transparent;
@@ -464,65 +479,73 @@ body.dashboard-body.sidebar-open::before {
     flex-shrink: 0;
 }
 .btn-menu:hover { background: rgba(240, 165, 0, 0.12); }
+.topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    flex: 1 1 auto;
+    line-height: 1.25;
+}
+.topbar-brand-name {
+    font-family: "Barlow Condensed", sans-serif;
+    font-weight: 800;
+    font-size: 1.05rem;
+    letter-spacing: 0.08em;
+    color: var(--amber-bright);
+    flex-shrink: 0;
+}
+.topbar-brand-sep {
+    color: rgba(255, 255, 255, 0.35);
+    font-weight: 300;
+    flex-shrink: 0;
+}
+.topbar-brand-tagline {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(
+        90deg,
+        transparent 0,
+        #000 10px,
+        #000 calc(100% - 10px),
+        transparent 100%
+    );
+    mask-image: linear-gradient(
+        90deg,
+        transparent 0,
+        #000 10px,
+        #000 calc(100% - 10px),
+        transparent 100%
+    );
+}
+.topbar-brand-tagline-track {
+    display: inline-flex;
+    width: max-content;
+    white-space: nowrap;
+    animation: topbarTaglineMarquee 28s linear infinite;
+}
+.topbar-brand-tagline-item {
+    display: inline-block;
+    padding-right: 3rem;
+    font-size: 0.72rem;
+    font-style: italic;
+    font-weight: 400;
+    color: var(--text-muted);
+}
+@keyframes topbarTaglineMarquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
 .topbar-title {
     font-family: "Barlow Condensed", sans-serif;
-    font-weight: 700;
-    font-size: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-.topbar-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-shrink: 0;
-    margin-left: auto;
-}
-.topbar-time {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    white-space: nowrap;
-    display: none;
-}
-.user-chip {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--slate-mid);
-    border: 1px solid var(--card-border);
-    border-radius: var(--radius-sm);
-    padding: 0.25rem 0.75rem 0.25rem 0.35rem;
-    font-size: 0.75rem;
-    max-width: 180px;
-}
-.user-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: var(--radius-sm);
-    background: var(--amber);
-    color: var(--charcoal);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 0.7rem;
-    flex-shrink: 0;
-}
-.user-chip-text {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    line-height: 1.2;
-    color: var(--text-primary);
-}
-.user-chip-text strong {
-    display: block;
-    font-size: 0.7rem;
-    color: var(--amber);
-    text-transform: uppercase;
+    font-weight: 600;
+    font-size: 0.85rem;
     letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .sidebar {
@@ -1378,7 +1401,6 @@ body.dashboard-body.sidebar-open::before {
 }
 
 /* ── Responsive ── */
-@media (min-width: 576px) { .topbar-time { display: block; } }
 @media (min-width: 768px) {
     .stats-grid { grid-template-columns: repeat(4, 1fr); }
     .section-header {
@@ -1396,5 +1418,25 @@ body.dashboard-body.sidebar-open::before {
     .main-content { margin-left: var(--sidebar-width); }
     .btn-menu { display: none; }
 }
-@media (max-width: 575px) { .topbar-title { display: none; } }
-@media (max-width: 400px) { .user-chip-text { display: none; } }
+@media (max-width: 767px) {
+    .topbar-title {
+        max-width: 6.5rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+@media (max-width: 400px) {
+    .topbar-title {
+        max-width: 4.5rem;
+        font-size: 0.75rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .topbar-brand-tagline-track {
+        animation: none;
+    }
+    .topbar-brand-tagline-item[aria-hidden="true"] {
+        display: none;
+    }
+}

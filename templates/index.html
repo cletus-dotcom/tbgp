@@ -32,18 +32,29 @@
 </div>
 
 <nav class="navbar navbar-expand-lg landing-nav">
-    <div class="container">
-        <a class="navbar-brand" href="{{ url_for('main_routes.index') }}">
-            <span class="brand-icon" aria-hidden="true">
-                <span></span><span></span><span></span><span></span>
-            </span>
-            TBGP
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#landingNav"
-                aria-controls="landingNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="landingNav">
+    <div class="container landing-nav-shell">
+        <div class="landing-nav-top">
+            <div class="landing-brand-row">
+                <a class="navbar-brand landing-brand-mark" href="{{ url_for('main_routes.index') }}">
+                    <span class="brand-icon" aria-hidden="true">
+                        <span></span><span></span><span></span><span></span>
+                    </span>
+                    <span class="landing-brand-name">TBGP</span>
+                </a>
+                <span class="landing-brand-sep" aria-hidden="true">|</span>
+                <div class="landing-brand-tagline" aria-label="The Business Partner of the Ordinary and Poorest of the Poor Filipino">
+                    <div class="landing-brand-tagline-track">
+                        <span class="landing-brand-tagline-item">The Business Partner of the Ordinary and Poorest of the Poor Filipino</span>
+                        <span class="landing-brand-tagline-item" aria-hidden="true">The Business Partner of the Ordinary and Poorest of the Poor Filipino</span>
+                    </div>
+                </div>
+            </div>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#landingNav"
+                    aria-controls="landingNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
+        <div class="collapse navbar-collapse landing-nav-collapse" id="landingNav">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item">
                     <a class="nav-link active" href="{{ url_for('main_routes.index') }}">Home</a>

@@ -13,19 +13,23 @@
 </head>
 <body class="dashboard-body">
     <header class="topbar">
-        <button class="btn-menu" id="menuToggle" aria-label="Toggle menu">
-            <i class="bi bi-list"></i>
-        </button>
-        <span class="topbar-title">{% block topbar_title %}Dashboard{% endblock %}</span>
-        <div class="topbar-actions">
-            <span class="topbar-time" id="ph-time">Loading...</span>
-            <div class="user-chip" title="{{ fullname }}">
-                <span class="user-avatar">{{ fullname[:1]|upper if fullname else 'A' }}</span>
-                <span class="user-chip-text">
-                    <strong>{{ role }}</strong>
-                    {{ fullname|truncate(14, True, '…') }}
-                </span>
+        <div class="topbar-left">
+            <button class="btn-menu" id="menuToggle" aria-label="Toggle menu">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="topbar-brand">
+                <span class="topbar-brand-name">TBGP</span>
+                <span class="topbar-brand-sep" aria-hidden="true">|</span>
+                <div class="topbar-brand-tagline" aria-label="The Business Partner of the Ordinary and Poorest of the Poor Filipino">
+                    <div class="topbar-brand-tagline-track">
+                        <span class="topbar-brand-tagline-item">The Business Partner of the Ordinary and Poorest of the Poor Filipino</span>
+                        <span class="topbar-brand-tagline-item" aria-hidden="true">The Business Partner of the Ordinary and Poorest of the Poor Filipino</span>
+                    </div>
+                </div>
             </div>
+        </div>
+        <div class="topbar-right">
+            <span class="topbar-title">{% block topbar_title %}Dashboard{% endblock %}</span>
         </div>
     </header>
 
@@ -250,7 +254,6 @@
             const menuToggle = document.getElementById('menuToggle');
             const sidebar = document.getElementById('sidebar');
             const body = document.body;
-            const phTimeEl = document.getElementById('ph-time');
             const isDesktop = () => window.matchMedia('(min-width: 992px)').matches;
 
             function closeSidebar() {
@@ -316,16 +319,6 @@
                 commissionChevron.classList.add('bi-chevron-up');
             }
             {% endif %}
-
-            const updateTime = () => {
-                const opts = {
-                    timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit',
-                    year: 'numeric', month: 'short', day: 'numeric', hour12: true
-                };
-                if (phTimeEl) phTimeEl.textContent = new Intl.DateTimeFormat([], opts).format(new Date());
-            };
-            updateTime();
-            setInterval(updateTime, 60000);
 
             document.getElementById('purgeMembersBtn')?.addEventListener('click', async () => {
                 if (!confirm('This will permanently delete all members and related ledger, payout, sharing, project, and contractor records. Continue?')) return;

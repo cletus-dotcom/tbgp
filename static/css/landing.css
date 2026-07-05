@@ -235,7 +235,29 @@ body.landing-body {
         box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
     }
 
-    .landing-nav .navbar-brand {
+    .landing-nav .landing-nav-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .landing-nav-top {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .landing-brand-row {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    .landing-nav .navbar-brand.landing-brand-mark {
         display: flex;
         align-items: center;
         gap: 0.6rem;
@@ -246,6 +268,84 @@ body.landing-body {
         letter-spacing: 0.06em;
         text-transform: uppercase;
         text-decoration: none;
+        margin-right: 0;
+        padding: 0;
+        flex-shrink: 0;
+    }
+
+    .landing-brand-name {
+        line-height: 1;
+    }
+
+    .landing-brand-sep {
+        color: rgba(255, 255, 255, 0.35);
+        font-weight: 300;
+        flex-shrink: 0;
+        line-height: 1;
+    }
+
+    .landing-brand-tagline {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        -webkit-mask-image: linear-gradient(
+            90deg,
+            transparent 0,
+            #000 8px,
+            #000 calc(100% - 8px),
+            transparent 100%
+        );
+        mask-image: linear-gradient(
+            90deg,
+            transparent 0,
+            #000 8px,
+            #000 calc(100% - 8px),
+            transparent 100%
+        );
+    }
+
+    .landing-brand-tagline-track {
+        display: inline-flex;
+        width: max-content;
+        white-space: nowrap;
+        animation: landingTaglineMarquee 28s linear infinite;
+    }
+
+    .landing-brand-tagline-item {
+        display: inline-block;
+        padding-right: 3rem;
+        font-size: 0.72rem;
+        font-style: italic;
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.62);
+        line-height: 1.2;
+    }
+
+    @keyframes landingTaglineMarquee {
+        from { transform: translateX(0); }
+        to { transform: translateX(-50%); }
+    }
+
+    .landing-nav .navbar-toggler {
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+
+    @media (min-width: 992px) {
+        .landing-nav-shell {
+            flex-direction: row;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .landing-nav-top {
+            flex: 1 1 auto;
+            width: auto;
+        }
+
+        .landing-nav-collapse {
+            flex: 0 0 auto;
+        }
     }
 
     .brand-icon {
@@ -817,9 +917,13 @@ body.landing-body {
         .build-layer,
         .lowbed-truck,
         .truck-wheel,
-        .loader-progress-bar {
+        .loader-progress-bar,
+        .landing-brand-tagline-track {
             animation: none !important;
         }
         .build-layer { height: 22px; opacity: 1; }
         .loader-progress-bar { width: 100%; }
+        .landing-brand-tagline-item[aria-hidden="true"] {
+            display: none;
+        }
     }
