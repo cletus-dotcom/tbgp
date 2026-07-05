@@ -9,8 +9,11 @@
         if (items.length < 2) return;
 
         var viewWidth = Math.round(wrap.getBoundingClientRect().width);
-        if (!viewWidth || viewWidth > window.innerWidth) {
-            viewWidth = Math.max(Math.round(window.innerWidth * 0.45), 120);
+        if (!viewWidth) {
+            requestAnimationFrame(function () {
+                measureMarquee(wrap);
+            });
+            return;
         }
         if (wrap.dataset.marqueeViewWidth === String(viewWidth) && wrap.dataset.marqueeReady === "1") {
             return;

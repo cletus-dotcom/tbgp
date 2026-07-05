@@ -484,8 +484,7 @@ body.dashboard-body.sidebar-open::before {
     align-items: center;
     gap: 0.4rem;
     min-width: 0;
-    flex: 1 1 0;
-    width: 0;
+    flex: 1 1 auto;
     line-height: 1.25;
 }
 .topbar-brand-name {
@@ -502,8 +501,7 @@ body.dashboard-body.sidebar-open::before {
     flex-shrink: 0;
 }
 .topbar-brand-tagline {
-    flex: 1 1 0;
-    width: 0;
+    flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
     -webkit-mask-image: linear-gradient(
