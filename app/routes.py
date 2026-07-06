@@ -20,6 +20,7 @@ from sqlalchemy import func, text
 from sqlalchemy.orm import joinedload
 from werkzeug.security import generate_password_hash
 
+from app import db
 from app.auth import admin_required, login_required, staff_or_admin_required
 from app.site_content_service import (
     get_all_ecosystem_pages,
