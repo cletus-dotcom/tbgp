@@ -1,0 +1,28 @@
+{% extends "site_admin/base.html" %}
+{% block page_title %}Landing Section{% endblock %}
+{% block topbar_title %}Landing Ecosystem Section{% endblock %}
+
+{% block content %}
+<div class="site-admin-page">
+    <form method="post" class="site-admin-form">
+        <fieldset>
+            <legend>Home page — ecosystem pillars header</legend>
+            <div class="mb-3">
+                <label for="subtitle" class="form-label">Subtitle</label>
+                <input type="text" class="form-control" id="subtitle" name="subtitle" value="{{ section.subtitle }}" required>
+            </div>
+            <div class="mb-3">
+                <label for="title" class="form-label">Title</label>
+                <input type="text" class="form-control" id="title" name="title" value="{{ section.title }}" required>
+            </div>
+        </fieldset>
+
+        <p class="form-text">Pillar card content is edited on each ecosystem page (Products, Services, Partners).</p>
+
+        <div class="site-admin-form-actions">
+            <a href="{{ url_for('site_admin.home') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

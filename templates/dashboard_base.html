@@ -116,9 +116,16 @@
         </ul>
         {% endif %}
 
-        {% if can_access_admin_options(session.get('role')) or can_manage_data(session.get('role')) %}
+        {% if can_access_admin_options(session.get('role')) or can_manage_data(session.get('role')) or can_manage_site_content(session.get('role')) %}
         <p class="sidebar-label">Administration</p>
         <ul class="sidebar-nav">
+            {% if can_manage_site_content(session.get('role')) %}
+            <li>
+                <a href="{{ url_for('site_admin.home') }}" class="{% if active_page == 'site_admin' %}active{% endif %}">
+                    <i class="bi bi-globe"></i> Site Content
+                </a>
+            </li>
+            {% endif %}
             {% if can_access_admin_options(session.get('role')) %}
             <li>
                 <button class="sidebar-link" id="adminOptionsBtn" type="button">

@@ -20,8 +20,16 @@ from sqlalchemy import func, text
 from sqlalchemy.orm import joinedload
 from werkzeug.security import generate_password_hash
 
-from app.ecosystem_content import ECOSYSTEM_PAGES, ECOSYSTEM_SLUGS
 from app.auth import admin_required, login_required, staff_or_admin_required
+from app.site_content_service import (
+    get_all_ecosystem_pages,
+    get_contractors,
+    get_ecosystem_page,
+    get_ecosystem_slugs,
+    get_landing_ecosystem_section,
+    get_partner_by_slug,
+    get_suppliers,
+)
 from app.config import (
     CLIENT_POOL_PERCENT,
     COMMISSION_SCHEME_CLIENT,
@@ -55,8 +63,10 @@ from app.config import (
     payout_scheme_summary,
     is_admin_role,
     is_member_role,
+    is_site_admin_role,
     is_staff_role,
     normalize_role,
+    post_login_redirect,
     staff_may_manage_user,
 )
 
@@ -432,19 +442,40 @@ def _blank_import_template(sheet_name, columns, reference_rows=None):
 
 @main_routes.route("/")
 def index():
-    return render_template("index.html")
+    return render_template(
+        "index.html",
+        landing_section=get_landing_ecosystem_section(),
+        ecosystem_pages=get_all_ecosystem_pages(),
+        ecosystem_slugs=get_ecosystem_slugs(),
+    )
 
 
 @main_routes.route("/ecosystem/<slug>")
 def ecosystem_page(slug):
-    page = ECOSYSTEM_PAGES.get(slug)
+    page = get_ecosystem_page(slug)
     if page is None:
         abort(404)
-    related_pages = [ECOSYSTEM_PAGES[s] for s in ECOSYSTEM_SLUGS if s != slug]
+    all_pages = get_all_ecosystem_pages()
+    related_pages = [all_pages[s] for s in get_ecosystem_slugs() if s != slug]
+    context = {
+        "page": page,
+        "related_pages": related_pages,
+        "landing_nav_active": None,
+    }
+    if slug == "partners":
+        context["contractors"] = get_contractors()
+        context["suppliers"] = get_suppliers()
+    return render_template("ecosystem_page.html", **context)
+
+
+@main_routes.route("/partners/<partner_slug>")
+def partner_profile(partner_slug):
+    partner = get_partner_by_slug(partner_slug)
+    if partner is None:
+        abort(404)
     return render_template(
-        "ecosystem_page.html",
-        page=page,
-        related_pages=related_pages,
+        "partner_profile.html",
+        partner=partner,
         landing_nav_active=None,
     )
 
@@ -481,7 +512,7 @@ def login():
                 session.clear()
                 return render_template("login.html", next_url=next_param)
 
-            redirect_to = next_param if next_param.startswith("/") else url_for("main_routes.dashboard")
+            redirect_to = post_login_redirect(user.role, next_param)
 
             if request.is_json:
                 return jsonify({"success": True, "redirect": redirect_to})
@@ -502,6 +533,9 @@ def dashboard():
     user = User.query.get(session.get("user_id"))
     if not user:
         return redirect(url_for("main_routes.logout"))
+
+    if is_site_admin_role(user.role):
+        return redirect(url_for("site_admin.home"))
 
     if is_member_role(user.role):
         linked_id = require_linked_member()

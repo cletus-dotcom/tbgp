@@ -1166,6 +1166,524 @@ body.landing-body {
         }
     }
 
+    /* ── Partners registry ── */
+    .partners-registry {
+        margin-bottom: 2.5rem;
+    }
+
+    .partners-registry-header {
+        text-align: center;
+        max-width: 720px;
+        margin: 0 auto 2rem;
+    }
+
+    .partners-registry-subtitle {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--amber);
+        margin: 0 0 0.5rem;
+    }
+
+    .partners-registry-title {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: clamp(1.4rem, 3.2vw, 2rem);
+        font-weight: 800;
+        color: var(--text-white);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin: 0 0 0.75rem;
+    }
+
+    .partners-registry-desc {
+        margin: 0;
+        font-size: 0.92rem;
+        line-height: 1.65;
+        color: var(--text-muted);
+    }
+
+    .registry-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+    }
+
+    .registry-column-head {
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.85rem;
+        border-bottom: 1px solid rgba(240, 165, 0, 0.2);
+    }
+
+    .registry-column-head i {
+        color: var(--amber);
+        font-size: 1.15rem;
+        margin-bottom: 0.35rem;
+        display: block;
+    }
+
+    .registry-column-head h3 {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--text-white);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin: 0 0 0.25rem;
+    }
+
+    .registry-column-head p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: var(--text-subtle);
+        line-height: 1.5;
+    }
+
+    .strip-card {
+        display: flex;
+        align-items: center;
+        background-color: #1e2640;
+        border-left: 3px solid transparent;
+        padding: 1rem 1.25rem;
+        border-radius: 8px;
+        margin-bottom: 0.85rem;
+        transition: background-color 0.25s ease-in-out, border-color 0.25s ease-in-out, transform 0.25s ease-in-out;
+    }
+
+    .strip-card:last-child {
+        margin-bottom: 0;
+    }
+
+    .strip-card:hover {
+        background-color: #242e4c;
+        border-left-color: var(--amber);
+        transform: translateX(4px);
+    }
+
+    .card-thumb {
+        width: 56px;
+        height: 56px;
+        flex-shrink: 0;
+        border-radius: 6px;
+        overflow: hidden;
+        background-color: #121824;
+    }
+
+    .card-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .card-info-center {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding-left: 1rem;
+        padding-right: 0.75rem;
+    }
+
+    .partner-code {
+        font-family: "SF Mono", "Consolas", "Courier New", monospace;
+        color: var(--text-white);
+        font-size: 1rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        margin: 0 0 0.2rem;
+    }
+
+    .partner-specialty {
+        margin: 0 0 0.25rem;
+        font-size: 0.78rem;
+        line-height: 1.4;
+        color: var(--text-subtle);
+    }
+
+    .address-line {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.35rem;
+        color: #94a3b8;
+        font-size: 0.82rem;
+        margin: 0;
+        line-height: 1.45;
+    }
+
+    .pin-icon {
+        color: var(--amber);
+        flex-shrink: 0;
+        line-height: 1.2;
+    }
+
+    .pin-icon .bi {
+        font-size: 0.75rem;
+    }
+
+    .card-action-right {
+        flex-shrink: 0;
+    }
+
+    .explore-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        text-decoration: none;
+        white-space: nowrap;
+        transition: color 0.2s ease;
+    }
+
+    .strip-card:hover .explore-link {
+        color: var(--amber);
+    }
+
+    .explore-link .arrow {
+        display: inline-block;
+        transition: transform 0.2s ease;
+    }
+
+    .strip-card:hover .explore-link .arrow {
+        transform: translateX(3px);
+    }
+
+    @media (min-width: 1024px) {
+        .registry-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    .partners-services-cta {
+        margin-top: 2rem;
+    }
+
+    .ecosystem-detail > .container > .services-contact-cta,
+    .partner-profile-body .services-contact-cta {
+        margin-top: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .partners-services-cta-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        text-align: center;
+        background: linear-gradient(135deg, rgba(240, 165, 0, 0.14) 0%, rgba(30, 38, 64, 0.98) 60%);
+        border: 1px solid rgba(240, 165, 0, 0.32);
+        border-radius: 8px;
+        padding: 2rem 1.5rem;
+    }
+
+    .partners-services-cta-title {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: clamp(1rem, 2.5vw, 1.35rem);
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-white);
+        margin: 0;
+        max-width: 640px;
+    }
+
+    .partners-services-cta-phone {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.65rem;
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: clamp(1.35rem, 3.5vw, 1.85rem);
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        color: var(--amber);
+        text-decoration: none;
+        transition: color 0.2s ease, transform 0.2s ease;
+    }
+
+    .partners-services-cta-phone i {
+        font-size: 1.1em;
+    }
+
+    .partners-services-cta-phone:hover {
+        color: #ffc04d;
+        transform: scale(1.02);
+    }
+
+    @media (min-width: 768px) {
+        .partners-services-cta-inner {
+            flex-direction: row;
+            justify-content: space-between;
+            text-align: left;
+            padding: 1.75rem 2rem;
+        }
+
+        .partners-services-cta-title {
+            max-width: none;
+            flex: 1 1 auto;
+        }
+
+        .partners-services-cta-phone {
+            flex-shrink: 0;
+        }
+    }
+
+    @media (max-width: 575px) {
+        .strip-card {
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .card-info-center {
+            flex: 1 1 calc(100% - 72px);
+            padding-left: 0;
+            padding-right: 0;
+            order: 2;
+        }
+
+        .card-thumb {
+            order: 1;
+        }
+
+        .card-action-right {
+            order: 3;
+            width: 100%;
+            padding-left: calc(56px + 0.75rem);
+        }
+    }
+
+    /* ── Partner profile page ── */
+    .partner-profile-hero {
+        padding: 1.75rem 1.5rem 2rem;
+        background: #121824;
+        border-bottom: 2px solid rgba(240, 165, 0, 0.25);
+    }
+
+    .partner-breadcrumbs {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.35rem 0.5rem;
+        font-size: 0.78rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.75;
+    }
+
+    .partner-breadcrumbs a {
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .partner-breadcrumbs a:hover {
+        color: var(--amber);
+    }
+
+    .partner-breadcrumbs span:last-child {
+        color: var(--amber);
+    }
+
+    .partner-profile-header {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .partner-profile-logo {
+        width: 96px;
+        height: 96px;
+        flex-shrink: 0;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #1e2640;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .partner-profile-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .partner-code-pill {
+        display: inline-block;
+        font-family: "SF Mono", "Consolas", "Courier New", monospace;
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        color: var(--amber);
+        background: rgba(240, 165, 0, 0.12);
+        border: 1px solid rgba(240, 165, 0, 0.35);
+        border-radius: 999px;
+        padding: 0.25rem 0.65rem;
+        margin-bottom: 0.65rem;
+    }
+
+    .partner-profile-identity h1 {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: clamp(1.65rem, 4vw, 2.35rem);
+        font-weight: 800;
+        color: var(--text-white);
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        margin: 0 0 0.5rem;
+        line-height: 1.1;
+    }
+
+    .partner-profile-specialty {
+        margin: 0 0 0.5rem;
+        font-size: 0.95rem;
+        color: var(--text-subtle);
+    }
+
+    .partner-profile-location {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin: 0;
+        font-size: 0.88rem;
+        color: var(--text-muted);
+    }
+
+    .partner-profile-location .bi {
+        color: var(--amber);
+    }
+
+    .partner-profile-body {
+        padding: 2.5rem 1.5rem 4rem;
+        background: var(--slate-deep);
+    }
+
+    .partner-profile-copy {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .partner-copy-block {
+        background: #1e2640;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 1.35rem 1.5rem;
+    }
+
+    .partner-copy-block h2 {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 0.95rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--amber);
+        margin: 0 0 0.65rem;
+    }
+
+    .partner-copy-block p {
+        margin: 0;
+        font-size: 0.92rem;
+        line-height: 1.65;
+        color: var(--text-muted);
+    }
+
+    .partner-copy-highlight {
+        border-color: rgba(240, 165, 0, 0.28);
+        background: linear-gradient(135deg, rgba(240, 165, 0, 0.08) 0%, #1e2640 100%);
+    }
+
+    .partner-gallery-section {
+        margin-bottom: 2rem;
+    }
+
+    .partner-gallery-head {
+        margin-bottom: 1.25rem;
+    }
+
+    .partner-gallery-head h2 {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: var(--text-white);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin: 0 0 0.35rem;
+    }
+
+    .partner-gallery-head p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--text-subtle);
+    }
+
+    .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .gallery-item {
+        margin: 0;
+    }
+
+    .gallery-item img {
+        width: 100%;
+        height: 220px;
+        object-fit: cover;
+        border-radius: 8px;
+        display: block;
+        filter: grayscale(20%);
+        transition: filter 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .gallery-item img:hover {
+        filter: grayscale(0%);
+        transform: scale(1.02);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .gallery-item figcaption {
+        margin-top: 0.5rem;
+        font-size: 0.78rem;
+        color: var(--text-subtle);
+        line-height: 1.4;
+    }
+
+    .partner-profile-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+    }
+
+    .partner-profile-actions .btn-ecosystem-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    @media (min-width: 768px) {
+        .partner-profile-header {
+            flex-direction: row;
+            align-items: flex-start;
+        }
+
+        .partner-profile-copy {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .strip-card,
+        .strip-card:hover,
+        .gallery-item img,
+        .gallery-item img:hover {
+            transform: none;
+        }
+    }
+
     .ecosystem-portal-panel {
         display: flex;
         flex-direction: column;

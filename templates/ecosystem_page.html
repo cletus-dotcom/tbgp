@@ -42,6 +42,14 @@
             {% endfor %}
         </div>
 
+        {% if page.slug == 'partners' %}
+        {% include 'partials/partners_registry.html' %}
+        {% endif %}
+
+        {% if page.slug == 'services' %}
+        {% include 'partials/services_contact_cta.html' %}
+        {% endif %}
+
         {% if page.social_feed %}
         <section class="ecosystem-social-feed" aria-labelledby="social-feed-title">
             <header class="ecosystem-social-feed-header">

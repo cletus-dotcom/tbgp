@@ -1,0 +1,49 @@
+{% extends "site_admin/base.html" %}
+{% block page_title %}Overview{% endblock %}
+{% block topbar_title %}Site Content Overview{% endblock %}
+
+{% block content %}
+<div class="site-admin-page">
+    <p class="site-admin-lead">
+        Manage the public landing page ecosystem section, ecosystem pillar pages, and the partner registry.
+    </p>
+
+    <div class="site-admin-cards">
+        <article class="site-admin-card">
+            <h2><i class="bi bi-house"></i> Landing Ecosystem</h2>
+            <p>Section header on the home page above the three pillar cards.</p>
+            <p class="site-admin-meta">{{ landing_section.subtitle }} — {{ landing_section.title }}</p>
+            <a href="{{ url_for('site_admin.edit_landing') }}" class="btn btn-primary btn-sm">Edit header</a>
+        </article>
+
+        {% for slug in ['products', 'services', 'partners'] %}
+        {% set page = ecosystem_pages[slug] %}
+        <article class="site-admin-card">
+            <h2><i class="bi bi-file-earmark-text"></i> {{ page.label }}</h2>
+            <p>{{ page.title }}</p>
+            <a href="{{ url_for('site_admin.edit_ecosystem', slug=slug) }}" class="btn btn-primary btn-sm">Edit page</a>
+            <a href="{{ url_for('main_routes.ecosystem_page', slug=slug) }}" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">Preview</a>
+        </article>
+        {% endfor %}
+
+        <article class="site-admin-card">
+            <h2><i class="bi bi-telephone"></i> Services Contact Card</h2>
+            <p>Call-to-action on Services, Partners, and all registry profile pages.</p>
+            <p class="site-admin-meta">{{ contact_cta.title }} — {{ contact_cta.phone_display }}</p>
+            <a href="{{ url_for('site_admin.edit_contact_cta') }}" class="btn btn-primary btn-sm">Edit card</a>
+        </article>
+
+        <article class="site-admin-card">
+            <h2><i class="bi bi-building"></i> Contractor Registry</h2>
+            <p>{{ contractors|length }} Tier-1 construction and civil works partners.</p>
+            <a href="{{ url_for('site_admin.registry_contractors') }}" class="btn btn-primary btn-sm">Manage contractors</a>
+        </article>
+
+        <article class="site-admin-card">
+            <h2><i class="bi bi-box-seam"></i> Supplier Registry</h2>
+            <p>{{ suppliers|length }} material and equipment supply partners.</p>
+            <a href="{{ url_for('site_admin.registry_suppliers') }}" class="btn btn-primary btn-sm">Manage suppliers</a>
+        </article>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "site_admin/base.html" %}
+{% block page_title %}Services Contact Card{% endblock %}
+{% block topbar_title %}Services Contact Card{% endblock %}
+
+{% block content %}
+<div class="site-admin-page">
+    <p class="site-admin-lead">
+        This card appears on the Services page, Partners page, and every contractor and supplier profile page.
+    </p>
+
+    <form method="post" class="site-admin-form">
+        <fieldset>
+            <legend>Card content</legend>
+            <div class="mb-3">
+                <label class="form-label" for="title">Heading</label>
+                <input class="form-control" id="title" name="title" value="{{ contact_cta.title }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="phone_display">Phone number (displayed)</label>
+                <input class="form-control" id="phone_display" name="phone_display" value="{{ contact_cta.phone_display }}" required placeholder="0920 202 3891">
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="phone_tel">Phone link (optional)</label>
+                <input class="form-control" id="phone_tel" name="phone_tel" value="{{ contact_cta.phone_tel }}" placeholder="+639202023891">
+                <p class="form-text">Used for tap-to-call. Leave blank to auto-generate from the displayed number.</p>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Preview</legend>
+            <div class="site-admin-cta-preview">
+                {% include 'partials/services_contact_cta.html' %}
+            </div>
+        </fieldset>
+
+        <div class="site-admin-form-actions">
+            <a href="{{ url_for('site_admin.home') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

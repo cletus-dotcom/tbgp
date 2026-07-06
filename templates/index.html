@@ -126,102 +126,30 @@
 <section class="ecosystem-pillars" id="ecosystem-pillars">
     <div class="container">
         <header class="ecosystem-pillars-header">
-            <p class="section-subtitle">The Cooperative Ecosystem</p>
-            <h2 class="section-title">Products, Services &amp; Partners</h2>
+            <p class="section-subtitle">{{ landing_section.subtitle }}</p>
+            <h2 class="section-title">{{ landing_section.title }}</h2>
         </header>
 
         <div class="cards-grid">
-            <a href="{{ url_for('main_routes.ecosystem_page', slug='products') }}" class="pillar-card pillar-card-link">
-                <p class="pillar-card-label">Our Products</p>
-                <p class="pillar-card-subtitle">The Cooperative Ecosystem</p>
-                <h3 class="pillar-card-title">Nation-Building Solutions</h3>
-                <p class="pillar-card-desc">
-                    From mega-infrastructure to grassroots livelihood programs, we develop sustainable tangible assets that drive both economic growth and social equity.
-                </p>
+            {% for slug in ecosystem_slugs %}
+            {% set page = ecosystem_pages[slug] %}
+            {% set card = page.landing_card or {} %}
+            <a href="{{ url_for('main_routes.ecosystem_page', slug=slug) }}" class="pillar-card pillar-card-link">
+                <p class="pillar-card-label">{{ page.label }}</p>
+                <p class="pillar-card-subtitle">{{ page.subtitle }}</p>
+                <h3 class="pillar-card-title">{{ page.title }}</h3>
+                <p class="pillar-card-desc">{{ card.desc or page.hero_lead }}</p>
                 <ul class="pillar-card-list">
+                    {% for bullet in card.bullets or [] %}
                     <li>
-                        <span class="pillar-list-icon" aria-hidden="true">🏗️</span>
-                        <span><strong>Mega-Infrastructure:</strong> Nationwide public and private sector developments.</span>
+                        <span class="pillar-list-icon" aria-hidden="true">{{ bullet.icon }}</span>
+                        <span>{{ bullet.text }}</span>
                     </li>
-                    <li>
-                        <span class="pillar-list-icon" aria-hidden="true">🏠</span>
-                        <span><strong>Resilient Housing:</strong> Sustainable, master-planned housing projects.</span>
-                    </li>
-                    <li>
-                        <span class="pillar-list-icon" aria-hidden="true">🌾</span>
-                        <span><strong>Pangkabuhayan Initiatives:</strong> Dedicated livelihood programs for the poorest of the poor Filipinos.</span>
-                    </li>
-                    <li>
-                        <span class="pillar-list-icon" aria-hidden="true">👥</span>
-                        <span><strong>Verified Personnel Pool:</strong> Rigorously vetted agency personnel and workforce.</span>
-                    </li>
-                    <li>
-                        <span class="pillar-list-icon" aria-hidden="true">🏆</span>
-                        <span><strong>Success Stories:</strong> Real-world proof of growth from our members and partners.</span>
-                    </li>
+                    {% endfor %}
                 </ul>
-                <span class="pillar-card-cta">Explore products <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+                <span class="pillar-card-cta">{{ card.cta or ('Explore ' ~ slug) }} <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
             </a>
-
-            <a href="{{ url_for('main_routes.ecosystem_page', slug='services') }}" class="pillar-card pillar-card-link">
-                <p class="pillar-card-label">Our Services</p>
-                <p class="pillar-card-subtitle">Operational Excellence</p>
-                <h3 class="pillar-card-title">Strategic Execution &amp; Logistics</h3>
-                <p class="pillar-card-desc">
-                    We streamline complex logistics, centralize workforce data, and fast-track resource deployment to ensure massive projects launch seamlessly.
-                </p>
-                <ul class="pillar-card-list">
-                    <li>
-                        <span class="pillar-list-icon" aria-hidden="true">⚡</span>
-                        <span><strong>Project Facilitation:</strong> End-to-end management for infrastructure and housing.</span>
-                    </li>
-                    <li>
-                        <span class="pillar-list-icon" aria-hidden="true">🚜</span>
-                        <span><strong>Fast Equipment Transitioning:</strong> Rapid deployment of heavy machinery via our Lowbed Hub.</span>
-                    </li>
-                    <li>
-                        <span class="pillar-list-icon" aria-hidden="true">📊</span>
-                        <span><strong>Centralized Information Pooling:</strong> Unified data hubs for agency personnel tracking.</span>
-                    </li>
-                    <li>
-                        <span class="pillar-list-icon" aria-hidden="true">💰</span>
-                        <span><strong>Financial Freedom Frameworks:</strong> Empowering ordinary members and partners through shared wealth.</span>
-                    </li>
-                    <li>
-                        <span class="pillar-list-icon" aria-hidden="true">🇵🇭</span>
-                        <span><strong>Poverty Alleviation:</strong> Direct, structural economic support for marginalized communities.</span>
-                    </li>
-                </ul>
-                <span class="pillar-card-cta">Explore services <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
-            </a>
-
-            <a href="{{ url_for('main_routes.ecosystem_page', slug='partners') }}" class="pillar-card pillar-card-link">
-                <p class="pillar-card-label">Our Partners</p>
-                <p class="pillar-card-subtitle">Global Synergy</p>
-                <h3 class="pillar-card-title">The Allied Network</h3>
-                <p class="pillar-card-desc">
-                    TBGP unites global capital with local execution, creating an unbreakable network of top-tier contractors, funders, and manpower.
-                </p>
-                <ul class="pillar-card-list">
-                    <li>
-                        <span class="pillar-list-icon" aria-hidden="true">🌐</span>
-                        <span><strong>Worldwide Funding Network:</strong> Institutional investors and global financial backers.</span>
-                    </li>
-                    <li>
-                        <span class="pillar-list-icon" aria-hidden="true">🏗️</span>
-                        <span><strong>Tier-1 Construction Firms:</strong> World-class engineering and development partners.</span>
-                    </li>
-                    <li>
-                        <span class="pillar-list-icon" aria-hidden="true">💪</span>
-                        <span><strong>Skilled Manpower Pool:</strong> A massive, ready-to-deploy Filipino construction workforce.</span>
-                    </li>
-                    <li>
-                        <span class="pillar-list-icon" aria-hidden="true">📋</span>
-                        <span><strong>Integrated Agency Pools:</strong> Verified personnel networks for compliant operations.</span>
-                    </li>
-                </ul>
-                <span class="pillar-card-cta">Explore partners <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
-            </a>
+            {% endfor %}
         </div>
     </div>
 </section>

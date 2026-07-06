@@ -1,0 +1,220 @@
+{% extends "site_admin/base.html" %}
+{% block page_title %}Edit {{ page.label }}{% endblock %}
+{% block topbar_title %}{{ page.label }}{% endblock %}
+
+{% block content %}
+<div class="site-admin-page">
+    <div class="site-admin-toolbar">
+        <a href="{{ url_for('main_routes.ecosystem_page', slug=slug) }}" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">
+            <i class="bi bi-box-arrow-up-right"></i> Preview live page
+        </a>
+    </div>
+
+    <form method="post" class="site-admin-form">
+        <fieldset>
+            <legend>Page metadata &amp; hero</legend>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="meta_title">Browser title</label>
+                    <input class="form-control" id="meta_title" name="meta_title" value="{{ page.meta_title }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="label">Nav label</label>
+                    <input class="form-control" id="label" name="label" value="{{ page.label }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="subtitle">Subtitle</label>
+                    <input class="form-control" id="subtitle" name="subtitle" value="{{ page.subtitle }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="title">Title</label>
+                    <input class="form-control" id="title" name="title" value="{{ page.title }}">
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="hero_lead">Hero lead</label>
+                    <textarea class="form-control" id="hero_lead" name="hero_lead" rows="3">{{ page.hero_lead }}</textarea>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="intro">Intro paragraph</label>
+                    <textarea class="form-control" id="intro" name="intro" rows="4">{{ page.intro }}</textarea>
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Detail highlights</legend>
+            <div class="repeater-list" data-repeater="highlight" data-fields="icon,title,body">
+                {% for item in page.highlights %}
+                <div class="repeater-item">
+                    <div class="row g-2">
+                        <div class="col-md-1">
+                            <label class="form-label">Icon</label>
+                            <input class="form-control" name="highlight_icon_{{ loop.index0 }}" value="{{ item.icon }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Title</label>
+                            <input class="form-control" name="highlight_title_{{ loop.index0 }}" value="{{ item.title }}">
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label">Body</label>
+                            <textarea class="form-control" name="highlight_body_{{ loop.index0 }}" rows="2">{{ item.body }}</textarea>
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                            <button type="button" class="btn btn-outline-danger btn-sm repeater-remove" aria-label="Remove highlight">&times;</button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm repeater-add" data-target="highlight">Add highlight</button>
+        </fieldset>
+
+        <fieldset>
+            <legend>Home page pillar card</legend>
+            {% set card = page.landing_card or {} %}
+            <div class="mb-3">
+                <label class="form-label" for="landing_card_desc">Card description</label>
+                <textarea class="form-control" id="landing_card_desc" name="landing_card_desc" rows="3">{{ card.desc or '' }}</textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="landing_card_cta">Call to action label</label>
+                <input class="form-control" id="landing_card_cta" name="landing_card_cta" value="{{ card.cta or '' }}">
+            </div>
+            <div class="repeater-list" data-repeater="landing_bullet" data-fields="icon,text">
+                {% for item in card.bullets or [] %}
+                <div class="repeater-item">
+                    <div class="row g-2">
+                        <div class="col-md-1">
+                            <label class="form-label">Icon</label>
+                            <input class="form-control" name="landing_bullet_icon_{{ loop.index0 }}" value="{{ item.icon }}">
+                        </div>
+                        <div class="col-md-10">
+                            <label class="form-label">Bullet text</label>
+                            <input class="form-control" name="landing_bullet_text_{{ loop.index0 }}" value="{{ item.text }}">
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                            <button type="button" class="btn btn-outline-danger btn-sm repeater-remove">&times;</button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm repeater-add" data-target="landing_bullet">Add bullet</button>
+        </fieldset>
+
+        <fieldset>
+            <legend>Portal call-to-action</legend>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="portal_title">Portal block title</label>
+                    <input class="form-control" id="portal_title" name="portal_title" value="{{ page.portal_title }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="portal_cta_label">Button label</label>
+                    <input class="form-control" id="portal_cta_label" name="portal_cta_label" value="{{ page.portal_cta_label }}">
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="portal_body">Portal block body</label>
+                    <textarea class="form-control" id="portal_body" name="portal_body" rows="3">{{ page.portal_body }}</textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="portal_cta_url">CTA route (e.g. login)</label>
+                    <input class="form-control" id="portal_cta_url" name="portal_cta_url" value="{{ page.portal_cta_url }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="portal_next">Post-login redirect path</label>
+                    <input class="form-control" id="portal_next" name="portal_next" value="{{ page.portal_next }}">
+                </div>
+            </div>
+        </fieldset>
+
+        {% if slug == 'products' %}
+        {% set social = page.social_feed or {} %}
+        <fieldset>
+            <legend>News &amp; Updates (social feed)</legend>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="social_subtitle">Subtitle</label>
+                    <input class="form-control" id="social_subtitle" name="social_subtitle" value="{{ social.subtitle or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="social_title">Title</label>
+                    <input class="form-control" id="social_title" name="social_title" value="{{ social.title or '' }}">
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="social_description">Description</label>
+                    <textarea class="form-control" id="social_description" name="social_description" rows="2">{{ social.description or '' }}</textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="social_facebook_url">Facebook page URL</label>
+                    <input class="form-control" id="social_facebook_url" name="social_facebook_url" value="{{ social.facebook_url or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="social_facebook_caption">Facebook caption</label>
+                    <input class="form-control" id="social_facebook_caption" name="social_facebook_caption" value="{{ social.facebook_caption or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="social_youtube_title">YouTube title</label>
+                    <input class="form-control" id="social_youtube_title" name="social_youtube_title" value="{{ social.youtube_title or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="social_youtube_embed_url">YouTube embed URL</label>
+                    <input class="form-control" id="social_youtube_embed_url" name="social_youtube_embed_url" value="{{ social.youtube_embed_url or '' }}" placeholder="https://www.youtube.com/embed/...">
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="social_youtube_placeholder">YouTube placeholder text</label>
+                    <textarea class="form-control" id="social_youtube_placeholder" name="social_youtube_placeholder" rows="2">{{ social.youtube_placeholder or '' }}</textarea>
+                </div>
+            </div>
+        </fieldset>
+        {% endif %}
+
+        {% if slug == 'partners' %}
+        {% set registry = page.registry_section or {} %}
+        {% set contractors_head = registry.contractors_head or {} %}
+        {% set suppliers_head = registry.suppliers_head or {} %}
+        <fieldset>
+            <legend>Partner registry section (on this page)</legend>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="registry_subtitle">Registry subtitle</label>
+                    <input class="form-control" id="registry_subtitle" name="registry_subtitle" value="{{ registry.subtitle or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="registry_title">Registry title</label>
+                    <input class="form-control" id="registry_title" name="registry_title" value="{{ registry.title or '' }}">
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="registry_description">Registry description</label>
+                    <textarea class="form-control" id="registry_description" name="registry_description" rows="2">{{ registry.description or '' }}</textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="registry_contractors_title">Contractors column title</label>
+                    <input class="form-control" id="registry_contractors_title" name="registry_contractors_title" value="{{ contractors_head.title or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="registry_contractors_description">Contractors column description</label>
+                    <input class="form-control" id="registry_contractors_description" name="registry_contractors_description" value="{{ contractors_head.description or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="registry_suppliers_title">Suppliers column title</label>
+                    <input class="form-control" id="registry_suppliers_title" name="registry_suppliers_title" value="{{ suppliers_head.title or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="registry_suppliers_description">Suppliers column description</label>
+                    <input class="form-control" id="registry_suppliers_description" name="registry_suppliers_description" value="{{ suppliers_head.description or '' }}">
+                </div>
+            </div>
+            <p class="form-text mt-2">Individual registry entries are managed under
+                <a href="{{ url_for('site_admin.registry_contractors') }}">Contractor Registry</a> and
+                <a href="{{ url_for('site_admin.registry_suppliers') }}">Supplier Registry</a>.</p>
+        </fieldset>
+        {% endif %}
+
+        <div class="site-admin-form-actions">
+            <a href="{{ url_for('site_admin.home') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

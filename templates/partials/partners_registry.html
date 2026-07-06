@@ -1,0 +1,79 @@
+{% set registry = page.registry_section or {} %}
+{% set contractors_head = registry.contractors_head or {} %}
+{% set suppliers_head = registry.suppliers_head or {} %}
+<section class="partners-registry" id="partners-registry" aria-labelledby="partners-registry-title">
+    <header class="partners-registry-header">
+        <p class="partners-registry-subtitle">{{ registry.subtitle or 'Ecosystem Partner Registry' }}</p>
+        <h2 class="partners-registry-title" id="partners-registry-title">{{ registry.title or 'Contractors & Suppliers' }}</h2>
+        <p class="partners-registry-desc">
+            {{ registry.description or (
+                'Vetted Tier-1 builders and material partners indexed by registry code. Select a strip card to open '
+                'the full capability profile, asset gallery, and TBGP platform relationship.'
+            ) }}
+        </p>
+    </header>
+
+    <div class="registry-grid">
+        <div class="registry-column contractors">
+            <div class="registry-column-head">
+                <i class="bi bi-building" aria-hidden="true"></i>
+                <h3>{{ contractors_head.title or 'Contractors' }}</h3>
+                <p>{{ contractors_head.description or 'Tier-1 developers, civil works firms, heavy engineering' }}</p>
+            </div>
+            <div class="registry-list">
+                {% for partner in contractors %}
+                <article class="strip-card">
+                    <div class="card-thumb">
+                        <img src="{{ partner.thumb_url }}" alt="{{ partner.code }} thumbnail">
+                    </div>
+                    <div class="card-info-center">
+                        <h4 class="partner-code">{{ partner.code }}</h4>
+                        <p class="partner-specialty">{{ partner.specialty }}</p>
+                        <p class="address-line">
+                            <span class="pin-icon" aria-hidden="true"><i class="bi bi-geo-alt-fill"></i></span>
+                            {{ partner.location }}
+                        </p>
+                    </div>
+                    <div class="card-action-right">
+                        <a href="{{ url_for('main_routes.partner_profile', partner_slug=partner.slug) }}" class="explore-link">
+                            Explore Me <span class="arrow" aria-hidden="true">➔</span>
+                        </a>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="registry-column suppliers">
+            <div class="registry-column-head">
+                <i class="bi bi-box-seam" aria-hidden="true"></i>
+                <h3>{{ suppliers_head.title or 'Suppliers' }}</h3>
+                <p>{{ suppliers_head.description or 'Aggregate, steel, cement, heavy equipment manufacturers' }}</p>
+            </div>
+            <div class="registry-list">
+                {% for partner in suppliers %}
+                <article class="strip-card">
+                    <div class="card-thumb">
+                        <img src="{{ partner.thumb_url }}" alt="{{ partner.code }} thumbnail">
+                    </div>
+                    <div class="card-info-center">
+                        <h4 class="partner-code">{{ partner.code }}</h4>
+                        <p class="partner-specialty">{{ partner.specialty }}</p>
+                        <p class="address-line">
+                            <span class="pin-icon" aria-hidden="true"><i class="bi bi-geo-alt-fill"></i></span>
+                            {{ partner.location }}
+                        </p>
+                    </div>
+                    <div class="card-action-right">
+                        <a href="{{ url_for('main_routes.partner_profile', partner_slug=partner.slug) }}" class="explore-link">
+                            Explore Me <span class="arrow" aria-hidden="true">➔</span>
+                        </a>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% include 'partials/services_contact_cta.html' %}
+</section>

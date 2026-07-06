@@ -47,6 +47,9 @@ from app.config import (
     can_manage_data,
     can_purge_member_database,
     assignable_user_roles,
+    can_manage_site_content,
+    is_site_admin_role,
+    post_login_redirect,
     USER_ROLES,
     database_uri,
     payout_scheme_summary,
@@ -70,9 +73,29 @@ def create_app():
 
     db.init_app(app)
 
+    @app.before_request
+    def restrict_site_admin_portal_access():
+        from flask import redirect, request, session, url_for
+
+        if not session.get("username") or not is_site_admin_role(session.get("role")):
+            return None
+        path = request.path or ""
+        allowed = (
+            "/site-admin",
+            "/logout",
+            "/static/",
+            "/login",
+            "/ecosystem/",
+            "/partners/",
+        )
+        if path == "/" or any(path.startswith(prefix) for prefix in allowed):
+            return None
+        return redirect(url_for("site_admin.home"))
+
     @app.context_processor
     def inject_globals():
         from app.payout_service import payout_queue_counts
+        from app.site_content_service import get_services_contact_cta
 
         role = session.get("role")
         return {
@@ -87,6 +110,8 @@ def create_app():
             "theme_bg": THEME_BG,
             "theme_bg_alt": THEME_BG_ALT,
             "is_admin_role": is_admin_role,
+            "is_site_admin_role": is_site_admin_role,
+            "can_manage_site_content": can_manage_site_content,
             "is_member_role": is_member_role,
             "is_staff_or_admin": is_staff_or_admin,
             "can_manage_data": can_manage_data,
@@ -120,11 +145,14 @@ def create_app():
             "member_earnings_cap_nth": float(MEMBER_EARNINGS_CAP_NTH_PROJECT),
             "member_lifetime_earnings_cap": float(MEMBER_LIFETIME_EARNINGS_CAP),
             "member_lifetime_project_cap_after_limit": float(MEMBER_LIFETIME_PROJECT_CAP_AFTER_LIMIT),
+            "services_contact_cta": get_services_contact_cta(),
         }
 
     from app.routes import main_routes
+    from app.site_admin_routes import site_admin_bp
 
     app.register_blueprint(main_routes)
+    app.register_blueprint(site_admin_bp)
 
     with app.app_context():
         from app import models  # noqa: F401
@@ -153,6 +181,10 @@ def create_app():
         migrate_sharing_entries_table()
         _seed_admin()
         _seed_portal_admin()
+        _seed_site_admin()
+        from app.site_content_service import seed_cms_content
+
+        seed_cms_content()
         _seed_members()
         _seed_contractors()
         _seed_commission_levels()
@@ -196,6 +228,26 @@ def _seed_portal_admin():
     portal_admin.status = "Active"
     portal_admin.member_id = None
     portal_admin.set_password("portal123")
+    db.session.commit()
+
+
+def _seed_site_admin():
+    from app.models import User
+
+    site_admin = User.query.filter_by(username="SiteAdmin").first()
+    if not site_admin:
+        site_admin = User(
+            username="SiteAdmin",
+            full_name="Site Administrator",
+            role="SiteAdmin",
+            status="Active",
+        )
+        db.session.add(site_admin)
+    site_admin.full_name = site_admin.full_name or "Site Administrator"
+    site_admin.role = "SiteAdmin"
+    site_admin.status = "Active"
+    site_admin.member_id = None
+    site_admin.set_password("siteadmin123")
     db.session.commit()
 
 

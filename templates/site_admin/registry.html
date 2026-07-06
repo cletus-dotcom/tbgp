@@ -1,0 +1,68 @@
+{% extends "site_admin/base.html" %}
+{% block page_title %}{{ registry_meta.title }}{% endblock %}
+{% block topbar_title %}{{ registry_meta.title }}{% endblock %}
+
+{% block content %}
+<div class="site-admin-page">
+    <p class="site-admin-lead">{{ registry_meta.description }}</p>
+
+    <div class="site-admin-registry-tabs">
+        <a href="{{ url_for('site_admin.registry_contractors') }}"
+           class="site-admin-registry-tab {% if registry_type == 'contractors' %}active{% endif %}">
+            <i class="bi bi-building"></i> Contractors
+        </a>
+        <a href="{{ url_for('site_admin.registry_suppliers') }}"
+           class="site-admin-registry-tab {% if registry_type == 'suppliers' %}active{% endif %}">
+            <i class="bi bi-box-seam"></i> Suppliers
+        </a>
+    </div>
+
+    <div class="site-admin-toolbar">
+        <a href="{{ url_for('site_admin.registry_new', partner_type=registry_type) }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg"></i> Add {{ registry_meta.label|lower }} entry
+        </a>
+        <a href="{{ url_for('main_routes.ecosystem_page', slug='partners') }}#partners-registry" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">
+            Preview on site
+        </a>
+    </div>
+
+    {% if partners %}
+    <div class="table-responsive">
+        <table class="table table-hover site-admin-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Specialty</th>
+                    <th>Location</th>
+                    <th>Order</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for partner in partners %}
+                <tr>
+                    <td><code>{{ partner.code }}</code></td>
+                    <td>{{ partner.name }}</td>
+                    <td>{{ partner.specialty }}</td>
+                    <td>{{ partner.location }}</td>
+                    <td>{{ partner.get('sort_order', loop.index0) }}</td>
+                    <td class="text-end">
+                        <a href="{{ url_for('site_admin.registry_edit', slug=partner.slug) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                        <a href="{{ url_for('main_routes.partner_profile', partner_slug=partner.slug) }}" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="site-admin-empty">
+        <p>No {{ registry_meta.label|lower }} entries yet.</p>
+        <a href="{{ url_for('site_admin.registry_new', partner_type=registry_type) }}" class="btn btn-primary btn-sm">
+            Add first {{ registry_meta.label|lower }} entry
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

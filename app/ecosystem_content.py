@@ -88,6 +88,20 @@ ECOSYSTEM_PAGES = {
                 "stories, and nation-building updates published directly from the field."
             ),
         },
+        "landing_card": {
+            "desc": (
+                "From mega-infrastructure to grassroots livelihood programs, we develop sustainable "
+                "tangible assets that drive both economic growth and social equity."
+            ),
+            "bullets": [
+                {"icon": "🏗️", "text": "Mega-Infrastructure: Nationwide public and private sector developments."},
+                {"icon": "🏠", "text": "Resilient Housing: Sustainable, master-planned housing projects."},
+                {"icon": "🌾", "text": "Pangkabuhayan Initiatives: Dedicated livelihood programs for the poorest of the poor Filipinos."},
+                {"icon": "👥", "text": "Verified Personnel Pool: Rigorously vetted agency personnel and workforce."},
+                {"icon": "🏆", "text": "Success Stories: Real-world proof of growth from our members and partners."},
+            ],
+            "cta": "Explore products",
+        },
     },
     "services": {
         "slug": "services",
@@ -160,6 +174,20 @@ ECOSYSTEM_PAGES = {
         "portal_cta_label": "Sign In to Dashboard",
         "portal_cta_url": "login",
         "portal_next": "/dashboard",
+        "landing_card": {
+            "desc": (
+                "We streamline complex logistics, centralize workforce data, and fast-track resource "
+                "deployment to ensure massive projects launch seamlessly."
+            ),
+            "bullets": [
+                {"icon": "⚡", "text": "Project Facilitation: End-to-end management for infrastructure and housing."},
+                {"icon": "🚜", "text": "Fast Equipment Transitioning: Rapid deployment of heavy machinery via our Lowbed Hub."},
+                {"icon": "📊", "text": "Centralized Information Pooling: Unified data hubs for agency personnel tracking."},
+                {"icon": "💰", "text": "Financial Freedom Frameworks: Empowering ordinary members and partners through shared wealth."},
+                {"icon": "🇵🇭", "text": "Poverty Alleviation: Direct, structural economic support for marginalized communities."},
+            ],
+            "cta": "Explore services",
+        },
     },
     "partners": {
         "slug": "partners",
@@ -223,6 +251,35 @@ ECOSYSTEM_PAGES = {
         "portal_cta_label": "Partner Login",
         "portal_cta_url": "login",
         "portal_next": "/contractors",
+        "landing_card": {
+            "desc": (
+                "TBGP unites global capital with local execution, creating an unbreakable network of "
+                "top-tier contractors, funders, and manpower."
+            ),
+            "bullets": [
+                {"icon": "🌐", "text": "Worldwide Funding Network: Institutional investors and global financial backers."},
+                {"icon": "🏗️", "text": "Tier-1 Construction Firms: World-class engineering and development partners."},
+                {"icon": "💪", "text": "Skilled Manpower Pool: A massive, ready-to-deploy Filipino construction workforce."},
+                {"icon": "📋", "text": "Integrated Agency Pools: Verified personnel networks for compliant operations."},
+            ],
+            "cta": "Explore partners",
+        },
+        "registry_section": {
+            "subtitle": "Ecosystem Partner Registry",
+            "title": "Contractors & Suppliers",
+            "description": (
+                "Vetted Tier-1 builders and material partners indexed by registry code. Select a strip card "
+                "to open the full capability profile, asset gallery, and TBGP platform relationship."
+            ),
+            "contractors_head": {
+                "title": "Contractors",
+                "description": "Tier-1 developers, civil works firms, heavy engineering",
+            },
+            "suppliers_head": {
+                "title": "Suppliers",
+                "description": "Aggregate, steel, cement, heavy equipment manufacturers",
+            },
+        },
     },
 }
 

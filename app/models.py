@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -436,3 +437,30 @@ class SharingEntry(db.Model):
     project = db.relationship("ProjectCommission")
     billing = db.relationship("ProjectBilling")
     member = db.relationship("Member")
+
+
+class CmsLandingSection(db.Model):
+    __tablename__ = "cms_landing_sections"
+
+    section_key = db.Column(db.String(64), primary_key=True)
+    data = db.Column(db.JSON, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CmsEcosystemPage(db.Model):
+    __tablename__ = "cms_ecosystem_pages"
+
+    slug = db.Column(db.String(40), primary_key=True)
+    data = db.Column(db.JSON, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CmsRegistryPartner(db.Model):
+    __tablename__ = "cms_registry_partners"
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(80), unique=True, nullable=False)
+    partner_type = db.Column(db.String(20), nullable=False)
+    sort_order = db.Column(db.Integer, default=0, nullable=False)
+    data = db.Column(db.JSON, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

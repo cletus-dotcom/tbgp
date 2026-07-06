@@ -142,10 +142,17 @@ DEFAULT_CONTRACTOR_COMMISSION_LEVELS = [
 ]
 
 USER_ROLE_PORTAL_ADMIN = "PortalAdmin"
+USER_ROLE_SITE_ADMIN = "SiteAdmin"
 USER_ROLE_ADMIN = "Admin"
 USER_ROLE_STAFF = "Staff"
 USER_ROLE_MEMBER = "Member"
-USER_ROLES = [USER_ROLE_PORTAL_ADMIN, USER_ROLE_ADMIN, USER_ROLE_STAFF, USER_ROLE_MEMBER]
+USER_ROLES = [
+    USER_ROLE_PORTAL_ADMIN,
+    USER_ROLE_SITE_ADMIN,
+    USER_ROLE_ADMIN,
+    USER_ROLE_STAFF,
+    USER_ROLE_MEMBER,
+]
 
 
 def normalize_role(role):
@@ -156,6 +163,15 @@ def normalize_role(role):
 
 def is_portal_admin_role(role=None):
     return normalize_role(role) == USER_ROLE_PORTAL_ADMIN
+
+
+def is_site_admin_role(role=None):
+    return normalize_role(role) == USER_ROLE_SITE_ADMIN
+
+
+def can_manage_site_content(role=None):
+    """Edit public landing pages, ecosystem content, and partner registry."""
+    return normalize_role(role) in (USER_ROLE_PORTAL_ADMIN, USER_ROLE_SITE_ADMIN)
 
 
 def is_admin_role(role=None):
@@ -211,10 +227,27 @@ def assignable_user_roles(actor_role=None):
     return [USER_ROLE_STAFF, USER_ROLE_MEMBER]
 
 
+def post_login_redirect(role, next_param=""):
+    """Default landing URL after login, respecting role and optional next path."""
+    if next_param.startswith("/") and not next_param.startswith("//"):
+        if next_param.startswith("/site-admin"):
+            if can_manage_site_content(role):
+                return next_param
+            return "/dashboard"
+        if is_site_admin_role(role) and next_param.startswith("/dashboard"):
+            return "/site-admin"
+        return next_param
+    if is_site_admin_role(role):
+        return "/site-admin"
+    return "/dashboard"
+
+
 def staff_may_manage_user(actor_role, target_user_role):
     if is_portal_admin_role(actor_role):
         return True
     if is_portal_admin_role(target_user_role):
+        return False
+    if is_site_admin_role(target_user_role):
         return False
     if is_admin_role(actor_role):
         return True

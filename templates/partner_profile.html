@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ partner.name }} — {{ partner.code }} — TBGP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+{% endblock %}
+
+{% block body_class %}landing-body{% endblock %}
+
+{% block body %}
+{% include 'partials/landing_nav.html' %}
+
+<section class="partner-profile-hero">
+    <div class="container">
+        <nav class="partner-breadcrumbs" aria-label="Breadcrumb">
+            <a href="{{ url_for('main_routes.ecosystem_page', slug='partners') }}">Partners</a>
+            <span aria-hidden="true">/</span>
+            <a href="{{ url_for('main_routes.ecosystem_page', slug='partners') }}#partners-registry">{{ partner.type_label }}</a>
+            <span aria-hidden="true">/</span>
+            <span>{{ partner.code }}</span>
+        </nav>
+
+        <div class="partner-profile-header">
+            <div class="partner-profile-logo">
+                <img src="{{ partner.logo_url }}" alt="{{ partner.name }} logo">
+            </div>
+            <div class="partner-profile-identity">
+                <span class="partner-code-pill">{{ partner.code }}</span>
+                <h1>{{ partner.name }}</h1>
+                <p class="partner-profile-specialty">{{ partner.specialty }}</p>
+                <p class="partner-profile-location">
+                    <i class="bi bi-geo-alt-fill" aria-hidden="true"></i> {{ partner.location }}
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="partner-profile-body">
+    <div class="container">
+        <div class="partner-profile-copy">
+            <div class="partner-copy-block">
+                <h2>Structural Background</h2>
+                <p>{{ partner.background }}</p>
+            </div>
+            <div class="partner-copy-block">
+                <h2>Asset Capacity</h2>
+                <p>{{ partner.capacity }}</p>
+            </div>
+            <div class="partner-copy-block partner-copy-highlight">
+                <h2>TBGP Platform Relationship</h2>
+                <p>{{ partner.tbgp_relationship }}</p>
+            </div>
+        </div>
+
+        <div class="partner-gallery-section">
+            <div class="partner-gallery-head">
+                <h2>Capability Gallery</h2>
+                <p>Equipment yards, active sites, and material stocks from the field.</p>
+            </div>
+            <div class="gallery-grid">
+                {% for image in partner.gallery %}
+                <figure class="gallery-item">
+                    <img src="{{ image.url }}" alt="{{ image.alt }}" loading="lazy">
+                    <figcaption>{{ image.alt }}</figcaption>
+                </figure>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% include 'partials/services_contact_cta.html' %}
+
+        <div class="partner-profile-actions">
+            <a href="{{ url_for('main_routes.ecosystem_page', slug='partners') }}#partners-registry" class="btn-ecosystem-secondary">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Registry
+            </a>
+            <a href="{{ url_for('main_routes.login', next='/contractors') }}" class="btn-hero">Partner Portal Login</a>
+        </div>
+    </div>
+</section>
+
+{% include 'partials/landing_footer.html' %}
+{% endblock %}
+
+{% block extra_js %}
+{% include 'partials/landing_scripts.html' %}
+{% endblock %}
