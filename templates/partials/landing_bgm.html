@@ -1,0 +1,7 @@
+<script>
+    window.TBGP_BGM = {
+        src: {{ url_for('static', filename='audio/tbgp_brand.mp3') | tojson }},
+        isHome: {{ (request.endpoint == 'main_routes.index') | tojson }}
+    };
+</script>
+<script src="{{ url_for('static', filename='js/landing-bgm.js') }}"></script>

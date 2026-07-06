@@ -50,6 +50,9 @@
         });
         const result = await response.json();
         if (result.success) {
+            if (window.TBGP_BGM_save) {
+                window.TBGP_BGM_save();
+            }
             window.location.href = result.redirect;
         } else {
             alert(result.message || "Login failed");
