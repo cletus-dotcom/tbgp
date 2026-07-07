@@ -34,6 +34,14 @@
     </header>
 
     <aside id="sidebar" class="sidebar" aria-label="Main navigation">
+        {% set help_pages = ['user_manual', 'about_features_process_flow', 'about_platform'] %}
+        {% set payout_pages = ['payout_scheme', 'payout_queue', 'payout_reports'] %}
+        {% set payout_pending = payout_queue_counts.pending_requests + payout_queue_counts.pending_releases + payout_queue_counts.awaiting_release %}
+        {% set sidebar_help_open = active_page in help_pages %}
+        {% set sidebar_payouts_open = active_page in payout_pages or payout_pending > 0 %}
+        {% set sidebar_income_open = active_page and active_page.startswith('prof_') %}
+        {% set sidebar_admin_open = active_page == 'site_admin' %}
+
         <p class="sidebar-label">Navigation</p>
         <ul class="sidebar-nav">
             <li>
@@ -52,6 +60,9 @@
                     <i class="bi bi-journal-text"></i> My Ledger
                 </a>
             </li>
+            <li class="sidebar-nav-divider" aria-hidden="true">
+                <hr class="sidebar-divider">
+            </li>
             <li>
                 <a href="{{ url_for('main_routes.hierarchy') }}" class="{% if active_page == 'hierarchy' %}active{% endif %}">
                     <i class="bi bi-diagram-3"></i> My Hierarchy
@@ -68,10 +79,16 @@
                     <i class="bi bi-journal-text"></i> Member Ledger
                 </a>
             </li>
+            <li class="sidebar-nav-divider" aria-hidden="true">
+                <hr class="sidebar-divider">
+            </li>
             <li>
                 <a href="{{ url_for('main_routes.contractors') }}" class="{% if active_page == 'contractors' %}active{% endif %}">
                     <i class="bi bi-building"></i> Contractors
                 </a>
+            </li>
+            <li class="sidebar-nav-divider" aria-hidden="true">
+                <hr class="sidebar-divider">
             </li>
             <li>
                 <a href="{{ url_for('main_routes.hierarchy') }}" class="{% if active_page == 'hierarchy' %}active{% endif %}">
@@ -79,84 +96,60 @@
                 </a>
             </li>
             {% endif %}
-            <li>
-                <a href="{{ url_for('main_routes.index') }}">
-                    <i class="bi bi-house"></i> Home
-                </a>
-            </li>
         </ul>
+
+        <hr class="sidebar-divider" aria-hidden="true">
 
         {% if can_manage_data(session.get('role')) %}
-        <p class="sidebar-label">Payouts</p>
-        <ul class="sidebar-nav">
-            {% if can_view_payout_scheme(session.get('role')) %}
+        <ul class="sidebar-nav sidebar-nav-section">
             <li>
-                <a href="{{ url_for('main_routes.payout_scheme') }}"
-                   class="{% if active_page == 'payout_scheme' %}active{% endif %}">
-                    <i class="bi bi-percent"></i> Payout Scheme
-                </a>
-            </li>
-            {% endif %}
-            <li>
-                <a href="{{ url_for('main_routes.payout_queue') }}"
-                   class="{% if active_page == 'payout_queue' %}active{% endif %}">
-                    <i class="bi bi-cash-coin"></i> Payout Queue
-                    {% set payout_badges = payout_queue_counts.pending_requests + payout_queue_counts.pending_releases + payout_queue_counts.awaiting_release %}
-                    {% if payout_badges %}<span class="badge bg-danger ms-auto">{{ payout_badges }}</span>{% endif %}
-                </a>
-            </li>
-            {% if can_view_payout_reports(session.get('role')) %}
-            <li>
-                <a href="{{ url_for('main_routes.payout_reports') }}"
-                   class="{% if active_page == 'payout_reports' %}active{% endif %}">
-                    <i class="bi bi-receipt"></i> Fund Release Reports
-                </a>
-            </li>
-            {% endif %}
-        </ul>
-        {% endif %}
-
-        {% if can_access_admin_options(session.get('role')) or can_manage_data(session.get('role')) or can_manage_site_content(session.get('role')) %}
-        <p class="sidebar-label">Administration</p>
-        <ul class="sidebar-nav">
-            {% if can_manage_site_content(session.get('role')) %}
-            <li>
-                <a href="{{ url_for('site_admin.home') }}" class="{% if active_page == 'site_admin' %}active{% endif %}">
-                    <i class="bi bi-globe"></i> Site Content
-                </a>
-            </li>
-            {% endif %}
-            {% if can_access_admin_options(session.get('role')) %}
-            <li>
-                <button class="sidebar-link" id="adminOptionsBtn" type="button">
-                    <i class="bi bi-gear"></i> Admin Options
-                    <i class="bi bi-chevron-down ms-auto" id="adminChevron" style="font-size:0.75rem;"></i>
-                </button>
-                <div id="adminSubMenu" class="sidebar-submenu d-none">
-                    <button id="manageUsersBtn" class="sidebar-sublink" type="button"
-                        data-bs-toggle="modal" data-bs-target="#listUsersModal">Manage Users</button>
-                    {% if can_purge_member_database(session.get('role')) %}
-                    <button id="purgeMembersBtn" class="sidebar-sublink text-danger" type="button">Delete All Members</button>
+                <button class="sidebar-link sidebar-section-toggle{% if payout_pending %} sidebar-section-alert{% endif %}" type="button"
+                        data-target="payoutsSubMenu" data-chevron="payoutsChevron"
+                        aria-expanded="{{ 'true' if sidebar_payouts_open else 'false' }}">
+                    <i class="bi bi-cash-coin"></i> Payouts
+                    {% if payout_pending %}
+                    <span class="badge bg-danger sidebar-payout-badge" title="Pending payout actions">{{ payout_pending }}</span>
                     {% endif %}
-                </div>
-            </li>
-            {% endif %}
-            {% if can_manage_data(session.get('role')) %}
-            <li>
-                <button class="sidebar-link" id="incomeManagementBtn" type="button">
-                    <i class="bi bi-wallet2"></i> Income Management
-                    <i class="bi bi-chevron-down ms-auto income-management-chevron" style="font-size:0.75rem;"></i>
+                    <i class="bi {{ 'bi-chevron-up' if sidebar_payouts_open else 'bi-chevron-down' }} ms-auto sidebar-chevron" id="payoutsChevron"></i>
                 </button>
             </li>
-            {% endif %}
         </ul>
-        {% if can_manage_data(session.get('role')) %}
-        <div id="incomeManagementSubMenu" class="sidebar-submenu {% if not active_page or not active_page.startswith('prof_') %}d-none{% endif %}">
+        <div id="payoutsSubMenu" class="sidebar-submenu{% if not sidebar_payouts_open %} d-none{% endif %}">
+            {% if can_view_payout_scheme(session.get('role')) %}
+            <a href="{{ url_for('main_routes.payout_scheme') }}"
+               class="sidebar-sublink {% if active_page == 'payout_scheme' %}active{% endif %}">
+                Payout Scheme
+            </a>
+            {% endif %}
+            <a href="{{ url_for('main_routes.payout_queue') }}"
+               class="sidebar-sublink {% if active_page == 'payout_queue' %}active{% endif %}{% if payout_pending %} sidebar-sublink-alert{% endif %}">
+                Payout Queue
+                {% if payout_pending %}<span class="badge bg-danger ms-1">{{ payout_pending }}</span>{% endif %}
+            </a>
+            {% if can_view_payout_reports(session.get('role')) %}
+            <a href="{{ url_for('main_routes.payout_reports') }}"
+               class="sidebar-sublink {% if active_page == 'payout_reports' %}active{% endif %}">
+                Fund Release Reports
+            </a>
+            {% endif %}
+        </div>
+
+        <ul class="sidebar-nav sidebar-nav-section">
+            <li>
+                <button class="sidebar-link sidebar-section-toggle" type="button"
+                        data-target="incomeManagementSubMenu" data-chevron="incomeManagementChevron"
+                        aria-expanded="{{ 'true' if sidebar_income_open else 'false' }}">
+                    <i class="bi bi-wallet2"></i> Income Management
+                    <i class="bi {{ 'bi-chevron-up' if sidebar_income_open else 'bi-chevron-down' }} ms-auto sidebar-chevron" id="incomeManagementChevron"></i>
+                </button>
+            </li>
+        </ul>
+        <div id="incomeManagementSubMenu" class="sidebar-submenu{% if not sidebar_income_open %} d-none{% endif %}">
             <button class="sidebar-sublink d-flex align-items-center w-100" id="commissionBtn" type="button">
                 <i class="bi bi-cash-stack me-1"></i> Commission
                 <i class="bi bi-chevron-down ms-auto commission-chevron" style="font-size:0.75rem;"></i>
             </button>
-            <div id="commissionSubMenu" class="sidebar-submenu ps-2 {% if not active_page or not active_page.startswith('prof_') %}d-none{% endif %}">
+            <div id="commissionSubMenu" class="sidebar-submenu ps-2 {% if not sidebar_income_open %}d-none{% endif %}">
                 <a href="{{ url_for('main_routes.prof_project_commission') }}"
                    class="sidebar-sublink {% if active_page == 'prof_project_commission' %}active{% endif %}">
                     Project Commission
@@ -196,30 +189,76 @@
                 <span class="badge bg-secondary ms-auto" style="font-size:0.6rem;">Soon</span>
             </span>
         </div>
-        {% endif %}
+
+        <hr class="sidebar-divider" aria-hidden="true">
         {% endif %}
 
-        <p class="sidebar-label">About</p>
-        <ul class="sidebar-nav">
+        {% if can_access_admin_options(session.get('role')) or can_manage_data(session.get('role')) or can_manage_site_content(session.get('role')) %}
+        <ul class="sidebar-nav sidebar-nav-section">
             <li>
-                <a href="{{ url_for('main_routes.about_features_process_flow') }}"
-                   class="{% if active_page == 'about_features_process_flow' %}active{% endif %}">
-                    <i class="bi bi-info-circle"></i> Features &amp; Process Flow
-                </a>
+                <button class="sidebar-link sidebar-section-toggle" type="button"
+                        data-target="administrationSubMenu" data-chevron="administrationChevron"
+                        aria-expanded="{{ 'true' if sidebar_admin_open else 'false' }}">
+                    <i class="bi bi-gear"></i> Administration
+                    <i class="bi {{ 'bi-chevron-up' if sidebar_admin_open else 'bi-chevron-down' }} ms-auto sidebar-chevron" id="administrationChevron"></i>
+                </button>
             </li>
         </ul>
+        <div id="administrationSubMenu" class="sidebar-submenu{% if not sidebar_admin_open %} d-none{% endif %}">
+            {% if can_manage_site_content(session.get('role')) %}
+            <a href="{{ url_for('site_admin.home') }}" class="sidebar-sublink {% if active_page == 'site_admin' %}active{% endif %}">
+                Site Content
+            </a>
+            {% endif %}
+            {% if can_access_admin_options(session.get('role')) %}
+            <button class="sidebar-sublink d-flex align-items-center w-100" id="adminOptionsBtn" type="button">
+                Admin Options
+                <i class="bi bi-chevron-down ms-auto" id="adminChevron" style="font-size:0.75rem;"></i>
+            </button>
+            <div id="adminSubMenu" class="sidebar-submenu ps-2 d-none">
+                <button id="manageUsersBtn" class="sidebar-sublink" type="button"
+                    data-bs-toggle="modal" data-bs-target="#listUsersModal">Manage Users</button>
+                {% if can_purge_member_database(session.get('role')) %}
+                <button id="purgeMembersBtn" class="sidebar-sublink text-danger" type="button">Delete All Members</button>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
 
-        <p class="sidebar-label">Help</p>
-        <ul class="sidebar-nav">
+        <ul class="sidebar-nav sidebar-nav-section">
             <li>
-                <a href="{{ url_for('main_routes.user_manual') }}"
-                   class="{% if active_page == 'user_manual' %}active{% endif %}">
-                    <i class="bi bi-question-circle"></i> User Manual
-                </a>
+                <button class="sidebar-link sidebar-section-toggle" type="button"
+                        data-target="helpSubMenu" data-chevron="helpChevron"
+                        aria-expanded="{{ 'true' if sidebar_help_open else 'false' }}">
+                    <i class="bi bi-question-circle"></i> Help
+                    <i class="bi {{ 'bi-chevron-up' if sidebar_help_open else 'bi-chevron-down' }} ms-auto sidebar-chevron" id="helpChevron"></i>
+                </button>
             </li>
         </ul>
+        <div id="helpSubMenu" class="sidebar-submenu{% if not sidebar_help_open %} d-none{% endif %}">
+            <a href="{{ url_for('main_routes.user_manual') }}"
+               class="sidebar-sublink {% if active_page == 'user_manual' %}active{% endif %}">
+                User Manual
+            </a>
+            <a href="{{ url_for('main_routes.about_features_process_flow') }}"
+               class="sidebar-sublink {% if active_page == 'about_features_process_flow' %}active{% endif %}">
+                Features &amp; Process Flow
+            </a>
+            <a href="{{ url_for('main_routes.about_platform') }}"
+               class="sidebar-sublink {% if active_page == 'about_platform' %}active{% endif %}">
+                About the Platform
+            </a>
+        </div>
 
-        <ul class="sidebar-nav mt-2">
+        <hr class="sidebar-divider" aria-hidden="true">
+
+        <ul class="sidebar-nav sidebar-nav-footer">
+            <li>
+                <a href="{{ url_for('main_routes.index') }}">
+                    <i class="bi bi-house"></i> Home
+                </a>
+            </li>
             <li>
                 <a href="{{ url_for('main_routes.logout') }}">
                     <i class="bi bi-box-arrow-right"></i> Logout
@@ -257,6 +296,7 @@
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/idle-screensaver.js') }}"></script>
     <script src="{{ url_for('static', filename='js/brand-tagline-marquee.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard-sidebar.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const menuToggle = document.getElementById('menuToggle');
@@ -305,18 +345,13 @@
                 }
             }
 
-            document.getElementById('incomeManagementBtn')?.addEventListener('click', e => {
-                e.stopPropagation();
-                toggleSubmenu('incomeManagementSubMenu', '.income-management-chevron');
-            });
-
             document.getElementById('commissionBtn')?.addEventListener('click', e => {
                 e.stopPropagation();
                 toggleSubmenu('commissionSubMenu', '.commission-chevron');
             });
 
             {% if active_page and active_page.startswith('prof_') %}
-            const incomeChevron = document.querySelector('.income-management-chevron');
+            const incomeChevron = document.getElementById('incomeManagementChevron');
             const commissionChevron = document.querySelector('.commission-chevron');
             if (incomeChevron) {
                 incomeChevron.classList.remove('bi-chevron-down');

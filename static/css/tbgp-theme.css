@@ -605,6 +605,68 @@ body.dashboard-body.sidebar-open::before {
     padding-left: calc(0.75rem - 3px);
 }
 .sidebar-nav a i { font-size: 1.1rem; width: 1.25rem; text-align: center; }
+
+.sidebar-nav-section {
+    margin-top: 0.35rem;
+}
+
+.sidebar-divider {
+    border: 0;
+    border-top: 1px solid rgba(240, 165, 0, 0.18);
+    margin: 0.65rem 0.75rem;
+    opacity: 1;
+}
+
+.sidebar-nav-divider {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-nav-divider .sidebar-divider {
+    margin: 0.35rem 0.75rem;
+}
+
+.sidebar-nav-footer {
+    margin-top: 0.15rem;
+}
+
+.sidebar-section-toggle.sidebar-section-alert {
+    color: var(--amber-bright);
+}
+
+.sidebar-payout-badge {
+    font-size: 0.65rem;
+    margin-left: 0.15rem;
+}
+
+.sidebar-sublink-alert {
+    color: var(--amber-bright);
+    font-weight: 600;
+}
+
+.sidebar-chevron {
+    font-size: 0.75rem;
+    opacity: 0.85;
+}
+
+.sidebar-developer {
+    color: var(--text-subtle);
+    line-height: 1.45;
+    padding: 0 0.5rem;
+}
+
+.sidebar-developer a {
+    color: var(--amber);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.sidebar-developer a:hover {
+    color: #ffc04d;
+    text-decoration: underline;
+}
+
 #adminSubMenu,
 .sidebar-submenu { padding-left: 0.5rem; }
 #adminSubMenu .sidebar-sublink,
@@ -1397,6 +1459,26 @@ body.dashboard-body.sidebar-open::before {
     color: var(--charcoal);
     border-radius: 50%;
     font-weight: 800;
+}
+
+.about-dev-card {
+    background: linear-gradient(135deg, #0f1524 0%, #1a2238 55%, rgba(240, 165, 0, 0.18) 100%);
+    color: var(--text-white);
+    border-color: rgba(240, 165, 0, 0.28);
+}
+
+.about-dev-card a {
+    color: var(--amber);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.about-dev-blurb {
+    opacity: 0.92;
+}
+
+.about-dev-note {
+    color: var(--text-subtle) !important;
 }
 
 /* ── Responsive ── */

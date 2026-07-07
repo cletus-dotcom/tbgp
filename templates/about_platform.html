@@ -1,0 +1,58 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}{{ platform.page_title }}{% endblock %}
+{% block topbar_title %}{{ platform.page_title }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card about-hero mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-info-circle"></i> {{ platform.title }}</h5>
+            <p class="section-subtitle">{{ platform.tagline }}</p>
+        </div>
+        <span class="badge bg-brand text-dark">TBGP Portal</span>
+    </div>
+    <p class="mb-0 text-muted">{{ platform.intro }}</p>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <div class="dashboard-card section-card h-100 mb-0">
+            <h6 class="mb-2"><i class="bi bi-grid-3x3-gap text-brand"></i> Explore features</h6>
+            <p class="small text-muted mb-3">Module overview and recommended operating flow.</p>
+            <a href="{{ url_for('main_routes.about_features_process_flow') }}" class="btn btn-sm btn-outline-secondary">
+                Features &amp; Process Flow
+            </a>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="dashboard-card section-card h-100 mb-0">
+            <h6 class="mb-2"><i class="bi bi-book text-brand"></i> Role guides</h6>
+            <p class="small text-muted mb-3">Step-by-step instructions for your portal role.</p>
+            <a href="{{ url_for('main_routes.user_manual') }}" class="btn btn-sm btn-outline-secondary">
+                User Manual
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-card about-dev-card">
+    <h5 class="fw-bold mb-2"><i class="bi bi-code-slash"></i> Platform developed by {{ developer.name }}</h5>
+    <p class="mb-3 about-dev-blurb">{{ developer.blurb }}</p>
+    <ul class="list-unstyled small mb-0 about-dev-contact">
+        <li class="mb-2">
+            <i class="bi bi-geo-alt-fill me-2"></i>{{ developer.address }}
+        </li>
+        <li class="mb-2">
+            <i class="bi bi-telephone-fill me-2"></i>
+            <a href="{{ developer.phone_href }}">{{ developer.phone }}</a>
+        </li>
+        <li>
+            <i class="bi bi-envelope-fill me-2"></i>
+            <a href="{{ developer.email_href }}">{{ developer.email }}</a>
+        </li>
+    </ul>
+    <p class="small about-dev-note mt-3 mb-0">
+        For support, training, or customization requests, reach out by phone or email during business hours.
+    </p>
+</div>
+{% endblock %}

@@ -95,6 +95,7 @@ def create_app():
     @app.context_processor
     def inject_globals():
         from app.payout_service import payout_queue_counts
+        from app.platform_about import PLATFORM_DEVELOPER
         from app.site_content_service import get_services_contact_cta
 
         role = session.get("role")
@@ -146,6 +147,7 @@ def create_app():
             "member_lifetime_earnings_cap": float(MEMBER_LIFETIME_EARNINGS_CAP),
             "member_lifetime_project_cap_after_limit": float(MEMBER_LIFETIME_PROJECT_CAP_AFTER_LIMIT),
             "services_contact_cta": get_services_contact_cta(),
+            "platform_developer": PLATFORM_DEVELOPER,
         }
 
     from app.routes import main_routes

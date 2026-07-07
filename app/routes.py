@@ -335,6 +335,7 @@ from app.payout_service import (
     reject_payout_request,
     submit_payout_release,
 )
+from app.platform_about import PLATFORM_ABOUT, PLATFORM_DEVELOPER
 from app.permissions import (
     access_denied_response,
     forbid_member_portal_users,
@@ -590,6 +591,21 @@ def about_features_process_flow():
         active_page="about_features_process_flow",
         features=APP_FEATURES,
         process_flow=APP_PROCESS_FLOW,
+    )
+
+
+@main_routes.route("/about/platform")
+@login_required
+def about_platform():
+    user = _dashboard_user()
+    role = normalize_role(user.role)
+    return render_template(
+        "about_platform.html",
+        fullname=user.full_name or "User",
+        role=role,
+        active_page="about_platform",
+        platform=PLATFORM_ABOUT,
+        developer=PLATFORM_DEVELOPER,
     )
 
 
