@@ -1,0 +1,122 @@
+/* Background music taskbar — fixed bottom control strip */
+.bgm-taskbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1040;
+    padding: 0.35rem 0.75rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(180deg, rgba(15, 21, 36, 0.92) 0%, rgba(10, 14, 24, 0.98) 100%);
+    border-top: 1px solid rgba(240, 165, 0, 0.28);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(8px);
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.bgm-taskbar[hidden] {
+    display: none !important;
+}
+
+.bgm-taskbar-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+.bgm-taskbar-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: "Barlow Condensed", sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.75);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.bgm-taskbar-label i {
+    color: #f0a500;
+    font-size: 0.95rem;
+}
+
+.bgm-taskbar-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.bgm-taskbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 1px solid rgba(240, 165, 0, 0.35);
+    border-radius: 4px;
+    background: rgba(240, 165, 0, 0.1);
+    color: #f0a500;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.bgm-taskbar-btn:hover {
+    background: rgba(240, 165, 0, 0.22);
+    color: #ffc04d;
+    border-color: rgba(240, 165, 0, 0.55);
+}
+
+.bgm-taskbar-btn.is-muted {
+    color: #ff8a8a;
+    border-color: rgba(255, 120, 120, 0.45);
+    background: rgba(255, 80, 80, 0.12);
+}
+
+.bgm-taskbar-slider {
+    flex: 1 1 auto;
+    min-width: 4.5rem;
+    height: 0.35rem;
+    margin: 0;
+    accent-color: #f0a500;
+    cursor: pointer;
+}
+
+.bgm-taskbar-status {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.45);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.bgm-taskbar.is-ended .bgm-taskbar-controls {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+body.bgm-taskbar-active {
+    padding-bottom: calc(2.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+body.bgm-taskbar-active.dashboard-body .main-content {
+    padding-bottom: calc(2.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 480px) {
+    .bgm-taskbar-label-text {
+        display: none;
+    }
+
+    .bgm-taskbar-status {
+        display: none;
+    }
+}

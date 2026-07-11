@@ -1,3 +1,21 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/bgm-taskbar.css') }}">
+<div id="bgmTaskbar" class="bgm-taskbar" role="region" aria-label="Background music controls" hidden>
+    <div class="bgm-taskbar-inner">
+        <span class="bgm-taskbar-label">
+            <i class="bi bi-music-note-beamed" aria-hidden="true"></i>
+            <span class="bgm-taskbar-label-text">TBGP Theme</span>
+        </span>
+        <div class="bgm-taskbar-controls">
+            <button type="button" class="bgm-taskbar-btn" id="bgmMuteBtn" aria-label="Mute background music" title="Mute">
+                <i class="bi bi-volume-up-fill" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="bgm-taskbar-btn" id="bgmVolDown" aria-label="Decrease volume" title="Volume down">−</button>
+            <input type="range" class="bgm-taskbar-slider" id="bgmVolSlider" min="0" max="100" value="10" aria-label="Background music volume">
+            <button type="button" class="bgm-taskbar-btn" id="bgmVolUp" aria-label="Increase volume" title="Volume up">+</button>
+        </div>
+        <span class="bgm-taskbar-status" id="bgmTaskbarStatus" aria-live="polite"></span>
+    </div>
+</div>
 <script>
     window.TBGP_BGM = {
         src: {{ url_for('static', filename='audio/tbgp_brand.mp3') | tojson }},
