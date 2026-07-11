@@ -192,6 +192,47 @@ class Contractor(db.Model):
         return " ".join(parts).lower()
 
 
+class Supplier(db.Model):
+    __tablename__ = "suppliers"
+
+    supplier_id = db.Column(db.Integer, primary_key=True)
+    batch = db.Column(db.Integer, nullable=False)
+    member_referrer_id = db.Column(db.Integer, db.ForeignKey("members.member_id"), nullable=False)
+    company_name = db.Column(db.String(120), nullable=False)
+    company_address = db.Column(db.String(255))
+    representative_name = db.Column(db.String(120))
+    contact_no = db.Column(db.String(30))
+    date_joined = db.Column(db.Date)
+
+    member_referrer = db.relationship("Member", backref="supplier_referrals")
+
+    def to_dict(self):
+        return {
+            "supplier_id": self.supplier_id,
+            "batch": self.batch,
+            "member_referrer_id": self.member_referrer_id,
+            "member_referrer_name": self.member_referrer.full_name if self.member_referrer else None,
+            "company_name": self.company_name,
+            "company_address": self.company_address,
+            "representative_name": self.representative_name,
+            "contact_no": self.contact_no,
+            "date_joined": self.date_joined.isoformat() if self.date_joined else None,
+        }
+
+    def search_text(self):
+        parts = [
+            str(self.supplier_id),
+            self.company_name or "",
+            self.company_address or "",
+            self.representative_name or "",
+            self.contact_no or "",
+            f"batch {self.batch}",
+        ]
+        if self.member_referrer:
+            parts.extend([str(self.member_referrer_id), self.member_referrer.full_name])
+        return " ".join(parts).lower()
+
+
 class ProjectCommission(db.Model):
     __tablename__ = "project_commissions"
 

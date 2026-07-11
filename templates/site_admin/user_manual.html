@@ -1,7 +1,9 @@
-{% extends "dashboard_base.html" %}
+{% extends "site_admin/base.html" %}
 {% block page_title %}User Manual{% endblock %}
 {% block topbar_title %}User Manual{% endblock %}
 
 {% block content %}
-{% include "partials/user_manual_body.html" %}
+<div class="site-admin-page">
+    {% include "partials/user_manual_body.html" %}
+</div>
 {% endblock %}

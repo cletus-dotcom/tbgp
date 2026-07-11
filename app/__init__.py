@@ -189,6 +189,7 @@ def create_app():
         seed_cms_content()
         _seed_members()
         _seed_contractors()
+        _seed_suppliers()
         _seed_commission_levels()
 
     log = logging.getLogger("werkzeug")
@@ -275,6 +276,19 @@ def _seed_contractors():
             import_contractors_from_xlsx()
         except Exception as exc:
             logging.getLogger(__name__).warning("Contractor import skipped: %s", exc)
+
+
+def _seed_suppliers():
+    from app.models import Member, Supplier
+    from app.supplier_import_service import import_suppliers_from_xlsx
+
+    if Member.query.count() == 0:
+        return
+    if Supplier.query.count() == 0:
+        try:
+            import_suppliers_from_xlsx()
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Supplier import skipped: %s", exc)
 
 
 def _seed_commission_levels():

@@ -1553,6 +1553,35 @@ body.landing-body {
         color: var(--amber);
     }
 
+    .partner-profile-referrer {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.45rem;
+        margin: 0.65rem 0 0;
+        padding: 0.55rem 0.75rem;
+        border-radius: 6px;
+        background: rgba(240, 165, 0, 0.1);
+        border: 1px solid rgba(240, 165, 0, 0.22);
+        font-size: 0.88rem;
+        color: var(--text-muted);
+        line-height: 1.45;
+    }
+
+    .partner-profile-referrer .bi {
+        color: var(--amber);
+        margin-top: 0.1rem;
+        flex-shrink: 0;
+    }
+
+    .partner-profile-referrer strong {
+        color: var(--text-white);
+        font-weight: 600;
+    }
+
+    .partner-profile-referrer-empty {
+        opacity: 0.85;
+    }
+
     .partner-profile-body {
         padding: 2.5rem 1.5rem 4rem;
         background: var(--slate-deep);

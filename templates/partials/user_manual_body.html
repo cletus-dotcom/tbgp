@@ -1,0 +1,35 @@
+{% if manual_choices and manual_choices|length > 1 %}
+<div class="manual-role-tabs mb-3">
+    {% for choice in manual_choices %}
+    <a href="{{ url_for(manual_url_endpoint, manual=choice.role) }}"
+       class="manual-role-tab {% if choice.role == manual_role %}active{% endif %}">
+        {{ choice.role }}
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="manual-hero dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-question-circle"></i> {{ manual.title }}</h5>
+            <p class="section-subtitle">{{ manual.summary }}</p>
+        </div>
+        <span class="badge bg-brand text-dark">{{ manual_role or role }}</span>
+    </div>
+</div>
+
+<div class="row g-3">
+    {% for section in manual.sections %}
+    <div class="col-lg-6">
+        <div class="dashboard-card section-card manual-section h-100">
+            <h6><i class="bi bi-check2-circle"></i> {{ section["heading"] }}</h6>
+            <ol class="manual-steps mb-0">
+                {% for item in section["items"] %}
+                <li>{{ item }}</li>
+                {% endfor %}
+            </ol>
+        </div>
+    </div>
+    {% endfor %}
+</div>

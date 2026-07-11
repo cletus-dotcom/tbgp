@@ -12,7 +12,7 @@
 <body class="dashboard-body site-admin-body">
     <header class="topbar">
         <div class="topbar-left">
-            <button class="btn-menu" id="menuToggle" aria-label="Toggle menu">
+            <button class="btn-menu" id="menuToggle" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="sidebar">
                 <i class="bi bi-list"></i>
             </button>
             <div class="topbar-brand">
@@ -73,6 +73,13 @@
 
         <p class="sidebar-label">Account</p>
         <ul class="sidebar-nav">
+            {% if can_manage_site_content(session.get('role')) %}
+            <li>
+                <a href="{{ url_for('site_admin.user_manual') }}" class="{% if active_page == 'user_manual' %}active{% endif %}">
+                    <i class="bi bi-question-circle"></i> User Manual
+                </a>
+            </li>
+            {% endif %}
             <li>
                 <a href="{{ url_for('main_routes.index') }}" target="_blank" rel="noopener noreferrer">
                     <i class="bi bi-box-arrow-up-right"></i> View Site

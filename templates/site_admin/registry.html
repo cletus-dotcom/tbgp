@@ -35,6 +35,11 @@
                     <th>Name</th>
                     <th>Specialty</th>
                     <th>Location</th>
+                    {% if registry_type == 'contractors' %}
+                    <th>Portal ID</th>
+                    {% elif registry_type == 'suppliers' %}
+                    <th>Portal ID</th>
+                    {% endif %}
                     <th>Order</th>
                     <th></th>
                 </tr>
@@ -46,6 +51,23 @@
                     <td>{{ partner.name }}</td>
                     <td>{{ partner.specialty }}</td>
                     <td>{{ partner.location }}</td>
+                    {% if registry_type == 'contractors' %}
+                    <td>
+                        {% if partner.portal_contractor_id %}
+                        <code>{{ partner.portal_contractor_id }}</code>
+                        {% else %}
+                        <span class="text-muted">Auto</span>
+                        {% endif %}
+                    </td>
+                    {% elif registry_type == 'suppliers' %}
+                    <td>
+                        {% if partner.portal_supplier_id %}
+                        <code>{{ partner.portal_supplier_id }}</code>
+                        {% else %}
+                        <span class="text-muted">Auto</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
                     <td>{{ partner.get('sort_order', loop.index0) }}</td>
                     <td class="text-end">
                         <a href="{{ url_for('site_admin.registry_edit', slug=partner.slug) }}" class="btn btn-sm btn-outline-primary">Edit</a>

@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="site-admin-page">
-    <form method="post" class="site-admin-form">
+    <form method="post" class="site-admin-form" data-portal-linked="{{ 'true' if portal_profile_synced else 'false' }}">
         <fieldset>
             <legend>Identity</legend>
             <div class="row g-3">
@@ -27,17 +27,78 @@
                     <label class="form-label" for="sort_order">Sort order</label>
                     <input class="form-control" id="sort_order" name="sort_order" type="number" value="{{ partner.get('sort_order', 0) if partner else 0 }}">
                 </div>
-                <div class="col-md-8">
+                <div class="col-md-8 portal-synced-wrap">
                     <label class="form-label" for="name">Company name</label>
-                    <input class="form-control" id="name" name="name" value="{{ partner.name if partner else '' }}" required>
+                    <input class="form-control portal-synced-field" id="name" name="name"
+                           value="{{ partner.name if partner else '' }}"
+                           {% if portal_profile_synced %}readonly{% else %}required{% endif %}>
+                    <div class="form-text portal-synced-note" {% if not portal_profile_synced %}hidden{% endif %}>
+                        Synced from the linked portal record.
+                    </div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label" for="specialty">Specialty</label>
                     <input class="form-control" id="specialty" name="specialty" value="{{ partner.specialty if partner else '' }}">
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-6 portal-synced-wrap">
                     <label class="form-label" for="location">Location</label>
-                    <input class="form-control" id="location" name="location" value="{{ partner.location if partner else '' }}">
+                    <input class="form-control portal-synced-field" id="location" name="location"
+                           value="{{ partner.location if partner else '' }}"
+                           {% if portal_profile_synced %}readonly{% endif %}>
+                    <div class="form-text portal-synced-note" {% if not portal_profile_synced %}hidden{% endif %}>
+                        Synced from the linked portal company address.
+                    </div>
+                </div>
+                <div class="col-md-4 portal-link-field portal-contractor-field" id="portal-contractor-field">
+                    <label class="form-label" for="portal_contractor_id">Portal contractor ID</label>
+                    <input class="form-control" id="portal_contractor_id" name="portal_contractor_id" type="number" min="1" step="1"
+                           value="{{ partner.portal_contractor_id if partner and partner.portal_contractor_id is not none else '' }}"
+                           placeholder="e.g. 12">
+                    <div class="form-text">
+                        Optional. Links this profile to a portal contractor when the registry code is not <code>TBGP-CON-###</code>.
+                        Leave blank to auto-link from slug or code ending in <code>con-###</code>.
+                    </div>
+                </div>
+                <div class="col-md-4 portal-link-field portal-supplier-field" id="portal-supplier-field">
+                    <label class="form-label" for="portal_supplier_id">Portal supplier ID</label>
+                    <input class="form-control" id="portal_supplier_id" name="portal_supplier_id" type="number" min="1" step="1"
+                           value="{{ partner.portal_supplier_id if partner and partner.portal_supplier_id is not none else '' }}"
+                           placeholder="e.g. 12">
+                    <div class="form-text">
+                        Optional. Links this profile to a portal supplier when the registry code is not <code>TBGP-SUP-###</code>.
+                        Leave blank to auto-link from slug or code ending in <code>sup-###</code>.
+                    </div>
+                </div>
+                <div class="col-md-8 portal-link-field" id="portal-link-preview">
+                    {% if portal_contractor %}
+                    <div class="site-admin-portal-link-preview">
+                        <span class="text-muted small d-block mb-1">Linked portal contractor</span>
+                        <strong>#{{ portal_contractor.contractor_id }} — {{ portal_contractor.company_name }}</strong>
+                        {% if member_referrer %}
+                        <div class="text-muted small mt-1">
+                            Member referrer: #{{ member_referrer.member_id }} — {{ member_referrer.full_name }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% elif portal_supplier %}
+                    <div class="site-admin-portal-link-preview">
+                        <span class="text-muted small d-block mb-1">Linked portal supplier</span>
+                        <strong>#{{ portal_supplier.supplier_id }} — {{ portal_supplier.company_name }}</strong>
+                        {% if member_referrer %}
+                        <div class="text-muted small mt-1">
+                            Member referrer: #{{ member_referrer.member_id }} — {{ member_referrer.full_name }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% elif partner and partner.type == 'contractors' and partner.portal_contractor_id %}
+                    <div class="site-admin-portal-link-preview text-warning small">
+                        Portal contractor #{{ partner.portal_contractor_id }} was not found. Check the ID and save again.
+                    </div>
+                    {% elif partner and partner.type == 'suppliers' and partner.portal_supplier_id %}
+                    <div class="site-admin-portal-link-preview text-warning small">
+                        Portal supplier #{{ partner.portal_supplier_id }} was not found. Check the ID and save again.
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="col-md-6">
                     <label class="form-label" for="thumb_url">Thumbnail image URL</label>

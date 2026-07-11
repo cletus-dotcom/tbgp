@@ -31,6 +31,22 @@
                 <p class="partner-profile-location">
                     <i class="bi bi-geo-alt-fill" aria-hidden="true"></i> {{ partner.location }}
                 </p>
+                {% if member_referrer %}
+                <p class="partner-profile-referrer">
+                    <i class="bi bi-person-check-fill" aria-hidden="true"></i>
+                    <span>Member referrer: <strong>#{{ member_referrer.member_id }} — {{ member_referrer.full_name }}</strong></span>
+                </p>
+                {% elif partner.type == 'contractors' and portal_contractor %}
+                <p class="partner-profile-referrer partner-profile-referrer-empty">
+                    <i class="bi bi-person-dash" aria-hidden="true"></i>
+                    <span>Member referrer: #{{ portal_contractor.member_referrer_id }} (record not found)</span>
+                </p>
+                {% elif partner.type == 'suppliers' and portal_supplier %}
+                <p class="partner-profile-referrer partner-profile-referrer-empty">
+                    <i class="bi bi-person-dash" aria-hidden="true"></i>
+                    <span>Member referrer: #{{ portal_supplier.member_referrer_id }} (record not found)</span>
+                </p>
+                {% endif %}
             </div>
         </div>
     </div>

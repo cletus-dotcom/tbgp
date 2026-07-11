@@ -1,6 +1,7 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from app.auth import login_required, site_admin_required
+from app.config import is_portal_admin_role, is_site_admin_role, normalize_role
 from app.site_content_service import (
     delete_registry_partner,
     get_all_ecosystem_pages,
@@ -15,10 +16,13 @@ from app.site_content_service import (
     list_registry_partners_by_type,
     parse_ecosystem_form,
     parse_partner_form,
+    partner_portal_link,
+    apply_portal_partner_profile,
     save_ecosystem_page,
     save_landing_ecosystem_section,
     save_registry_partner,
 )
+from app.user_manual_content import resolve_user_manual
 
 site_admin_bp = Blueprint("site_admin", __name__, url_prefix="/site-admin")
 
@@ -54,6 +58,28 @@ def _registry_list_url(partner_type):
     return url_for("site_admin.registry_contractors")
 
 
+def _partner_edit_context(partner, registry_type, meta, is_new):
+    link = partner_portal_link(partner) if partner else {
+        "portal_contractor": None,
+        "portal_supplier": None,
+        "portal_record": None,
+        "member_referrer": None,
+    }
+    if partner:
+        partner = apply_portal_partner_profile(partner, link["portal_record"])
+    return {
+        "active_page": meta["active_page"],
+        "registry_type": registry_type,
+        "registry_meta": meta,
+        "partner": partner,
+        "portal_contractor": link["portal_contractor"],
+        "portal_supplier": link["portal_supplier"],
+        "member_referrer": link["member_referrer"],
+        "portal_profile_synced": link["portal_record"] is not None,
+        "is_new": is_new,
+    }
+
+
 @site_admin_bp.route("/")
 @login_required
 @site_admin_required
@@ -66,6 +92,29 @@ def home():
         suppliers=get_suppliers(),
         landing_section=get_landing_ecosystem_section(),
         contact_cta=get_services_contact_cta(),
+    )
+
+
+@site_admin_bp.route("/user-manual")
+@login_required
+@site_admin_required
+def user_manual():
+    role = normalize_role(session.get("role"))
+    if not is_site_admin_role(role) and not is_portal_admin_role(role):
+        flash("You do not have access to the user manual here.", "warning")
+        return redirect(url_for("site_admin.home"))
+    manual, manual_role, manual_choices = resolve_user_manual(
+        role,
+        request.args.get("manual"),
+    )
+    return render_template(
+        "site_admin/user_manual.html",
+        active_page="user_manual",
+        role=role,
+        manual_role=manual_role,
+        manual_choices=manual_choices,
+        manual_url_endpoint="site_admin.user_manual",
+        manual=manual,
     )
 
 
@@ -177,7 +226,17 @@ def registry_new(partner_type):
 
     meta = _registry_meta(partner_type)
     if request.method == "POST":
-        partner = parse_partner_form(request.form)
+        try:
+            partner = parse_partner_form(request.form)
+        except ValueError as exc:
+            flash(str(exc), "danger")
+            partner = parse_partner_form(request.form, validate=False)
+            partner["sort_order"] = request.form.get("sort_order", type=int) or 0
+            return render_template(
+                "site_admin/partner_edit.html",
+                **_partner_edit_context(partner, partner_type, meta, is_new=True),
+            )
+
         sort_order = request.form.get("sort_order", type=int)
         save_registry_partner(
             partner["slug"],
@@ -190,11 +249,7 @@ def registry_new(partner_type):
 
     return render_template(
         "site_admin/partner_edit.html",
-        active_page=meta["active_page"],
-        registry_type=partner_type,
-        registry_meta=meta,
-        partner=None,
-        is_new=True,
+        **_partner_edit_context(None, partner_type, meta, is_new=True),
     )
 
 
@@ -222,7 +277,19 @@ def registry_edit(slug):
             flash(f"{meta['label']} registry entry removed.", "success")
             return redirect(list_url)
 
-        updated = parse_partner_form(request.form, existing=partner)
+        try:
+            updated = parse_partner_form(request.form, existing=partner)
+        except ValueError as exc:
+            flash(str(exc), "danger")
+            draft = parse_partner_form(request.form, existing=partner, validate=False)
+            draft["sort_order"] = request.form.get("sort_order", type=int)
+            if draft["sort_order"] is None:
+                draft["sort_order"] = partner.get("sort_order", 0)
+            return render_template(
+                "site_admin/partner_edit.html",
+                **_partner_edit_context(draft, partner_type, meta, is_new=False),
+            )
+
         sort_order = request.form.get("sort_order", type=int)
         new_type = updated.get("type", partner_type)
         if updated["slug"] != partner["slug"]:
@@ -238,9 +305,5 @@ def registry_edit(slug):
 
     return render_template(
         "site_admin/partner_edit.html",
-        active_page=meta["active_page"],
-        registry_type=partner_type,
-        registry_meta=meta,
-        partner=partner,
-        is_new=False,
+        **_partner_edit_context(partner, partner_type, meta, is_new=False),
     )

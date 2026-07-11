@@ -1,0 +1,440 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Suppliers{% endblock %}
+{% block topbar_title %}Suppliers{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-box-seam"></i> All Suppliers</h5>
+            <p class="section-subtitle">{{ suppliers|length }} suppliers across all batches</p>
+        </div>
+        <div class="section-actions">
+            {% if can_manage_data(session.get('role')) %}
+            <button type="button" class="btn-add-supplier" data-bs-toggle="modal" data-bs-target="#manualAddsupplierModal">
+                <i class="bi bi-box-seam"></i> + Add supplier
+            </button>
+            <button type="button" class="btn-import-suppliers" data-bs-toggle="modal" data-bs-target="#addsupplierModal">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Import suppliers
+            </button>
+            {% endif %}
+            {% with search_id='supplierSearch', search_placeholder='Search suppliers...' %}
+            {% include 'partials/search_input.html' %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <div class="section-mobile-list" id="suppliersMobile">
+        {% for c in suppliers %}
+        <div class="supplier-card" data-search="{{ c.search_text() }}">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <div>
+                    <div class="member-id">#{{ c.supplier_id }} — {{ c.company_name }}</div>
+                    <div class="member-meta">
+                        Batch {{ c.batch }}
+                        {% if c.member_referrer %}
+                        &middot; Referred by #{{ c.member_referrer_id }} — {{ c.member_referrer.full_name }}
+                        {% else %}
+                        &middot; Member #{{ c.member_referrer_id }}
+                        {% endif %}
+                    </div>
+                </div>
+                <button type="button" class="btn btn-link expand-mobile-btn text-brand">View details</button>
+            </div>
+            <div class="detail-panel-mobile">
+                {% include 'partials/supplier_detail.html' %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="section-desktop-table section-table-wrap">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 36px;"></th>
+                    <th>ID</th>
+                    <th>Company</th>
+                    <th>Batch</th>
+                    <th>Member Referrer</th>
+                    <th>Representative</th>
+                    <th>Date Joined</th>
+                </tr>
+            </thead>
+            <tbody id="suppliersTableBody">
+                {% for c in suppliers %}
+                <tr class="supplier-row"
+                    data-search="{{ c.search_text() }}"
+                    data-supplier-id="{{ c.supplier_id }}"
+                    data-supplier="{{ {
+                        'supplier_id': c.supplier_id,
+                        'batch': c.batch,
+                        'member_referrer_id': c.member_referrer_id,
+                        'company_name': c.company_name,
+                        'company_address': c.company_address,
+                        'representative_name': c.representative_name,
+                        'contact_no': c.contact_no,
+                        'date_joined': (c.date_joined.isoformat() if c.date_joined else ''),
+                    } | tojson }}">
+                    <td>
+                        <button type="button" class="expand-btn" aria-label="Expand row">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </td>
+                    <td>{{ c.supplier_id }}</td>
+                    <td>{{ c.company_name }}</td>
+                    <td>{{ c.batch }}</td>
+                    <td>
+                        {% if c.member_referrer %}
+                        #{{ c.member_referrer_id }} — {{ c.member_referrer.full_name }}
+                        {% else %}
+                        #{{ c.member_referrer_id }}
+                        {% endif %}
+                    </td>
+                    <td>{{ c.representative_name or '—' }}</td>
+                    <td>{{ c.date_joined.strftime('%Y-%m-%d') if c.date_joined else '—' }}</td>
+                </tr>
+                <tr class="detail-row d-none" data-parent-search="{{ c.search_text() }}">
+                    <td colspan="7">
+                        <div class="detail-panel">
+                            {% include 'partials/supplier_detail.html' %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if can_manage_data(session.get('role')) %}
+{% include 'partials/manual_add_supplier_modal.html' %}
+{% include 'partials/add_supplier_modal.html' %}
+{% endif %}
+{% include 'partials/import_progress.html' %}
+{% if can_manage_data(session.get('role')) %}
+{% include 'partials/edit_supplier_modal.html' %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleDesktopRow(row) {
+        const detailRow = row.nextElementSibling;
+        if (!detailRow?.classList.contains('detail-row')) return;
+        const expanded = row.classList.toggle('expanded');
+        detailRow.classList.toggle('d-none', !expanded);
+    }
+
+    function toggleMobileCard(card) {
+        card.classList.toggle('expanded');
+        const btn = card.querySelector('.expand-mobile-btn');
+        if (btn) {
+            btn.textContent = card.classList.contains('expanded') ? 'Hide details' : 'View details';
+        }
+    }
+
+    document.querySelectorAll('.supplier-row').forEach(row => {
+        row.addEventListener('click', () => toggleDesktopRow(row));
+    });
+
+    document.querySelectorAll('#suppliersMobile .supplier-card').forEach(card => {
+        card.querySelector('.expand-mobile-btn')?.addEventListener('click', e => {
+            e.stopPropagation();
+            toggleMobileCard(card);
+        });
+    });
+
+    document.getElementById('supplierSearch')?.addEventListener('input', e => {
+        const q = e.target.value.trim().toLowerCase();
+
+        document.querySelectorAll('#suppliersTableBody tr.supplier-row').forEach(row => {
+            const haystack = row.dataset.search || '';
+            const visible = !q || haystack.includes(q);
+            row.style.display = visible ? '' : 'none';
+            const detailRow = row.nextElementSibling;
+            if (detailRow?.classList.contains('detail-row')) {
+                if (!visible) {
+                    detailRow.classList.add('d-none');
+                    row.classList.remove('expanded');
+                }
+                detailRow.style.display = visible ? '' : 'none';
+            }
+        });
+
+        document.querySelectorAll('#suppliersMobile .supplier-card').forEach(card => {
+            const haystack = card.dataset.search || '';
+            card.style.display = !q || haystack.includes(q) ? '' : 'none';
+        });
+    });
+
+    const isAdminRole = {{ 'true' if can_manage_data(session.get('role')) else 'false' }};
+
+    function showFormError(alertEl, message) {
+        if (!alertEl) return;
+        alertEl.textContent = message;
+        alertEl.classList.remove('d-none');
+    }
+
+    function hideFormError(alertEl) {
+        alertEl?.classList.add('d-none');
+    }
+
+    function getsupplierDataFromDom(supplierId) {
+        const row = document.querySelector(`.supplier-row[data-supplier-id="${supplierId}"]`);
+        const json = row?.dataset.supplier;
+        if (!json) return null;
+        try { return JSON.parse(json); } catch { return null; }
+    }
+
+    if (isAdminRole) {
+        const editModalEl = document.getElementById('editsupplierModal');
+        const editForm = document.getElementById('editsupplierForm');
+        const editAlert = document.getElementById('editsupplierAlert');
+        const manualAddsupplierModal = document.getElementById('manualAddsupplierModal');
+        const manualAddsupplierForm = document.getElementById('manualAddsupplierForm');
+        const manualAddsupplierAlert = document.getElementById('manualAddsupplierAlert');
+
+        const setEditFields = (c) => {
+            document.getElementById('editsupplierId').value = c.supplier_id;
+            document.getElementById('editsupplierIdDisplay').value = c.supplier_id;
+            document.getElementById('editsupplierBatch').value = c.batch;
+            document.getElementById('editMemberReferrerId').value = c.member_referrer_id ?? '';
+            document.getElementById('editCompanyName').value = c.company_name || '';
+            document.getElementById('editCompanyAddress').value = c.company_address || '';
+            document.getElementById('editRepresentativeName').value = c.representative_name || '';
+            document.getElementById('editContactNo').value = c.contact_no || '';
+            document.getElementById('editsupplierDateJoined').value = (c.date_joined || '').slice(0, 10);
+        };
+
+        function getsupplierDataFromEditButton(btn) {
+            const json = btn?.dataset?.supplier;
+            if (!json) return null;
+            try { return JSON.parse(json); } catch { return null; }
+        }
+
+        document.addEventListener('click', e => {
+            const editBtn = e.target.closest('.supplier-edit-btn');
+            if (editBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                hideFormError(editAlert);
+                const supplierId = Number(editBtn.dataset.supplierId);
+                const supplier = getsupplierDataFromEditButton(editBtn) || getsupplierDataFromDom(supplierId);
+                if (!supplier) {
+                    showFormError(editAlert, 'Could not load supplier data from the page. Please refresh.');
+                    return;
+                }
+                setEditFields(supplier);
+                bootstrap.Modal.getOrCreateInstance(editModalEl).show();
+                return;
+            }
+
+            const deleteBtn = e.target.closest('.supplier-delete-btn');
+            if (deleteBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const supplierId = Number(deleteBtn.dataset.supplierId);
+                if (!confirm(`Delete supplier #${supplierId}? This cannot be undone.`)) return;
+                (async () => {
+                    try {
+                        const res = await fetch(`/admin/suppliers/${supplierId}`, { method: 'DELETE' });
+                        const data = await res.json();
+                        alert(data.msg || data.status);
+                        if (data.status === 'success') window.location.reload();
+                    } catch (err) {
+                        alert(err.message || 'Delete failed.');
+                    }
+                })();
+                return;
+            }
+        });
+
+        editForm?.addEventListener('submit', async e => {
+            e.preventDefault();
+            hideFormError(editAlert);
+
+            const supplierId = document.getElementById('editsupplierId').value;
+            const formData = new FormData(editForm);
+
+            try {
+                const res = await fetch(`/admin/suppliers/${supplierId}`, { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    bootstrap.Modal.getInstance(editModalEl)?.hide();
+                    window.location.reload();
+                    return;
+                }
+                showFormError(editAlert, data.msg || 'Update failed.');
+            } catch (err) {
+                showFormError(editAlert, err.message || 'Update failed.');
+            }
+        });
+
+        manualAddsupplierModal?.addEventListener('shown.bs.modal', () => {
+            hideFormError(manualAddsupplierAlert);
+            manualAddsupplierForm?.reset();
+            document.getElementById('manualsupplierId')?.focus();
+        });
+
+        manualAddsupplierForm?.addEventListener('submit', async e => {
+            e.preventDefault();
+            hideFormError(manualAddsupplierAlert);
+
+            try {
+                const formData = new FormData(manualAddsupplierForm);
+                const res = await fetch('/admin/suppliers', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    bootstrap.Modal.getInstance(manualAddsupplierModal)?.hide();
+                    window.location.reload();
+                    return;
+                }
+                showFormError(manualAddsupplierAlert, data.msg || 'Add supplier failed.');
+            } catch (err) {
+                showFormError(manualAddsupplierAlert, err.message || 'Add supplier failed.');
+            }
+        });
+    }
+
+    const addsupplierModal = document.getElementById('addsupplierModal');
+    const addsupplierForm = document.getElementById('addsupplierForm');
+    const addsupplierAlert = document.getElementById('addsupplierAlert');
+    const supplierFileInput = document.getElementById('supplierFile');
+    const importPreview = document.getElementById('supplierImportPreview');
+    const importPreviewBody = document.getElementById('supplierImportPreviewBody');
+    const importRowCount = document.getElementById('supplierImportRowCount');
+    const importPreviewNote = document.getElementById('supplierImportPreviewNote');
+    const importSubmitBtn = document.getElementById('supplierImportSubmitBtn');
+    const importProgressOverlay = document.getElementById('importProgressOverlay');
+    const importProgressMessage = document.getElementById('importProgressMessage');
+    const importCancelBtn = document.getElementById('supplierImportCancelBtn');
+
+    const PROGRESS_READING = 'Reading in progress, please wait a moment.';
+    const PROGRESS_RECORDING = 'Recording data in progress, please wait a moment.';
+
+    function showAddsupplierError(message) { showFormError(addsupplierAlert, message); }
+    function hideAddsupplierError() { hideFormError(addsupplierAlert); }
+
+    function resetImportPreview() {
+        importPreview?.classList.add('d-none');
+        if (importPreviewBody) importPreviewBody.innerHTML = '';
+        if (importRowCount) importRowCount.textContent = '0 rows';
+        if (importPreviewNote) importPreviewNote.textContent = '';
+        if (importSubmitBtn) importSubmitBtn.disabled = true;
+    }
+
+    function setImportBusy(isBusy, message = '') {
+        if (importProgressOverlay) {
+            importProgressOverlay.classList.toggle('d-none', !isBusy);
+        }
+        if (importProgressMessage && message) {
+            importProgressMessage.textContent = message;
+        }
+        if (supplierFileInput) supplierFileInput.disabled = isBusy;
+        if (importSubmitBtn) importSubmitBtn.disabled = isBusy || !supplierFileInput?.files?.[0];
+        if (importCancelBtn) importCancelBtn.disabled = isBusy;
+        if (addsupplierModal) {
+            addsupplierModal.setAttribute('data-bs-keyboard', isBusy ? 'false' : 'true');
+            addsupplierModal.setAttribute('data-bs-backdrop', isBusy ? 'static' : 'true');
+        }
+    }
+
+    function renderImportPreview(data) {
+        if (!importPreviewBody || !importPreview) return;
+        importPreviewBody.innerHTML = data.preview.map(row => `
+            <tr>
+                <td>${row.supplier_id}</td>
+                <td>${row.company_name || '—'}</td>
+                <td>${row.batch}</td>
+                <td>${row.member_referrer_id ?? '—'}</td>
+                <td>${row.date_joined || '—'}</td>
+            </tr>
+        `).join('');
+        importRowCount.textContent = `${data.row_count} row${data.row_count === 1 ? '' : 's'}`;
+        importPreviewNote.textContent = data.row_count > data.preview.length
+            ? `Showing first ${data.preview.length} of ${data.row_count} rows.`
+            : 'All rows parsed successfully.';
+        importPreview.classList.remove('d-none');
+        if (importSubmitBtn) importSubmitBtn.disabled = false;
+    }
+
+    addsupplierModal?.addEventListener('shown.bs.modal', () => {
+        hideAddsupplierError();
+        addsupplierForm?.reset();
+        resetImportPreview();
+        setImportBusy(false);
+    });
+
+    addsupplierModal?.addEventListener('hidden.bs.modal', () => {
+        setImportBusy(false);
+    });
+
+    supplierFileInput?.addEventListener('change', async () => {
+        hideAddsupplierError();
+        resetImportPreview();
+
+        const file = supplierFileInput.files?.[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        setImportBusy(true, PROGRESS_READING);
+
+        try {
+            const res = await fetch('/suppliers/preview', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.status !== 'success') {
+                showAddsupplierError(data.msg || 'Could not parse file.');
+                supplierFileInput.value = '';
+                return;
+            }
+            renderImportPreview(data);
+        } catch (err) {
+            showAddsupplierError(err.message || 'Could not parse file.');
+            supplierFileInput.value = '';
+        } finally {
+            setImportBusy(false);
+            if (supplierFileInput.files?.[0] && importSubmitBtn) {
+                importSubmitBtn.disabled = false;
+            }
+        }
+    });
+
+    addsupplierForm?.addEventListener('submit', async e => {
+        e.preventDefault();
+        hideAddsupplierError();
+
+        const file = supplierFileInput?.files?.[0];
+        if (!file) {
+            showAddsupplierError('Please choose an Excel file.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        setImportBusy(true, PROGRESS_RECORDING);
+
+        try {
+            const res = await fetch('/suppliers/add', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            if (data.status === 'success') {
+                bootstrap.Modal.getInstance(addsupplierModal)?.hide();
+                window.location.reload();
+                return;
+            }
+
+            showAddsupplierError(data.msg || 'Import failed.');
+            setImportBusy(false);
+            if (importSubmitBtn) importSubmitBtn.disabled = false;
+        } catch (err) {
+            showAddsupplierError(err.message || 'Import failed.');
+            setImportBusy(false);
+            if (importSubmitBtn) importSubmitBtn.disabled = false;
+        }
+    });
+</script>
+{% endblock %}

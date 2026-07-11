@@ -231,6 +231,152 @@ def get_partner_by_slug(partner_slug):
     return None
 
 
+def parse_portal_contractor_id(partner):
+    """Map ecosystem registry contractor entry to portal contractors.contractor_id."""
+    if not partner or partner.get("type") != "contractors":
+        return None
+
+    explicit = partner.get("portal_contractor_id")
+    if explicit is not None and str(explicit).strip() != "":
+        try:
+            return int(explicit)
+        except (TypeError, ValueError):
+            pass
+
+    for key in ("slug", "code"):
+        value = (partner.get(key) or "").lower()
+        match = re.search(r"con-(\d+)$", value)
+        if match:
+            return int(match.group(1), 10)
+    return None
+
+
+def get_portal_contractor_for_partner(partner):
+    from sqlalchemy.orm import joinedload
+
+    from app.models import Contractor
+
+    contractor_id = parse_portal_contractor_id(partner)
+    if not contractor_id:
+        return None
+    return (
+        Contractor.query.options(joinedload(Contractor.member_referrer))
+        .filter_by(contractor_id=contractor_id)
+        .first()
+    )
+
+
+def parse_portal_supplier_id(partner):
+    """Map ecosystem registry supplier entry to portal suppliers.supplier_id."""
+    if not partner or partner.get("type") != "suppliers":
+        return None
+
+    explicit = partner.get("portal_supplier_id")
+    if explicit is not None and str(explicit).strip() != "":
+        try:
+            return int(explicit)
+        except (TypeError, ValueError):
+            pass
+
+    for key in ("slug", "code"):
+        value = (partner.get(key) or "").lower()
+        match = re.search(r"sup-(\d+)$", value)
+        if match:
+            return int(match.group(1), 10)
+    return None
+
+
+def get_portal_supplier_for_partner(partner):
+    from sqlalchemy.orm import joinedload
+
+    from app.models import Supplier
+
+    supplier_id = parse_portal_supplier_id(partner)
+    if not supplier_id:
+        return None
+    return (
+        Supplier.query.options(joinedload(Supplier.member_referrer))
+        .filter_by(supplier_id=supplier_id)
+        .first()
+    )
+
+
+def get_portal_record_for_partner(partner):
+    partner_type = (partner or {}).get("type")
+    if partner_type == "contractors":
+        return get_portal_contractor_for_partner(partner)
+    if partner_type == "suppliers":
+        return get_portal_supplier_for_partner(partner)
+    return None
+
+
+def apply_portal_contractor_profile(partner, portal_contractor=None):
+    """For linked contractors, show portal DB company name and address on public profiles."""
+    if not partner or partner.get("type") != "contractors":
+        return partner
+
+    if portal_contractor is None:
+        portal_contractor = get_portal_contractor_for_partner(partner)
+    if portal_contractor is None:
+        return partner
+
+    profile = copy.deepcopy(partner)
+    _sync_partner_identity_from_portal(profile, portal_contractor, location_fallback=True)
+    profile["company_name"] = portal_contractor.company_name
+    profile["company_address"] = portal_contractor.company_address
+    return profile
+
+
+def apply_portal_supplier_profile(partner, portal_supplier=None):
+    """For linked suppliers, show portal DB company name and address on public profiles."""
+    if not partner or partner.get("type") != "suppliers":
+        return partner
+
+    if portal_supplier is None:
+        portal_supplier = get_portal_supplier_for_partner(partner)
+    if portal_supplier is None:
+        return partner
+
+    profile = copy.deepcopy(partner)
+    _sync_partner_identity_from_portal(profile, portal_supplier, location_fallback=True)
+    profile["company_name"] = portal_supplier.company_name
+    profile["company_address"] = portal_supplier.company_address
+    return profile
+
+
+def apply_portal_partner_profile(partner, portal_record=None):
+    if not partner:
+        return partner
+    if partner.get("type") == "contractors":
+        return apply_portal_contractor_profile(partner, portal_record)
+    if partner.get("type") == "suppliers":
+        return apply_portal_supplier_profile(partner, portal_record)
+    return partner
+
+
+def _sync_contractor_identity_from_portal(partner, contractor=None, *, location_fallback=True):
+    return _sync_partner_identity_from_portal(partner, contractor, location_fallback=location_fallback)
+
+
+def _sync_partner_identity_from_portal(partner, portal_record=None, *, location_fallback=True):
+    """Copy portal company name and address into registry partner fields."""
+    if not partner or partner.get("type") not in ("contractors", "suppliers"):
+        return partner
+
+    if portal_record is None:
+        portal_record = get_portal_record_for_partner(partner)
+    if portal_record is None:
+        return partner
+
+    if portal_record.company_name:
+        partner["name"] = portal_record.company_name
+    if portal_record.company_address:
+        partner["location"] = portal_record.company_address
+    elif not location_fallback:
+        partner["location"] = ""
+    return partner
+
+
 def list_registry_partners():
     rows = CmsRegistryPartner.query.order_by(
         CmsRegistryPartner.partner_type,
@@ -358,7 +504,7 @@ def parse_ecosystem_form(form, slug, existing=None):
     return page
 
 
-def parse_partner_form(form, existing=None):
+def parse_partner_form(form, existing=None, validate=True):
     partner = copy.deepcopy(existing or {})
     for field in (
         "code",
@@ -380,7 +526,177 @@ def parse_partner_form(form, existing=None):
     partner["gallery"] = _parse_repeater(form, "gallery", ("url", "alt"))
     slug = form.get("slug", partner.get("slug", "")).strip()
     partner["slug"] = _normalize_slug(slug or partner.get("code", ""))
+
+    if validate:
+        error = _apply_portal_partner_id(partner, form)
+        if error:
+            raise ValueError(error)
+    else:
+        _apply_portal_partner_id_draft(partner, form)
+    _sync_partner_identity_from_portal(partner, location_fallback=False)
     return partner
+
+
+def _apply_portal_partner_id_draft(partner, form):
+    if partner.get("type") == "contractors":
+        _apply_portal_contractor_id_draft(partner, form)
+        partner.pop("portal_supplier_id", None)
+        return
+    if partner.get("type") == "suppliers":
+        _apply_portal_supplier_id_draft(partner, form)
+        partner.pop("portal_contractor_id", None)
+        return
+    partner.pop("portal_contractor_id", None)
+    partner.pop("portal_supplier_id", None)
+
+
+def _apply_portal_supplier_id_draft(partner, form):
+    if partner.get("type") != "suppliers":
+        partner.pop("portal_supplier_id", None)
+        return
+    raw = (form.get("portal_supplier_id") or "").strip()
+    if not raw:
+        partner.pop("portal_supplier_id", None)
+        return
+    try:
+        partner["portal_supplier_id"] = int(raw)
+    except ValueError:
+        partner["portal_supplier_id"] = raw
+
+
+def partner_portal_link(partner):
+    if not partner:
+        return {
+            "portal_contractor": None,
+            "portal_supplier": None,
+            "portal_record": None,
+            "member_referrer": None,
+        }
+    if partner.get("type") == "suppliers":
+        portal_supplier = get_portal_supplier_for_partner(partner)
+        return {
+            "portal_contractor": None,
+            "portal_supplier": portal_supplier,
+            "portal_record": portal_supplier,
+            "member_referrer": portal_supplier.member_referrer if portal_supplier else None,
+        }
+    portal_contractor = get_portal_contractor_for_partner(partner)
+    return {
+        "portal_contractor": portal_contractor,
+        "portal_supplier": None,
+        "portal_record": portal_contractor,
+        "member_referrer": portal_contractor.member_referrer if portal_contractor else None,
+    }
+
+
+def _apply_portal_partner_id(partner, form):
+    if partner.get("type") == "contractors":
+        partner.pop("portal_supplier_id", None)
+        return _apply_portal_contractor_id(partner, form)
+    if partner.get("type") == "suppliers":
+        partner.pop("portal_contractor_id", None)
+        return _apply_portal_supplier_id(partner, form)
+    partner.pop("portal_contractor_id", None)
+    partner.pop("portal_supplier_id", None)
+    return None
+
+
+def _apply_portal_supplier_id(partner, form):
+    from app.models import Supplier
+
+    if partner.get("type") != "suppliers":
+        partner.pop("portal_supplier_id", None)
+        return None
+
+    raw = (form.get("portal_supplier_id") or "").strip()
+    if not raw:
+        partner.pop("portal_supplier_id", None)
+        return None
+
+    try:
+        supplier_id = int(raw)
+    except ValueError:
+        return "Portal supplier ID must be a whole number."
+
+    if supplier_id <= 0:
+        return "Portal supplier ID must be greater than zero."
+
+    supplier = Supplier.query.get(supplier_id)
+    if supplier is None:
+        return f"Portal supplier #{supplier_id} was not found in the database."
+
+    partner["portal_supplier_id"] = supplier_id
+    _sync_partner_identity_from_portal(partner, supplier, location_fallback=False)
+    return None
+    from app.models import Contractor
+
+    if partner.get("type") != "contractors":
+        partner.pop("portal_contractor_id", None)
+        return None
+
+    raw = (form.get("portal_contractor_id") or "").strip()
+    if not raw:
+        partner.pop("portal_contractor_id", None)
+        return None
+
+    try:
+        contractor_id = int(raw)
+    except ValueError:
+        return "Portal contractor ID must be a whole number."
+
+    if contractor_id <= 0:
+        return "Portal contractor ID must be greater than zero."
+
+    contractor = Contractor.query.get(contractor_id)
+    if contractor is None:
+        return f"Portal contractor #{contractor_id} was not found in the database."
+
+    partner["portal_contractor_id"] = contractor_id
+    _sync_partner_identity_from_portal(partner, contractor, location_fallback=False)
+    return None
+
+
+def _apply_portal_contractor_id_draft(partner, form):
+    if partner.get("type") != "contractors":
+        partner.pop("portal_contractor_id", None)
+        return
+    raw = (form.get("portal_contractor_id") or "").strip()
+    if not raw:
+        partner.pop("portal_contractor_id", None)
+        return
+    try:
+        partner["portal_contractor_id"] = int(raw)
+    except ValueError:
+        partner["portal_contractor_id"] = raw
+
+
+def _apply_portal_contractor_id(partner, form):
+    from app.models import Contractor
+
+    if partner.get("type") != "contractors":
+        partner.pop("portal_contractor_id", None)
+        return None
+
+    raw = (form.get("portal_contractor_id") or "").strip()
+    if not raw:
+        partner.pop("portal_contractor_id", None)
+        return None
+
+    try:
+        contractor_id = int(raw)
+    except ValueError:
+        return "Portal contractor ID must be a whole number."
+
+    if contractor_id <= 0:
+        return "Portal contractor ID must be greater than zero."
+
+    contractor = Contractor.query.get(contractor_id)
+    if contractor is None:
+        return f"Portal contractor #{contractor_id} was not found in the database."
+
+    partner["portal_contractor_id"] = contractor_id
+    _sync_partner_identity_from_portal(partner, contractor, location_fallback=False)
+    return None
 
 
 def _parse_repeater(form, prefix, fields):

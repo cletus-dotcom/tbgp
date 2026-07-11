@@ -71,6 +71,7 @@ MEMBERS_XLSX = os.getenv(
 
 MEMBERS_SHEET = "members"
 CONTRACTORS_SHEET = "contractors"
+SUPPLIERS_SHEET = "suppliers"
 
 MEMBER_STATUSES = ["Active", "Inactive", "Separated"]
 MEMBER_SEPARATION_TYPES = [

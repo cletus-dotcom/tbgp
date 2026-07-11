@@ -1,9 +1,38 @@
 (function () {
     const menuToggle = document.getElementById("menuToggle");
     const sidebar = document.getElementById("sidebar");
+    const body = document.body;
+    const isDesktop = () => window.matchMedia("(min-width: 992px)").matches;
+
+    function closeSidebar() {
+        if (!sidebar || isDesktop()) {
+            return;
+        }
+        sidebar.classList.remove("visible");
+        body.classList.remove("no-scroll", "sidebar-open");
+        menuToggle?.setAttribute("aria-expanded", "false");
+    }
+
     if (menuToggle && sidebar) {
-        menuToggle.addEventListener("click", function () {
-            sidebar.classList.toggle("open");
+        menuToggle.addEventListener("click", function (e) {
+            e.stopPropagation();
+            if (isDesktop()) {
+                return;
+            }
+            const isOpen = sidebar.classList.toggle("visible");
+            body.classList.toggle("no-scroll", isOpen);
+            body.classList.toggle("sidebar-open", isOpen);
+            menuToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        });
+
+        document.addEventListener("click", function (e) {
+            if (isDesktop()) {
+                return;
+            }
+            const clickInside = sidebar.contains(e.target) || menuToggle.contains(e.target);
+            if (!clickInside) {
+                closeSidebar();
+            }
         });
     }
 
@@ -106,4 +135,64 @@
             }
         }
     });
+
+    const partnerTypeSelect = document.getElementById("partner_type");
+    const portalLinkFields = document.querySelectorAll(".portal-link-field");
+    const portalSyncedFields = document.querySelectorAll(".portal-synced-field");
+    const portalSyncedNotes = document.querySelectorAll(".portal-synced-note");
+    const partnerForm = document.querySelector(".site-admin-form");
+
+    function syncPortalLinkFields() {
+        if (!partnerTypeSelect) {
+            return;
+        }
+        const partnerType = partnerTypeSelect.value;
+        const showContractor = partnerType === "contractors";
+        const showSupplier = partnerType === "suppliers";
+
+        document.querySelectorAll(".portal-contractor-field").forEach(function (el) {
+            el.hidden = !showContractor;
+        });
+        document.querySelectorAll(".portal-supplier-field").forEach(function (el) {
+            el.hidden = !showSupplier;
+        });
+        const preview = document.getElementById("portal-link-preview");
+        if (preview) {
+            preview.hidden = !showContractor && !showSupplier;
+        }
+
+        const portalContractorInput = document.getElementById("portal_contractor_id");
+        if (portalContractorInput) {
+            portalContractorInput.disabled = !showContractor;
+        }
+        const portalSupplierInput = document.getElementById("portal_supplier_id");
+        if (portalSupplierInput) {
+            portalSupplierInput.disabled = !showSupplier;
+        }
+        syncPortalSyncedFields();
+    }
+
+    function syncPortalSyncedFields() {
+        const isContractor = partnerTypeSelect?.value === "contractors";
+        const isSupplier = partnerTypeSelect?.value === "suppliers";
+        const portalLinked = partnerForm?.dataset.portalLinked === "true";
+        const lock = portalLinked && (isContractor || isSupplier);
+
+        portalSyncedFields.forEach(function (el) {
+            el.readOnly = lock;
+            if (el.id === "name") {
+                el.required = !lock;
+            }
+        });
+        portalSyncedNotes.forEach(function (el) {
+            el.hidden = !lock;
+        });
+    }
+
+    if (partnerTypeSelect) {
+        partnerTypeSelect.addEventListener("change", syncPortalLinkFields);
+        syncPortalLinkFields();
+    } else {
+        syncPortalSyncedFields();
+    }
 })();

@@ -28,7 +28,10 @@ from app.site_content_service import (
     get_ecosystem_page,
     get_ecosystem_slugs,
     get_landing_ecosystem_section,
+    apply_portal_partner_profile,
     get_partner_by_slug,
+    get_portal_record_for_partner,
+    partner_portal_link,
     get_suppliers,
 )
 from app.config import (
@@ -38,6 +41,7 @@ from app.config import (
     COMMISSION_SCHEMES,
     CONTRACTOR_POOL_PERCENT,
     CONTRACTORS_SHEET,
+    SUPPLIERS_SHEET,
     MAX_SHARING_LEVELS,
     MEMBERS_SHEET,
     MEMBER_LIFETIME_EARNINGS_CAP,
@@ -64,6 +68,7 @@ from app.config import (
     payout_scheme_summary,
     is_admin_role,
     is_member_role,
+    is_portal_admin_role,
     is_site_admin_role,
     is_staff_role,
     normalize_role,
@@ -71,232 +76,16 @@ from app.config import (
     staff_may_manage_user,
 )
 
-USER_MANUALS = {
-    USER_ROLE_PORTAL_ADMIN: {
-        "title": "PortalAdmin User Manual",
-        "summary": "Use PortalAdmin only for protected portal maintenance and database purge actions.",
-        "sections": [
-            {
-                "heading": "Main Responsibilities",
-                "items": [
-                    "Maintain the protected PortalAdmin account.",
-                    "Use Delete All Members only when resetting demo or test data.",
-                    "Review the portal as an Admin-level user when needed.",
-                ],
-            },
-            {
-                "heading": "Delete All Members",
-                "items": [
-                    "Open Admin Options, then choose Delete All Members.",
-                    "Read the confirmation prompt carefully before continuing.",
-                    "Type DELETE ALL MEMBERS exactly when the system asks for confirmation.",
-                    "This clears member-related records, including ledgers, payouts, sharing data, projects, and contractors, then resets member and contractor ID sequences.",
-                ],
-            },
-            {
-                "heading": "Safety Notes",
-                "items": [
-                    "Do not use PortalAdmin for daily encoding work.",
-                    "Do not share the PortalAdmin password with regular staff users.",
-                    "Use a normal Admin account for routine management tasks.",
-                ],
-            },
-        ],
-    },
-    USER_ROLE_ADMIN: {
-        "title": "Admin User Manual",
-        "summary": "Admin users manage accounts, members, contractors, commissions, sharing, reports, and payout approvals.",
-        "sections": [
-            {
-                "heading": "User Management",
-                "items": [
-                    "Open Admin Options, then Manage Users to add, edit, or delete user accounts.",
-                    "Assign only the role a user needs: Admin, Staff, or Member.",
-                    "Link Member users to their correct Member ID so they can access their own portal.",
-                    "PortalAdmin is protected and hidden from normal user management.",
-                ],
-            },
-            {
-                "heading": "Member and Contractor Records",
-                "items": [
-                    "Use Members to add, edit, import, or review member profiles.",
-                    "Use Contractors to add, edit, import, or review contractor records.",
-                    "Use the generated Excel templates when importing new records.",
-                    "Set a member lifetime limit threshold from the Add/Edit Member form when needed.",
-                    f"After the threshold, that member is limited to {MEMBER_LIFETIME_PROJECT_CAP_AFTER_LIMIT:,.2f} per project and excess goes to the POP Lifetime Limit Fund.",
-                ],
-            },
-            {
-                "heading": "Income Management",
-                "items": [
-                    "Use Project Commission to record projects, contractors, client referrals, addresses, and billings.",
-                    "Use Commission Management to adjust commission levels.",
-                    "Use Generate Sharing to preview and generate profit sharing for billing dates.",
-                    "Generated sharing protects linked project and billing records from unsafe deletion.",
-                ],
-            },
-            {
-                "heading": "Payouts and Reports",
-                "items": [
-                    "Approve member payout requests from Payout Queue.",
-                    "Review Staff release submissions and approve final releases.",
-                    "Use Fund Release Reports and Commission Reports for review and reconciliation.",
-                ],
-            },
-        ],
-    },
-    USER_ROLE_STAFF: {
-        "title": "Staff User Manual",
-        "summary": "Staff users encode operational records, generate sharing, and submit payout release details.",
-        "sections": [
-            {
-                "heading": "Daily Data Entry",
-                "items": [
-                    "Use Members to add, edit, and import member records.",
-                    "Use Contractors to add, edit, and import contractor records.",
-                    "Check required fields before saving or importing records.",
-                    "Staff cannot change Admin-only member lifetime limit controls.",
-                ],
-            },
-            {
-                "heading": "Project Commissions",
-                "items": [
-                    "Use Project Commission to add projects, select contractors, set client referrals, and encode billings.",
-                    "Once sharing has been generated, Staff cannot edit project title, address, client referral, contractor, or generated billing amounts.",
-                    "Ask an Admin if generated project or billing details must be corrected.",
-                ],
-            },
-            {
-                "heading": "Generate Sharing",
-                "items": [
-                    "Use Generate Sharing to preview available billings.",
-                    "Review the billing date and records before generating sharing.",
-                    "Generated sharing creates ledger entries and may lock related project billing details.",
-                ],
-            },
-            {
-                "heading": "Payout Release",
-                "items": [
-                    "Use Payout Queue to record release details for approved payout requests.",
-                    "Select the correct release method and fill required reference details.",
-                    "For Bank Deposit, enter bank name and branch; for Other, enter the custom method.",
-                ],
-            },
-        ],
-    },
-    USER_ROLE_MEMBER: {
-        "title": "Member User Manual",
-        "summary": "Member users can review their own profile, hierarchy, ledger, payout scheme, and payout activity.",
-        "sections": [
-            {
-                "heading": "Dashboard",
-                "items": [
-                    "Use Dashboard to see your member summary, batch, referrals, downline count, and ledger earnings.",
-                    "If your account is not linked to a member record, contact the Admin or Staff.",
-                ],
-            },
-            {
-                "heading": "My Information",
-                "items": [
-                    "Use My Information to review your member profile.",
-                    "Ask Staff or Admin to correct profile information that you cannot edit directly.",
-                ],
-            },
-            {
-                "heading": "My Ledger and Hierarchy",
-                "items": [
-                    "Use My Ledger to review your earning transactions and payout deductions.",
-                    "Use My Hierarchy to view your referral line and downline structure.",
-                ],
-            },
-            {
-                "heading": "Payout Guidance",
-                "items": [
-                    "Review the payout scheme so you understand deductions and net release amounts.",
-                    "Coordinate with Staff or Admin for payout request and release concerns.",
-                ],
-            },
-        ],
-    },
-}
-
-APP_FEATURES = [
-    {
-        "icon": "bi-people",
-        "title": "Member Management",
-        "description": "Maintain member profiles, referral links, batch details, status, beneficiaries, and lifetime limit rules.",
-    },
-    {
-        "icon": "bi-building",
-        "title": "Contractor Management",
-        "description": "Record contractors, company contacts, member referrers, and contractor batches used by project commissions.",
-    },
-    {
-        "icon": "bi-diagram-3",
-        "title": "Hierarchy and Ledger Tracking",
-        "description": "View referral hierarchy, member downlines, and earning ledger transactions from generated sharing and payouts.",
-    },
-    {
-        "icon": "bi-cash-stack",
-        "title": "Project Commission and Sharing",
-        "description": "Encode project billings, configure commission levels, preview sharing, and generate member ledger earnings.",
-    },
-    {
-        "icon": "bi-wallet2",
-        "title": "Payout Processing",
-        "description": "Manage payout requests, Staff release submissions, Admin release approvals, and OMPD deductions.",
-    },
-    {
-        "icon": "bi-file-earmark-text",
-        "title": "Reports and PDF Export",
-        "description": "Review project detail reports, commission summaries, fund release reports, and export key reports to PDF.",
-    },
-    {
-        "icon": "bi-shield-lock",
-        "title": "Role-Based Access",
-        "description": "Separate PortalAdmin, Admin, Staff, and Member permissions so users only see tools appropriate to their role.",
-    },
-    {
-        "icon": "bi-file-earmark-spreadsheet",
-        "title": "Excel Import Templates",
-        "description": "Download generated blank templates for members and contractors, then import structured data with validation.",
-    },
-]
-
-APP_PROCESS_FLOW = [
-    {
-        "title": "Set Up Users and Master Data",
-        "description": "Admin creates users, Staff/Admin add members and contractors, and member accounts are linked to member records.",
-    },
-    {
-        "title": "Build the Referral Network",
-        "description": "Member referrers and contractor referrers are recorded so hierarchy, commission paths, and ledger ownership are clear.",
-    },
-    {
-        "title": "Encode Project Commissions",
-        "description": "Staff/Admin adds the project, contractor, client referral, address, billing dates, and billing amounts.",
-    },
-    {
-        "title": "Preview and Generate Sharing",
-        "description": "Staff/Admin previews billings, then generates sharing. The system applies commission levels, per-project caps, and lifetime limit rules.",
-    },
-    {
-        "title": "Record Ledger and POP Allocations",
-        "description": "Generated sharing creates member ledger credits and redirects cap overflow to POP or the POP Lifetime Limit Fund.",
-    },
-    {
-        "title": "Process Payouts",
-        "description": "Payout requests are reviewed, release details are recorded by Staff/Admin, and Admin approves the final release.",
-    },
-    {
-        "title": "Review Reports",
-        "description": "Admin and authorized users review project reports, commission summaries, payout reports, and PDF exports for reconciliation.",
-    },
-]
+from app.user_manual_content import APP_FEATURES, APP_PROCESS_FLOW, resolve_user_manual
 from app.contractor_import_service import (
     import_contractors_from_upload,
     import_contractors_from_xlsx,
     preview_contractors_upload,
+)
+from app.supplier_import_service import (
+    import_suppliers_from_upload,
+    import_suppliers_from_xlsx,
+    preview_suppliers_upload,
 )
 from app.hierarchy_service import (
     build_hierarchy_tree,
@@ -318,6 +107,7 @@ from app.models import (
     ProjectCommission,
     SharingBatch,
     SharingEntry,
+    Supplier,
     User,
 )
 from app.ledger_service import member_ledger_rows, member_ledger_stats
@@ -408,6 +198,17 @@ CONTRACTOR_TEMPLATE_COLUMNS = [
     "date_joined",
 ]
 
+SUPPLIER_TEMPLATE_COLUMNS = [
+    "supplier_id",
+    "batch",
+    "member_referrer_id",
+    "company_name",
+    "company_address",
+    "representative_name",
+    "contact_no",
+    "date_joined",
+]
+
 
 def _blank_import_template(sheet_name, columns, reference_rows=None):
     buffer = BytesIO()
@@ -475,9 +276,15 @@ def partner_profile(partner_slug):
     partner = get_partner_by_slug(partner_slug)
     if partner is None:
         abort(404)
+    portal_record = get_portal_record_for_partner(partner)
+    link = partner_portal_link(partner)
+    partner = apply_portal_partner_profile(partner, portal_record)
     return render_template(
         "partner_profile.html",
         partner=partner,
+        portal_contractor=link["portal_contractor"],
+        portal_supplier=link["portal_supplier"],
+        member_referrer=link["member_referrer"],
         landing_nav_active=None,
     )
 
@@ -569,11 +376,19 @@ def dashboard():
 def user_manual():
     user = _dashboard_user()
     role = normalize_role(user.role)
-    manual = USER_MANUALS.get(role, USER_MANUALS[USER_ROLE_STAFF])
+    if is_site_admin_role(user.role) and not is_portal_admin_role(user.role):
+        return redirect(url_for("site_admin.user_manual"))
+    manual, manual_role, manual_choices = resolve_user_manual(
+        user.role,
+        request.args.get("manual"),
+    )
     return render_template(
         "user_manual.html",
         fullname=user.full_name or "User",
         role=role,
+        manual_role=manual_role,
+        manual_choices=manual_choices,
+        manual_url_endpoint="main_routes.user_manual",
         active_page="user_manual",
         manual=manual,
     )
@@ -903,6 +718,214 @@ def admin_delete_contractor(contractor_id):
         return jsonify({"status": "error", "msg": f"Database error: {exc}"}), 500
 
 
+@main_routes.route("/suppliers")
+@login_required
+def suppliers():
+    denied = forbid_member_portal_users()
+    if denied:
+        return denied
+
+    user = User.query.get(session.get("user_id"))
+    suppliers_list = (
+        Supplier.query
+        .options(joinedload(Supplier.member_referrer))
+        .order_by(Supplier.batch.asc(), Supplier.supplier_id.asc())
+        .all()
+    )
+    members_list = Member.query.order_by(Member.batch.asc(), Member.member_id.asc()).all()
+    return render_template(
+        "suppliers.html",
+        fullname=user.full_name or "Admin",
+        role=normalize_role(user.role),
+        suppliers=suppliers_list,
+        members=members_list,
+        active_page="suppliers",
+    )
+
+
+@main_routes.route("/suppliers/template")
+@login_required
+@staff_or_admin_required
+def suppliers_template():
+    workbook = _blank_import_template(
+        SUPPLIERS_SHEET,
+        SUPPLIER_TEMPLATE_COLUMNS,
+        reference_rows=[
+            ["field", "allowed values / note"],
+            ["member_referrer_id", "Must match an existing member_id."],
+            ["date_joined", "Use YYYY-MM-DD format."],
+        ],
+    )
+    return send_file(
+        workbook,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name="suppliers_import_template.xlsx",
+    )
+
+
+@main_routes.route("/suppliers/preview", methods=["POST"])
+@login_required
+@staff_or_admin_required
+def preview_suppliers():
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return jsonify({"status": "error", "msg": "Please choose an Excel file."}), 400
+    if not file.filename.lower().endswith((".xlsx", ".xls")):
+        return jsonify({"status": "error", "msg": "Only .xlsx or .xls files are supported."}), 400
+
+    try:
+        result = preview_suppliers_upload(file)
+        return jsonify({"status": "success", **result})
+    except ValueError as exc:
+        return jsonify({"status": "error", "msg": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"status": "error", "msg": f"Could not parse file: {exc}"}), 500
+
+
+@main_routes.route("/suppliers/add", methods=["POST"])
+@login_required
+@staff_or_admin_required
+def add_supplier():
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return jsonify({"status": "error", "msg": "Please choose an Excel file."}), 400
+    if not file.filename.lower().endswith((".xlsx", ".xls")):
+        return jsonify({"status": "error", "msg": "Only .xlsx or .xls files are supported."}), 400
+
+    try:
+        result = import_suppliers_from_upload(file, replace=False)
+        return jsonify({
+            "status": "success",
+            "msg": (
+                f"Import complete: {result['imported']} added, "
+                f"{result['updated']} updated ({result['total']} total suppliers)."
+            ),
+            **result,
+        })
+    except ValueError as exc:
+        return jsonify({"status": "error", "msg": str(exc)}), 400
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": f"Import failed: {exc}"}), 500
+
+
+def _apply_supplier_form(supplier, data, include_batch=False):
+    company_name = (data.get("company_name") or "").strip()
+    if not company_name:
+        raise ValueError("Company name is required.")
+
+    if include_batch:
+        batch = _parse_form_int(data.get("batch"), "batch")
+        if batch is None or batch <= 0:
+            raise ValueError("Batch is required and must be greater than zero.")
+        supplier.batch = batch
+
+    referrer_raw = (data.get("member_referrer_id") or "").strip()
+    if not referrer_raw:
+        raise ValueError("Member referrer is required.")
+
+    member_referrer_id = _parse_form_int(referrer_raw, "member_referrer_id")
+    referrer = db.session.get(Member, member_referrer_id)
+    if not referrer:
+        raise ValueError("Member referrer not found.")
+
+    supplier.company_name = company_name
+    supplier.company_address = (data.get("company_address") or "").strip() or None
+    supplier.representative_name = (data.get("representative_name") or "").strip() or None
+    supplier.contact_no = (data.get("contact_no") or "").strip() or None
+    supplier.member_referrer_id = member_referrer_id
+    supplier.date_joined = _parse_form_date(data.get("date_joined"), "date_joined") or supplier.date_joined
+
+
+@main_routes.route("/admin/suppliers", methods=["POST"])
+@login_required
+@staff_or_admin_required
+def admin_create_supplier():
+    data = request.get_json() if request.is_json else request.form
+
+    try:
+        supplier_id = _parse_form_int(data.get("supplier_id"), "supplier_id")
+        if supplier_id is None or supplier_id <= 0:
+            raise ValueError("Supplier ID is required and must be greater than zero.")
+        if db.session.get(Supplier, supplier_id):
+            raise ValueError(f"Supplier #{supplier_id} already exists.")
+
+        supplier = Supplier(supplier_id=supplier_id, batch=1, member_referrer_id=1, company_name="")
+        _apply_supplier_form(supplier, data, include_batch=True)
+        db.session.add(supplier)
+        db.session.commit()
+        return jsonify({
+            "status": "success",
+            "msg": f"Supplier #{supplier.supplier_id} added.",
+            "supplier": supplier.to_dict(),
+        })
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": str(exc)}), 400
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": f"Database error: {exc}"}), 500
+
+
+@main_routes.route("/admin/suppliers/<int:supplier_id>", methods=["POST"])
+@login_required
+@staff_or_admin_required
+def admin_update_supplier(supplier_id):
+    supplier = db.session.get(Supplier, supplier_id)
+    if not supplier:
+        return jsonify({"status": "error", "msg": "Supplier not found."}), 404
+
+    data = request.get_json() if request.is_json else request.form
+
+    try:
+        _apply_supplier_form(supplier, data)
+        db.session.commit()
+        return jsonify({
+            "status": "success",
+            "msg": f"Supplier #{supplier.supplier_id} updated.",
+            "supplier": supplier.to_dict(),
+        })
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": str(exc)}), 400
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": f"Database error: {exc}"}), 500
+
+
+@main_routes.route("/admin/suppliers/<int:supplier_id>", methods=["DELETE"])
+@login_required
+@staff_or_admin_required
+def admin_delete_supplier(supplier_id):
+    supplier = db.session.get(Supplier, supplier_id)
+    if not supplier:
+        return jsonify({"status": "error", "msg": "Supplier not found."}), 404
+
+    try:
+        db.session.delete(supplier)
+        db.session.commit()
+        return jsonify({"status": "success", "msg": f"Supplier #{supplier_id} deleted."})
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": f"Database error: {exc}"}), 500
+
+
+@main_routes.route("/api/suppliers")
+@login_required
+def api_suppliers():
+    denied = forbid_member_portal_users()
+    if denied:
+        return denied
+    suppliers_list = (
+        Supplier.query
+        .options(joinedload(Supplier.member_referrer))
+        .order_by(Supplier.company_name.asc())
+        .all()
+    )
+    return jsonify([s.to_dict() for s in suppliers_list])
+
+
 def _parse_form_date(value, field_name="date"):
     if value is None:
         return None
@@ -1205,6 +1228,7 @@ def _delete_all_members_and_dependents():
         "project_billings": ProjectBilling.query.count(),
         "project_commissions": ProjectCommission.query.count(),
         "contractors": Contractor.query.count(),
+        "suppliers": Supplier.query.count(),
         "members": Member.query.count(),
         "unlinked_users": User.query.filter(User.member_id.isnot(None)).count(),
     }
@@ -1222,10 +1246,12 @@ def _delete_all_members_and_dependents():
     ProjectBilling.query.delete(synchronize_session=False)
     ProjectCommission.query.delete(synchronize_session=False)
     Contractor.query.delete(synchronize_session=False)
+    Supplier.query.delete(synchronize_session=False)
     Member.query.delete(synchronize_session=False)
     for table_name, column_name in (
         ("members", "member_id"),
         ("contractors", "contractor_id"),
+        ("suppliers", "supplier_id"),
     ):
         db.session.execute(text("""
             SELECT setval(sequence_name, 1, false)

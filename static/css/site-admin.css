@@ -71,6 +71,19 @@
     margin-top: 1rem;
 }
 
+.site-admin-portal-link-preview {
+    border: 1px solid var(--theme-gray-light);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    background: var(--theme-gray-lightest, #f8f9fa);
+    min-height: 100%;
+}
+
+.portal-synced-field[readonly] {
+    background: var(--theme-gray-lightest, #f8f9fa);
+    cursor: not-allowed;
+}
+
 .site-admin-toolbar {
     display: flex;
     flex-wrap: wrap;

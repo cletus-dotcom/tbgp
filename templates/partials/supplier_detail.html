@@ -1,0 +1,68 @@
+<div class="detail-grid">
+    <div class="detail-item">
+        <label>Supplier ID</label>
+        <span>#{{ c.supplier_id }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Batch</label>
+        <span>{{ c.batch }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Company Name</label>
+        <span>{{ c.company_name or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Representative</label>
+        <span>{{ c.representative_name or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Contact No.</label>
+        <span>{{ c.contact_no or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Date Joined</label>
+        <span>{{ c.date_joined.strftime('%B %d, %Y') if c.date_joined else '—' }}</span>
+    </div>
+    <div class="detail-item" style="grid-column: 1 / -1;">
+        <label>Company Address</label>
+        <span>{{ c.company_address or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Member Referrer</label>
+        <span>
+            {% if c.member_referrer %}
+            #{{ c.member_referrer_id }} — {{ c.member_referrer.full_name }}
+            {% else %}
+            #{{ c.member_referrer_id }}
+            {% endif %}
+        </span>
+    </div>
+
+    {% if can_manage_data(session.get('role')) %}
+    <div class="detail-item" style="grid-column: 1 / -1;">
+        <label>Admin Actions</label>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button"
+                class="btn btn-sm btn-outline-dark supplier-edit-btn"
+                data-supplier-id="{{ c.supplier_id }}"
+                data-supplier="{{ {
+                    'supplier_id': c.supplier_id,
+                    'batch': c.batch,
+                    'member_referrer_id': c.member_referrer_id,
+                    'company_name': c.company_name,
+                    'company_address': c.company_address,
+                    'representative_name': c.representative_name,
+                    'contact_no': c.contact_no,
+                    'date_joined': (c.date_joined.isoformat() if c.date_joined else ''),
+                } | tojson | forceescape }}">
+                <i class="bi bi-pencil-square"></i> Edit
+            </button>
+            <button type="button"
+                class="btn btn-sm btn-outline-danger supplier-delete-btn"
+                data-supplier-id="{{ c.supplier_id }}">
+                <i class="bi bi-trash"></i> Delete
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
