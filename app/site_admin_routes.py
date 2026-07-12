@@ -1,7 +1,7 @@
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
 from app.auth import login_required, site_admin_required
-from app.config import is_portal_admin_role, is_site_admin_role, normalize_role
+from app.config import is_portal_admin_role, is_site_admin_role, normalize_role, supabase_storage_configured
 from app.site_content_service import (
     delete_registry_partner,
     get_all_ecosystem_pages,
@@ -23,6 +23,7 @@ from app.site_content_service import (
     save_registry_partner,
 )
 from app.user_manual_content import resolve_user_manual
+from app.supabase_storage_service import upload_partner_image as store_partner_image
 
 site_admin_bp = Blueprint("site_admin", __name__, url_prefix="/site-admin")
 
@@ -77,6 +78,8 @@ def _partner_edit_context(partner, registry_type, meta, is_new):
         "member_referrer": link["member_referrer"],
         "portal_profile_synced": link["portal_record"] is not None,
         "is_new": is_new,
+        "partner_image_upload_enabled": supabase_storage_configured(),
+        "partner_image_upload_url": url_for("site_admin.upload_partner_image"),
     }
 
 
@@ -215,6 +218,25 @@ def registry_suppliers():
         registry_meta=meta,
         partners=list_registry_partners_by_type("suppliers"),
     )
+
+
+@site_admin_bp.route("/registry/partner-image", methods=["POST"])
+@login_required
+@site_admin_required
+def upload_partner_image():
+    if not supabase_storage_configured():
+        return jsonify({"error": "Supabase Storage is not configured on this server."}), 503
+
+    file = request.files.get("file")
+    kind = request.form.get("kind", "gallery")
+    slug = request.form.get("slug", "draft")
+    try:
+        result = store_partner_image(file, slug, kind)
+        return jsonify(result)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception:
+        return jsonify({"error": "Image upload failed. Try again or paste an image URL."}), 500
 
 
 @site_admin_bp.route("/registry/<partner_type>/new", methods=["GET", "POST"])

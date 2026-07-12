@@ -76,6 +76,8 @@ USER_MANUALS = {
                 "items": [
                     "Use Contractor Registry and Supplier Registry to add, edit, sort, or remove public partner profiles.",
                     "Set registry code, URL slug, specialty, images, profile copy, and capability gallery photos.",
+                    "When Supabase Storage is configured, use Upload on thumbnail, logo, and gallery rows; the public URL is saved automatically.",
+                    "You can still paste an external image URL instead of uploading.",
                     "Supplier entries support portal supplier ID linking; company name and location sync from the portal Suppliers module when linked.",
                 ],
             },

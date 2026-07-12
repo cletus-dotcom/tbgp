@@ -4,7 +4,9 @@
 
 {% block content %}
 <div class="site-admin-page">
-    <form method="post" class="site-admin-form" data-portal-linked="{{ 'true' if portal_profile_synced else 'false' }}">
+    <form method="post" class="site-admin-form" data-portal-linked="{{ 'true' if portal_profile_synced else 'false' }}"
+          data-partner-image-upload-enabled="{{ 'true' if partner_image_upload_enabled else 'false' }}"
+          {% if partner_image_upload_enabled %}data-partner-image-upload-url="{{ partner_image_upload_url }}"{% endif %}>
         <fieldset>
             <legend>Identity</legend>
             <div class="row g-3">
@@ -101,12 +103,46 @@
                     {% endif %}
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label" for="thumb_url">Thumbnail image URL</label>
-                    <input class="form-control" id="thumb_url" name="thumb_url" value="{{ partner.thumb_url if partner else '' }}">
+                    <div class="partner-image-field" data-image-kind="thumb">
+                        <label class="form-label" for="thumb_url">Thumbnail image</label>
+                        <div class="partner-image-preview-wrap">
+                            <img class="partner-image-preview" src="{{ partner.thumb_url if partner and partner.thumb_url else '' }}" alt="Thumbnail preview" {% if not partner or not partner.thumb_url %}hidden{% endif %}>
+                            <div class="partner-image-preview-empty" {% if partner and partner.thumb_url %}hidden{% endif %}>No thumbnail yet</div>
+                        </div>
+                        <input class="form-control partner-image-url" id="thumb_url" name="thumb_url" value="{{ partner.thumb_url if partner else '' }}" placeholder="https://... or upload below">
+                        {% if partner_image_upload_enabled %}
+                        <div class="partner-image-actions">
+                            <input type="file" class="partner-image-file" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+                            <button type="button" class="btn btn-outline-primary btn-sm partner-image-upload-btn">
+                                <i class="bi bi-upload"></i> Upload thumbnail
+                            </button>
+                            <span class="partner-image-status text-muted small"></span>
+                        </div>
+                        {% else %}
+                        <div class="form-text">Paste a public image URL. Configure Supabase Storage to enable uploads.</div>
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label" for="logo_url">Logo image URL</label>
-                    <input class="form-control" id="logo_url" name="logo_url" value="{{ partner.logo_url if partner else '' }}">
+                    <div class="partner-image-field" data-image-kind="logo">
+                        <label class="form-label" for="logo_url">Logo image</label>
+                        <div class="partner-image-preview-wrap">
+                            <img class="partner-image-preview" src="{{ partner.logo_url if partner and partner.logo_url else '' }}" alt="Logo preview" {% if not partner or not partner.logo_url %}hidden{% endif %}>
+                            <div class="partner-image-preview-empty" {% if partner and partner.logo_url %}hidden{% endif %}>No logo yet</div>
+                        </div>
+                        <input class="form-control partner-image-url" id="logo_url" name="logo_url" value="{{ partner.logo_url if partner else '' }}" placeholder="https://... or upload below">
+                        {% if partner_image_upload_enabled %}
+                        <div class="partner-image-actions">
+                            <input type="file" class="partner-image-file" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+                            <button type="button" class="btn btn-outline-primary btn-sm partner-image-upload-btn">
+                                <i class="bi bi-upload"></i> Upload logo
+                            </button>
+                            <span class="partner-image-status text-muted small"></span>
+                        </div>
+                        {% else %}
+                        <div class="form-text">Paste a public image URL. Configure Supabase Storage to enable uploads.</div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </fieldset>
@@ -134,8 +170,19 @@
                 <div class="repeater-item">
                     <div class="row g-2">
                         <div class="col-md-7">
-                            <label class="form-label">Image URL</label>
-                            <input class="form-control" name="gallery_url_{{ loop.index0 }}" value="{{ item.url }}">
+                            <label class="form-label">Image</label>
+                            <div class="partner-image-field partner-image-field-inline" data-image-kind="gallery">
+                                <input class="form-control partner-image-url" name="gallery_url_{{ loop.index0 }}" value="{{ item.url }}" placeholder="https://... or upload below">
+                                {% if partner_image_upload_enabled %}
+                                <div class="partner-image-actions">
+                                    <input type="file" class="partner-image-file" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+                                    <button type="button" class="btn btn-outline-primary btn-sm partner-image-upload-btn">
+                                        <i class="bi bi-upload"></i> Upload
+                                    </button>
+                                    <span class="partner-image-status text-muted small"></span>
+                                </div>
+                                {% endif %}
+                            </div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Alt text</label>

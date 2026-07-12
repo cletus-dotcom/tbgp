@@ -28,6 +28,21 @@ def _normalize_database_url(url):
 
 DATABASE_URL = _normalize_database_url(os.getenv("DATABASE_URL"))
 
+SUPABASE_URL = (os.getenv("SUPABASE_URL") or "").strip().rstrip("/")
+SUPABASE_SERVICE_ROLE_KEY = (
+    os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    or os.getenv("SUPABASE_SECRET_KEY")
+    or ""
+).strip()
+SUPABASE_PARTNER_IMAGES_BUCKET = os.getenv(
+    "SUPABASE_PARTNER_IMAGES_BUCKET",
+    "partner-images",
+)
+
+
+def supabase_storage_configured():
+    return bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
+
 
 def database_uri():
     if DATABASE_URL:

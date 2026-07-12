@@ -71,6 +71,10 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
 
+    from app.config import SUPABASE_PARTNER_IMAGES_BUCKET
+
+    app.config["SUPABASE_PARTNER_IMAGES_BUCKET"] = SUPABASE_PARTNER_IMAGES_BUCKET
+
     db.init_app(app)
 
     @app.before_request

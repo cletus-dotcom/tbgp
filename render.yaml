@@ -30,6 +30,12 @@ services:
         value: "50000000"
       - key: MEMBER_LIFETIME_PROJECT_CAP_AFTER_LIMIT
         value: "1000000"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_PARTNER_IMAGES_BUCKET
+        value: partner-images
 
 databases:
   - name: tbgp-db

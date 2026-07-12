@@ -73,12 +73,31 @@
                     </div>
                 </div>
             </div>`,
-        gallery: `
+    };
+
+    function galleryRepeaterTemplate() {
+        const form = document.querySelector(".site-admin-form[data-partner-image-upload-enabled]");
+        const uploadEnabled = form?.dataset.partnerImageUploadEnabled === "true";
+        const uploadBlock = uploadEnabled
+            ? `
+                        <div class="partner-image-actions">
+                            <input type="file" class="partner-image-file" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+                            <button type="button" class="btn btn-outline-primary btn-sm partner-image-upload-btn">
+                                <i class="bi bi-upload"></i> Upload
+                            </button>
+                            <span class="partner-image-status text-muted small"></span>
+                        </div>`
+            : "";
+
+        return `
             <div class="repeater-item">
                 <div class="row g-2">
                     <div class="col-md-7">
-                        <label class="form-label">Image URL</label>
-                        <input class="form-control" data-field="url">
+                        <label class="form-label">Image</label>
+                        <div class="partner-image-field partner-image-field-inline" data-image-kind="gallery">
+                            <input class="form-control partner-image-url" data-field="url" placeholder="https://... or upload below">
+                            ${uploadBlock}
+                        </div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Alt text</label>
@@ -88,8 +107,8 @@
                         <button type="button" class="btn btn-outline-danger btn-sm repeater-remove">&times;</button>
                     </div>
                 </div>
-            </div>`,
-    };
+            </div>`;
+    }
 
     function reindexRepeater(list) {
         const prefix = list.dataset.repeater;
@@ -117,11 +136,21 @@
         if (addBtn) {
             const prefix = addBtn.dataset.target;
             const list = addBtn.previousElementSibling;
-            if (!list || !repeaterTemplates[prefix]) {
+            if (!list) {
                 return;
             }
-            list.insertAdjacentHTML("beforeend", repeaterTemplates[prefix]);
+            let html = "";
+            if (prefix === "gallery") {
+                html = galleryRepeaterTemplate();
+            } else if (repeaterTemplates[prefix]) {
+                html = repeaterTemplates[prefix];
+            }
+            if (!html) {
+                return;
+            }
+            list.insertAdjacentHTML("beforeend", html);
             reindexRepeater(list);
+            list.querySelectorAll(".repeater-item:last-child .partner-image-field").forEach(wirePartnerImageField);
             return;
         }
 
@@ -140,7 +169,7 @@
     const portalLinkFields = document.querySelectorAll(".portal-link-field");
     const portalSyncedFields = document.querySelectorAll(".portal-synced-field");
     const portalSyncedNotes = document.querySelectorAll(".portal-synced-note");
-    const partnerForm = document.querySelector(".site-admin-form");
+    const partnerForm = document.querySelector(".site-admin-form[data-partner-image-upload-enabled], .site-admin-form[data-portal-linked]");
 
     function syncPortalLinkFields() {
         if (!partnerTypeSelect) {
@@ -195,4 +224,118 @@
     } else {
         syncPortalSyncedFields();
     }
+
+    function updatePartnerImagePreview(field, url) {
+        const preview = field.querySelector(".partner-image-preview");
+        const empty = field.querySelector(".partner-image-preview-empty");
+        if (!preview) {
+            return;
+        }
+        if (url) {
+            preview.src = url;
+            preview.hidden = false;
+            if (empty) {
+                empty.hidden = true;
+            }
+        } else {
+            preview.removeAttribute("src");
+            preview.hidden = true;
+            if (empty) {
+                empty.hidden = false;
+            }
+        }
+    }
+
+    function setPartnerImageStatus(field, message, isError) {
+        const status = field.querySelector(".partner-image-status");
+        if (!status) {
+            return;
+        }
+        status.textContent = message || "";
+        status.classList.toggle("text-danger", Boolean(isError));
+        status.classList.toggle("text-muted", !isError);
+    }
+
+    function uploadPartnerImage(field, file) {
+        const uploadUrl = partnerForm?.dataset.partnerImageUploadUrl;
+        if (!uploadUrl || !file) {
+            return;
+        }
+
+        const slugInput = document.getElementById("slug");
+        const slug = (slugInput && slugInput.value.trim()) || "draft";
+        const kind = field.dataset.imageKind || "gallery";
+        const urlInput = field.querySelector(".partner-image-url");
+        const uploadBtn = field.querySelector(".partner-image-upload-btn");
+        const formData = new FormData();
+
+        formData.append("file", file);
+        formData.append("slug", slug);
+        formData.append("kind", kind);
+
+        if (uploadBtn) {
+            uploadBtn.disabled = true;
+        }
+        setPartnerImageStatus(field, "Uploading...", false);
+
+        fetch(uploadUrl, {
+            method: "POST",
+            body: formData,
+            credentials: "same-origin",
+        })
+            .then(function (response) {
+                return response.json().then(function (payload) {
+                    if (!response.ok) {
+                        throw new Error(payload.error || "Upload failed.");
+                    }
+                    return payload;
+                });
+            })
+            .then(function (payload) {
+                if (urlInput) {
+                    urlInput.value = payload.url;
+                    urlInput.dispatchEvent(new Event("input", { bubbles: true }));
+                }
+                updatePartnerImagePreview(field, payload.url);
+                setPartnerImageStatus(field, "Uploaded.", false);
+            })
+            .catch(function (error) {
+                setPartnerImageStatus(field, error.message || "Upload failed.", true);
+            })
+            .finally(function () {
+                if (uploadBtn) {
+                    uploadBtn.disabled = false;
+                }
+            });
+    }
+
+    function wirePartnerImageField(field) {
+        const urlInput = field.querySelector(".partner-image-url");
+        const fileInput = field.querySelector(".partner-image-file");
+        const uploadBtn = field.querySelector(".partner-image-upload-btn");
+
+        if (urlInput && !urlInput.dataset.previewWired) {
+            urlInput.dataset.previewWired = "true";
+            urlInput.addEventListener("input", function () {
+                updatePartnerImagePreview(field, urlInput.value.trim());
+            });
+        }
+
+        if (uploadBtn && fileInput && !uploadBtn.dataset.uploadWired) {
+            uploadBtn.dataset.uploadWired = "true";
+            uploadBtn.addEventListener("click", function () {
+                fileInput.click();
+            });
+            fileInput.addEventListener("change", function () {
+                const file = fileInput.files && fileInput.files[0];
+                if (!file) {
+                    return;
+                }
+                uploadPartnerImage(field, file);
+                fileInput.value = "";
+            });
+        }
+    }
+
+    document.querySelectorAll(".partner-image-field").forEach(wirePartnerImageField);
 })();
