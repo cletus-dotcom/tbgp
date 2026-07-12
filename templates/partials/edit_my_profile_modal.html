@@ -9,17 +9,19 @@
                 <div class="modal-body">
                     <div id="editMyProfileAlert" class="alert alert-danger d-none py-2 small" role="alert"></div>
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Member ID</label>
-                            <input type="text" id="selfEditMemberIdDisplay" class="form-control" disabled>
-                        </div>
-                        <div class="col-md-8">
-                            <label class="form-label">Name</label>
-                            <input type="text" id="selfEditFullNameDisplay" class="form-control" disabled>
+                    <div class="portal-modal-readonly-panel">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label" for="selfEditMemberIdDisplay">Member ID</label>
+                                <input type="text" id="selfEditMemberIdDisplay" class="form-control" disabled>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label" for="selfEditFullNameDisplay">Name</label>
+                                <input type="text" id="selfEditFullNameDisplay" class="form-control" disabled>
+                            </div>
                         </div>
                     </div>
-                    <p class="text-muted small mb-3">
+                    <p class="portal-modal-note">
                         You can update contact details, employment information, and beneficiary records.
                         Ask Staff or Admin to change your name, batch, referrer, or membership status.
                     </p>

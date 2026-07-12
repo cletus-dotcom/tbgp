@@ -13,7 +13,7 @@ from app.config import (
 USER_MANUALS = {
     USER_ROLE_PORTAL_ADMIN: {
         "title": "PortalAdmin User Manual",
-        "summary": "Highest-privilege account for protected portal maintenance and database purge actions.",
+        "summary": "Highest-privilege account for protected portal maintenance, manual review, and database purge actions.",
         "sections": [
             {
                 "heading": "Main Responsibilities",
@@ -22,6 +22,15 @@ USER_MANUALS = {
                     "Use Delete All Members only when resetting demo or test data.",
                     "Review the portal as an Admin-level user when needed.",
                     "Delegate routine public website updates to SiteAdmin accounts.",
+                    "Delegate daily portal encoding and payout work to Admin and Staff accounts.",
+                ],
+            },
+            {
+                "heading": "Help and Role Manuals",
+                "items": [
+                    "Open Help → User Manual to browse manuals for PortalAdmin, SiteAdmin, Admin, Staff, and Member.",
+                    "Use the role tabs at the top of the manual page to switch between role guides.",
+                    "Share the appropriate manual link or guidance with users when onboarding new accounts.",
                 ],
             },
             {
@@ -30,7 +39,7 @@ USER_MANUALS = {
                     "Open Administration → Admin Options → Delete All Members.",
                     "Read the confirmation prompt carefully before continuing.",
                     "Type DELETE ALL MEMBERS exactly when the system asks for confirmation.",
-                    "This clears member-related records, including ledgers, payouts, sharing data, projects, and contractors, then resets member and contractor ID sequences.",
+                    "This clears member-related records, including ledgers, payouts, sharing data, projects, contractors, and suppliers, then resets member, contractor, and supplier ID sequences.",
                 ],
             },
             {
@@ -54,6 +63,8 @@ USER_MANUALS = {
                     "Use the sidebar to move between overview, page editors, and registry tools.",
                     "On mobile, tap the hamburger menu in the top bar to open navigation.",
                     "Use View Site in the sidebar to preview the public website in a new tab.",
+                    "Open Reading in the top bar to choose Standard, Large, or Extra large text and turn High contrast on or off.",
+                    "When logged in, reading settings are saved to your account and follow you across devices.",
                 ],
             },
             {
@@ -97,13 +108,14 @@ USER_MANUALS = {
                 "items": [
                     "Open User Manual in the sidebar for this guide.",
                     "Use Logout when finished. SiteAdmin accounts are for public site work, not daily portal encoding.",
+                    "Coordinate with Admin or Staff when portal supplier or contractor records must be corrected before public profiles can sync.",
                 ],
             },
         ],
     },
     USER_ROLE_ADMIN: {
         "title": "Admin User Manual",
-        "summary": "Admin users manage accounts, members, contractors, income workflows, payout approvals, and reports.",
+        "summary": "Admin users manage accounts, members, contractors, suppliers, income workflows, payout approvals, and reports.",
         "sections": [
             {
                 "heading": "Portal Navigation",
@@ -114,6 +126,15 @@ USER_MANUALS = {
                     "Open Administration → Admin Options for user management.",
                     "Open Help for this manual, Features & Process Flow, and About the Platform.",
                     "Use Home at the bottom of the sidebar to return to the public landing page.",
+                    "Open Reading in the top bar to choose Standard, Large, or Extra large text and turn High contrast on or off.",
+                ],
+            },
+            {
+                "heading": "Dashboard",
+                "items": [
+                    "Use Dashboard for network-wide statistics on members, contractors, and suppliers.",
+                    "Click any summary card to open the related Members, Contractors, or Suppliers list.",
+                    "Review batch distribution, top referrers, and latest batch counts from the dashboard sections.",
                 ],
             },
             {
@@ -126,14 +147,16 @@ USER_MANUALS = {
                 ],
             },
             {
-                "heading": "Member and Contractor Records",
+                "heading": "Member, Contractor, and Supplier Records",
                 "items": [
                     "Use Members to add, edit, import, or review member profiles.",
                     "Use Contractors to add, edit, import, or review contractor records.",
+                    "Use Suppliers to add, edit, import, or review supplier records.",
                     "Use the generated Excel templates when importing new records.",
                     "Set a member lifetime limit threshold from the Add/Edit Member form when needed.",
                     f"After the threshold, that member is limited to {MEMBER_LIFETIME_PROJECT_CAP_AFTER_LIMIT:,.2f} per project and excess goes to the POP Lifetime Limit Fund.",
-                    "Keep contractor company name and address accurate; linked public contractor profiles sync from these records.",
+                    "Members can update their own contact, employment, and beneficiary fields in My Information; Admin and Staff handle name, batch, referrer, status, and other membership fields.",
+                    "Keep contractor and supplier company name and address accurate; linked public partner profiles sync from these records.",
                 ],
             },
             {
@@ -168,6 +191,14 @@ USER_MANUALS = {
                     "Open Payouts for payout scheme reference, payout queue work, and fund release reports.",
                     "Open Income Management for project commissions and generate sharing.",
                     "Open Help for this manual, Features & Process Flow, and About the Platform.",
+                    "Open Reading in the top bar to choose Standard, Large, or Extra large text and turn High contrast on or off.",
+                ],
+            },
+            {
+                "heading": "Dashboard",
+                "items": [
+                    "Use Dashboard for network-wide statistics on members, contractors, and suppliers.",
+                    "Click any summary card to open the related Members, Contractors, or Suppliers list.",
                 ],
             },
             {
@@ -175,8 +206,10 @@ USER_MANUALS = {
                 "items": [
                     "Use Members to add, edit, and import member records.",
                     "Use Contractors to add, edit, and import contractor records.",
+                    "Use Suppliers to add, edit, and import supplier records.",
                     "Check required fields before saving or importing records.",
                     "Staff cannot change Admin-only member lifetime limit controls.",
+                    "Members update their own contact, employment, and beneficiary fields in My Information; Staff handles name, batch, referrer, status, and other membership fields.",
                 ],
             },
             {
@@ -208,13 +241,14 @@ USER_MANUALS = {
     },
     USER_ROLE_MEMBER: {
         "title": "Member User Manual",
-        "summary": "Member users review their own profile, hierarchy, ledger, payout activity, and help resources.",
+        "summary": "Member users review their own profile, referrals, hierarchy, ledger, payout activity, and help resources.",
         "sections": [
             {
                 "heading": "Portal Navigation",
                 "items": [
                     "Use Dashboard for your member summary and earnings overview.",
                     "Use My Information, My Ledger, and My Hierarchy for your own records only.",
+                    "Use My Member Referrals, My Contractors, and My Suppliers to review partners you referred.",
                     "Open Help for this manual, Features & Process Flow, and About the Platform.",
                     "Use Home at the bottom of the sidebar to return to the public landing page.",
                 ],
@@ -226,7 +260,7 @@ USER_MANUALS = {
                     "Use the Member Support box on the dashboard to send a WhatsApp message for membership concerns or other matters.",
                     "Open Reading in the top bar to choose Standard, Large, or Extra large text and turn High contrast on or off.",
                     "When logged in, reading settings are saved to your account and follow you across devices.",
-                    "On Dashboard, click any summary card to open member referrals, downline, contractor/supplier referrals, profile, or ledger details.",
+                    "Click any summary card to open member referrals, downline, contractor/supplier referrals, profile, or ledger details.",
                     "If your account is not linked to a member record, contact the Admin or Staff.",
                 ],
             },
@@ -234,8 +268,18 @@ USER_MANUALS = {
                 "heading": "My Information",
                 "items": [
                     "Use My Information to review and update your member profile.",
+                    "Click Edit My Information to open the profile editor.",
                     "You can edit gender, civil status, phone, email, address, highest education, occupation or income source, monthly income, number of dependents, and beneficiary details.",
                     "Ask Staff or Admin to change your name, batch, referrer, status, or other membership records.",
+                ],
+            },
+            {
+                "heading": "My Referrals",
+                "items": [
+                    "Use My Member Referrals to view members you directly referred.",
+                    "Use My Contractors to view contractor records linked to you as member referrer.",
+                    "Use My Suppliers to view supplier records linked to you as member referrer.",
+                    "You can also open these lists from the matching Dashboard summary cards.",
                 ],
             },
             {
@@ -262,7 +306,7 @@ APP_FEATURES = [
     {
         "icon": "bi-people",
         "title": "Member Management",
-        "description": "Maintain member profiles, referral links, batch details, status, beneficiaries, and lifetime limit rules.",
+        "description": "Maintain member profiles, referral links, batch details, status, beneficiaries, lifetime limit rules, and member self-service profile updates.",
     },
     {
         "icon": "bi-building",
@@ -270,9 +314,14 @@ APP_FEATURES = [
         "description": "Record contractors, company contacts, member referrers, and contractor batches used by project commissions.",
     },
     {
+        "icon": "bi-box-seam",
+        "title": "Supplier Management",
+        "description": "Record suppliers, company contacts, member referrers, and supplier batches linked to the public partner registry.",
+    },
+    {
         "icon": "bi-diagram-3",
         "title": "Hierarchy and Ledger Tracking",
-        "description": "View referral hierarchy, member downlines, and earning ledger transactions from generated sharing and payouts.",
+        "description": "View referral hierarchy, member downlines, referral lists, and earning ledger transactions from generated sharing and payouts.",
     },
     {
         "icon": "bi-cash-stack",
@@ -292,7 +341,7 @@ APP_FEATURES = [
     {
         "icon": "bi-globe2",
         "title": "Public Site and Partner Registry",
-        "description": "Publish ecosystem pages, partner profiles, and services contact content managed through Site Content.",
+        "description": "Publish ecosystem pages, partner profiles with image uploads, and services contact content managed through Site Content.",
     },
     {
         "icon": "bi-shield-lock",
@@ -302,22 +351,27 @@ APP_FEATURES = [
     {
         "icon": "bi-file-earmark-spreadsheet",
         "title": "Excel Import Templates",
-        "description": "Download generated blank templates for members and contractors, then import structured data with validation.",
+        "description": "Download generated blank templates for members, contractors, and suppliers, then import structured data with validation.",
+    },
+    {
+        "icon": "bi-universal-access",
+        "title": "Reading and Contrast Settings",
+        "description": "Adjust text size and high-contrast mode from the Reading control; preferences sync to your account when logged in.",
     },
 ]
 
 APP_PROCESS_FLOW = [
     {
         "title": "Set Up Users and Master Data",
-        "description": "Admin creates users, Staff/Admin add members and contractors, and member accounts are linked to member records.",
+        "description": "Admin creates users, Staff/Admin add members, contractors, and suppliers, and member accounts are linked to member records.",
     },
     {
         "title": "Publish Public Site Content",
-        "description": "SiteAdmin or PortalAdmin updates landing copy, ecosystem pages, partner registry entries, and the services contact card.",
+        "description": "SiteAdmin or PortalAdmin updates landing copy, ecosystem pages, partner registry entries with images, and the services contact card.",
     },
     {
         "title": "Build the Referral Network",
-        "description": "Member referrers and contractor referrers are recorded so hierarchy, commission paths, and ledger ownership are clear.",
+        "description": "Member referrers and contractor or supplier referrers are recorded so hierarchy, commission paths, referral lists, and ledger ownership are clear.",
     },
     {
         "title": "Encode Project Commissions",

@@ -1119,48 +1119,84 @@ a.stat-section-link:focus-visible {
     border-color: var(--amber-bright);
     box-shadow: 0 0 12px var(--amber-glow);
 }
-#projectModal .modal-content {
+#projectModal .modal-content,
+#editMyProfileModal .modal-content {
     background: #171b22;
     border-color: rgba(255, 194, 51, 0.38);
     box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
 }
-#projectModal .modal-body {
+#projectModal .modal-body,
+#editMyProfileModal .modal-body {
     background:
         linear-gradient(180deg, rgba(255, 194, 51, 0.04), transparent 34%),
         #171b22;
 }
+#projectModal .modal-footer,
+#editMyProfileModal .modal-footer {
+    background: #14181f;
+}
 #projectModal .form-label,
-#projectModal .text-muted.fw-semibold {
+#projectModal .text-muted.fw-semibold,
+#editMyProfileModal .form-label,
+#editMyProfileModal .text-muted.fw-semibold {
     color: var(--amber-bright) !important;
     font-weight: 700;
 }
-#projectModal .text-muted.small:not(.fw-semibold) {
+#projectModal .text-muted.small:not(.fw-semibold),
+#editMyProfileModal .text-muted.small:not(.fw-semibold) {
     color: rgba(255, 255, 255, 0.78) !important;
 }
 #projectModal .form-control,
-#projectModal .form-select {
+#projectModal .form-select,
+#editMyProfileModal .form-control,
+#editMyProfileModal .form-select {
     background-color: #f8fafc;
     border-color: #ffc233;
     color: #111827;
     font-weight: 600;
 }
-#projectModal .form-control::placeholder {
+#projectModal .form-control::placeholder,
+#editMyProfileModal .form-control::placeholder {
     color: #6b7280;
 }
 #projectModal .form-control:focus,
-#projectModal .form-select:focus {
+#projectModal .form-select:focus,
+#editMyProfileModal .form-control:focus,
+#editMyProfileModal .form-select:focus {
     background-color: #ffffff;
     color: #111827;
     border-color: var(--amber-bright);
+    box-shadow: 0 0 0 0.2rem rgba(255, 194, 51, 0.28);
 }
 #projectModal .form-control[readonly],
 #projectModal .form-control:disabled,
 #projectModal .form-select:disabled,
-#projectModal .bg-light {
+#projectModal .bg-light,
+#editMyProfileModal .form-control[readonly],
+#editMyProfileModal .form-control:disabled,
+#editMyProfileModal .form-select:disabled,
+#editMyProfileModal .bg-light {
     background-color: #d7dde7 !important;
     border-color: #aeb8c7 !important;
     color: #111827 !important;
     opacity: 1;
+}
+#editMyProfileModal .portal-modal-readonly-panel {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 194, 51, 0.28);
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 0.75rem 0.25rem;
+}
+#editMyProfileModal .portal-modal-note {
+    background: rgba(240, 165, 0, 0.1);
+    border: 1px solid rgba(255, 194, 51, 0.24);
+    border-left: 3px solid var(--amber);
+    border-radius: var(--radius-sm);
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 0.84rem;
+    line-height: 1.45;
+    margin-bottom: 1rem;
+    padding: 0.75rem 0.85rem;
 }
 #projectModal .billing-row {
     background: rgba(255, 255, 255, 0.07);
@@ -1174,14 +1210,17 @@ a.stat-section-link:focus-visible {
     border: 1px solid #ffe08a;
     font-weight: 800;
 }
-#projectModal .btn-secondary {
+#projectModal .btn-secondary,
+#editMyProfileModal .btn-secondary {
     background: #3a424f;
     border-color: #6b7280;
     color: #ffffff;
     font-weight: 700;
 }
 #projectModal .btn-secondary:hover,
-#projectModal .btn-secondary:focus {
+#projectModal .btn-secondary:focus,
+#editMyProfileModal .btn-secondary:hover,
+#editMyProfileModal .btn-secondary:focus {
     background: #4b5563;
     border-color: #d1d5db;
     color: #ffffff;
