@@ -1,0 +1,69 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}My Member Referrals{% endblock %}
+{% block topbar_title %}My Member Referrals{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-people"></i> My Member Referrals</h5>
+            <p class="section-subtitle">{{ referrals|length }} direct member referral(s)</p>
+        </div>
+        <div class="section-actions">
+            <a href="{{ url_for('main_routes.hierarchy') }}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-diagram-3"></i> View full downline
+            </a>
+        </div>
+    </div>
+
+    {% if referrals %}
+    <div class="section-mobile-list">
+        {% for member in referrals %}
+        <div class="member-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="member-id">#{{ member.member_id }} — {{ member.full_name }}</div>
+                    <div class="member-meta">
+                        Batch {{ member.batch }}
+                        &middot; {{ member.status or 'Active' }}
+                        {% if member.date_joined %}
+                        &middot; Joined {{ member.date_joined.strftime('%Y-%m-%d') }}
+                        {% endif %}
+                    </div>
+                </div>
+                <span class="badge bg-brand">{{ member.referrals|length }} referral(s)</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="section-desktop-table section-table-wrap">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Batch</th>
+                    <th>Status</th>
+                    <th>Date Joined</th>
+                    <th>Their Referrals</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in referrals %}
+                <tr>
+                    <td>{{ member.member_id }}</td>
+                    <td>{{ member.full_name }}</td>
+                    <td>{{ member.batch }}</td>
+                    <td>{{ member.status or '—' }}</td>
+                    <td>{{ member.date_joined.strftime('%Y-%m-%d') if member.date_joined else '—' }}</td>
+                    <td><span class="badge bg-brand">{{ member.referrals|length }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">You have no direct member referrals yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

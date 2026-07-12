@@ -46,6 +46,7 @@ from app.config import (
     MEMBERS_SHEET,
     MEMBER_LIFETIME_EARNINGS_CAP,
     MEMBER_LIFETIME_PROJECT_CAP_AFTER_LIMIT,
+    MEMBER_SELF_EDITABLE_FIELDS,
     MEMBER_SEPARATION_TYPES,
     MEMBER_STATUSES,
     PAYOUT_RELEASE_METHODS,
@@ -93,6 +94,11 @@ from app.hierarchy_service import (
     dashboard_stats,
     member_dashboard_stats,
     member_lineage,
+)
+from app.member_support_service import member_support_subjects
+from app.accessibility_service import (
+    get_user_accessibility_prefs,
+    save_user_accessibility_prefs,
 )
 from app.import_service import import_members_from_upload, import_members_from_xlsx, preview_members_upload
 from app.models import (
@@ -295,6 +301,18 @@ def logout():
     return redirect(url_for("main_routes.index"))
 
 
+@main_routes.route("/api/accessibility-preferences", methods=["GET", "POST"])
+@login_required
+def accessibility_preferences():
+    user_id = session.get("user_id")
+    if request.method == "GET":
+        return jsonify(get_user_accessibility_prefs(user_id))
+
+    payload = request.get_json(silent=True) or request.form
+    prefs = save_user_accessibility_prefs(user_id, payload)
+    return jsonify(prefs)
+
+
 @main_routes.route("/login", methods=["GET", "POST"])
 def login():
     next_param = request.args.get("next", "")
@@ -356,6 +374,7 @@ def dashboard():
             stats=None,
             personal_stats=personal_stats,
             is_personal_dashboard=True,
+            member_support_subjects=member_support_subjects(),
             active_page="dashboard",
         )
 
@@ -448,6 +467,38 @@ def members():
         active_page="members",
         is_own_profile_view=is_member_role(user.role),
     )
+
+
+@main_routes.route("/members/my-profile", methods=["POST"])
+@login_required
+def member_update_own_profile():
+    if not is_member_role(session.get("role")):
+        return access_denied_response("Access denied.")
+
+    linked_id = require_linked_member()
+    if not linked_id:
+        return access_denied_response("Your account is not linked to a member record.")
+
+    member = db.session.get(Member, linked_id)
+    if not member:
+        return jsonify({"status": "error", "msg": "Member not found."}), 404
+
+    data = request.get_json() if request.is_json else request.form
+
+    try:
+        _apply_member_self_form(member, data)
+        db.session.commit()
+        return jsonify({
+            "status": "success",
+            "msg": "Your profile has been updated.",
+            "member": member.to_dict(),
+        })
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": str(exc)}), 400
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": f"Database error: {exc}"}), 500
 
 
 @main_routes.route("/members/template")
@@ -547,6 +598,87 @@ def contractors():
         contractors=contractors_list,
         members=members_list,
         active_page="contractors",
+        is_member_referral_view=False,
+    )
+
+
+@main_routes.route("/my-referrals/members")
+@login_required
+def my_member_referrals():
+    user = User.query.get(session.get("user_id"))
+    if not is_member_role(user.role):
+        return redirect(url_for("main_routes.members"))
+
+    linked_id = require_linked_member()
+    if not linked_id:
+        return access_denied_response("Your account is not linked to a member record.")
+
+    member = Member.query.options(joinedload(Member.referrals)).get(linked_id)
+    referrals = sorted(member.referrals, key=lambda row: row.member_id) if member else []
+    return render_template(
+        "my_member_referrals.html",
+        fullname=user.full_name or "Member",
+        role=normalize_role(user.role),
+        referrals=referrals,
+        active_page="my_member_referrals",
+    )
+
+
+@main_routes.route("/my-referrals/contractors")
+@login_required
+def my_contractor_referrals():
+    user = User.query.get(session.get("user_id"))
+    if not is_member_role(user.role):
+        return redirect(url_for("main_routes.contractors"))
+
+    linked_id = require_linked_member()
+    if not linked_id:
+        return access_denied_response("Your account is not linked to a member record.")
+
+    contractors_list = (
+        Contractor.query
+        .options(joinedload(Contractor.member_referrer))
+        .filter_by(member_referrer_id=linked_id)
+        .order_by(Contractor.batch.asc(), Contractor.contractor_id.asc())
+        .all()
+    )
+    return render_template(
+        "contractors.html",
+        fullname=user.full_name or "Member",
+        role=normalize_role(user.role),
+        contractors=contractors_list,
+        members=[],
+        active_page="my_contractor_referrals",
+        is_member_referral_view=True,
+    )
+
+
+@main_routes.route("/my-referrals/suppliers")
+@login_required
+def my_supplier_referrals():
+    user = User.query.get(session.get("user_id"))
+    if not is_member_role(user.role):
+        return redirect(url_for("main_routes.suppliers"))
+
+    linked_id = require_linked_member()
+    if not linked_id:
+        return access_denied_response("Your account is not linked to a member record.")
+
+    suppliers_list = (
+        Supplier.query
+        .options(joinedload(Supplier.member_referrer))
+        .filter_by(member_referrer_id=linked_id)
+        .order_by(Supplier.batch.asc(), Supplier.supplier_id.asc())
+        .all()
+    )
+    return render_template(
+        "suppliers.html",
+        fullname=user.full_name or "Member",
+        role=normalize_role(user.role),
+        suppliers=suppliers_list,
+        members=[],
+        active_page="my_supplier_referrals",
+        is_member_referral_view=True,
     )
 
 
@@ -740,6 +872,7 @@ def suppliers():
         suppliers=suppliers_list,
         members=members_list,
         active_page="suppliers",
+        is_member_referral_view=False,
     )
 
 
@@ -962,6 +1095,24 @@ def _parse_member_lifetime_cap(data):
     if amount < 0:
         raise ValueError("Lifetime cap amount cannot be negative.")
     return enabled, amount
+
+
+def _apply_member_self_form(member, data):
+    """Apply only fields members may edit on their own profile."""
+    member.gender = (data.get("gender") or "").strip() or None
+    member.civil_status = (data.get("civil_status") or "").strip() or None
+    member.phone = (data.get("phone") or "").strip() or None
+    member.email = (data.get("email") or "").strip() or None
+    member.address = (data.get("address") or "").strip() or None
+    member.highest_education = (data.get("highest_education") or "").strip() or None
+    member.occupation_income_source = (data.get("occupation_income_source") or "").strip() or None
+    member.monthly_income = (data.get("monthly_income") or "").strip() or None
+    member.number_of_dependents = _parse_form_int(
+        data.get("number_of_dependents"), "number_of_dependents"
+    )
+    member.beneficiary_name = (data.get("beneficiary_name") or "").strip() or None
+    member.beneficiary_phone = (data.get("beneficiary_phone") or "").strip() or None
+    member.beneficiary_address = (data.get("beneficiary_address") or "").strip() or None
 
 
 def _apply_member_form(member, data, actor_role=None):

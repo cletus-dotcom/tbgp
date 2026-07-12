@@ -8,8 +8,10 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tbgp-theme.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/site-admin.css') }}">
+    {% include 'partials/comfort_view_head.html' %}
 </head>
-<body class="dashboard-body site-admin-body">
+<body class="dashboard-body site-admin-body"
+      data-accessibility-api-url="{% if accessibility_user_logged_in %}{{ accessibility_api_url }}{% endif %}">
     <header class="topbar">
         <div class="topbar-left">
             <button class="btn-menu" id="menuToggle" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="sidebar">
@@ -22,6 +24,9 @@
             </div>
         </div>
         <div class="topbar-right">
+            {% with placement='topbar' %}
+            {% include 'partials/comfort_view_toggle.html' %}
+            {% endwith %}
             <span class="topbar-title">{% block topbar_title %}Site Admin{% endblock %}</span>
         </div>
     </header>
@@ -117,7 +122,9 @@
         {% block content %}{% endblock %}
     </main>
 
+    {% include 'partials/comfort_view_panel.html' %}
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/comfort-view.js') }}"></script>
     <script src="{{ url_for('static', filename='js/site-admin.js') }}"></script>
     {% include 'partials/landing_bgm.html' %}
     {% block extra_js %}{% endblock %}

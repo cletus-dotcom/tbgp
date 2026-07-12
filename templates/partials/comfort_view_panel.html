@@ -1,0 +1,44 @@
+<div id="comfortViewPanel"
+     class="comfort-view-panel"
+     role="dialog"
+     aria-modal="false"
+     aria-labelledby="comfortViewPanelTitle"
+     hidden>
+    <div class="comfort-view-panel-inner">
+        <div class="comfort-view-panel-head">
+            <h2 id="comfortViewPanelTitle">Reading &amp; contrast</h2>
+            <button type="button" class="comfort-view-panel-close" data-comfort-view-close aria-label="Close settings">
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <fieldset class="comfort-view-fieldset">
+            <legend>Text size</legend>
+            <label class="comfort-view-option">
+                <input type="radio" name="comfortTextSize" value="standard" data-comfort-text-size>
+                <span>Standard</span>
+            </label>
+            <label class="comfort-view-option">
+                <input type="radio" name="comfortTextSize" value="large" data-comfort-text-size>
+                <span>Large</span>
+            </label>
+            <label class="comfort-view-option">
+                <input type="radio" name="comfortTextSize" value="xlarge" data-comfort-text-size>
+                <span>Extra large</span>
+            </label>
+        </fieldset>
+
+        <label class="comfort-view-option comfort-view-option-checkbox">
+            <input type="checkbox" id="comfortHighContrast" data-comfort-high-contrast>
+            <span>High contrast</span>
+        </label>
+
+        <p class="comfort-view-panel-note" id="comfortViewSyncNote" {% if not accessibility_user_logged_in %}hidden{% endif %}>
+            Saved to your account on this portal.
+        </p>
+        <p class="comfort-view-panel-note" id="comfortViewLocalNote" {% if accessibility_user_logged_in %}hidden{% endif %}>
+            Saved on this device only. Log in to sync across devices.
+        </p>
+    </div>
+</div>
+<span id="comfortViewStatus" class="visually-hidden" aria-live="polite"></span>

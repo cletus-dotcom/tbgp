@@ -1,0 +1,7 @@
+{% macro stat_tile_link(url, value, label) %}
+<a href="{{ url }}" class="stat-tile stat-tile-link" aria-label="{{ label }} — view details">
+    <div class="stat-value">{{ value }}</div>
+    <div class="stat-label">{{ label }}</div>
+    <span class="stat-tile-chevron" aria-hidden="true"><i class="bi bi-chevron-right"></i></span>
+</a>
+{% endmacro %}

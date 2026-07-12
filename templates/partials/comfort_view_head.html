@@ -1,0 +1,64 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/comfort-view.css') }}">
+{% if accessibility_user_logged_in %}
+<script>window.TBGP_SERVER_A11Y_PREFS = {{ user_accessibility_prefs|tojson }};</script>
+{% endif %}
+<script>
+(function () {
+    const STORAGE_KEY = "tbgp_accessibility";
+
+    function migrateLegacyStorage() {
+        try {
+            if (localStorage.getItem("tbgp_comfort_view") === "on" && !localStorage.getItem(STORAGE_KEY)) {
+                localStorage.setItem(
+                    STORAGE_KEY,
+                    JSON.stringify({ text_size: "large", high_contrast: false })
+                );
+                localStorage.removeItem("tbgp_comfort_view");
+            }
+        } catch (error) {
+            /* ignore */
+        }
+    }
+
+    function normalizePrefs(prefs) {
+        const textSize = prefs && prefs.text_size ? String(prefs.text_size).toLowerCase() : "standard";
+        const allowed = { standard: true, large: true, xlarge: true };
+        return {
+            text_size: allowed[textSize] ? textSize : "standard",
+            high_contrast: Boolean(prefs && prefs.high_contrast),
+        };
+    }
+
+    function applyPrefs(prefs) {
+        const normalized = normalizePrefs(prefs);
+        const html = document.documentElement;
+        html.classList.remove(
+            "comfort-view",
+            "comfort-text-large",
+            "comfort-text-xlarge",
+            "comfort-high-contrast"
+        );
+        if (normalized.text_size === "large") {
+            html.classList.add("comfort-text-large");
+        } else if (normalized.text_size === "xlarge") {
+            html.classList.add("comfort-text-xlarge");
+        }
+        if (normalized.high_contrast) {
+            html.classList.add("comfort-high-contrast");
+        }
+        return normalized;
+    }
+
+    migrateLegacyStorage();
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+            applyPrefs(JSON.parse(raw));
+        } else if (window.TBGP_SERVER_A11Y_PREFS) {
+            applyPrefs(window.TBGP_SERVER_A11Y_PREFS);
+        }
+    } catch (error) {
+        /* ignore */
+    }
+})();
+</script>

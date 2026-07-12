@@ -1,0 +1,473 @@
+/* Reading & contrast settings — html.comfort-text-large | comfort-text-xlarge | comfort-high-contrast */
+
+html.comfort-text-large,
+html.comfort-text-xlarge {
+    --text-muted: rgba(255, 255, 255, 0.84);
+    --text-subtle: #c5cdd8;
+}
+
+html.comfort-text-large {
+    font-size: 112.5%;
+}
+
+html.comfort-text-xlarge {
+    font-size: 125%;
+}
+
+html.comfort-text-large body,
+html.comfort-text-xlarge body {
+    line-height: 1.55;
+}
+
+html.comfort-text-xlarge body {
+    line-height: 1.6;
+}
+
+html.comfort-high-contrast {
+    --charcoal: #000000;
+    --slate-deep: #050505;
+    --slate-dark: #101010;
+    --slate-mid: #1a1a1a;
+    --card-surface: #121212;
+    --card-border: rgba(255, 255, 255, 0.55);
+    --text-primary: #ffffff;
+    --text-muted: rgba(255, 255, 255, 0.92);
+    --text-subtle: #f0f0f0;
+    --amber: #ffcc00;
+    --amber-bright: #ffe566;
+}
+
+html.comfort-text-large :focus-visible,
+html.comfort-text-xlarge :focus-visible,
+html.comfort-high-contrast :focus-visible {
+    outline: 3px solid var(--amber-bright);
+    outline-offset: 2px;
+}
+
+/* Settings panel */
+.comfort-view-panel {
+    position: fixed;
+    top: calc(var(--topbar-height, 60px) + 0.65rem);
+    right: 1rem;
+    z-index: 1060;
+    width: min(340px, calc(100vw - 2rem));
+}
+
+.comfort-view-panel-inner {
+    background: var(--card-surface);
+    border: 2px solid var(--card-border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    padding: 1rem 1rem 0.9rem;
+}
+
+.comfort-view-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+}
+
+.comfort-view-panel-head h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.comfort-view-panel-close {
+    min-width: 44px;
+    min-height: 44px;
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.comfort-view-fieldset {
+    border: 0;
+    margin: 0 0 0.75rem;
+    padding: 0;
+}
+
+.comfort-view-fieldset legend {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 0.45rem;
+    color: var(--text-primary);
+}
+
+.comfort-view-option {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 44px;
+    margin: 0.2rem 0;
+    font-size: 0.98rem;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.comfort-view-option input {
+    width: 1.1rem;
+    height: 1.1rem;
+    flex-shrink: 0;
+}
+
+.comfort-view-option-checkbox {
+    margin-top: 0.35rem;
+    padding-top: 0.35rem;
+    border-top: 1px solid var(--card-border);
+}
+
+.comfort-view-panel-note {
+    margin: 0.65rem 0 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* Toggle control */
+.comfort-view-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-time), border-color var(--transition-time), color var(--transition-time);
+}
+
+.comfort-view-toggle:hover {
+    background: rgba(240, 165, 0, 0.12);
+    border-color: var(--amber);
+    color: var(--text-white);
+}
+
+.comfort-view-toggle.is-active,
+.comfort-view-toggle[aria-pressed="true"] {
+    background: rgba(240, 165, 0, 0.22);
+    border-color: var(--amber);
+    color: var(--amber-bright);
+}
+
+.comfort-view-toggle i {
+    font-size: 1.15rem;
+    line-height: 1;
+}
+
+.comfort-view-toggle--topbar {
+    margin-right: 0.75rem;
+    max-width: 11rem;
+}
+
+.comfort-view-toggle--nav {
+    margin-right: 0.65rem;
+}
+
+.comfort-view-toggle--floating {
+    position: fixed;
+    left: 1rem;
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    z-index: 1045;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.landing-body .comfort-view-toggle--floating {
+    display: none;
+}
+
+html.comfort-text-large .comfort-view-toggle--floating,
+html.comfort-text-xlarge .comfort-view-toggle--floating {
+    bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Portal — typography & targets */
+html.comfort-text-large .topbar-title,
+html.comfort-text-xlarge .topbar-title {
+    font-size: 1rem;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+}
+
+html.comfort-text-large .btn-menu,
+html.comfort-text-xlarge .btn-menu {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.55rem 0.65rem;
+}
+
+html.comfort-text-large .sidebar-label,
+html.comfort-text-xlarge .sidebar-label {
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    text-transform: none;
+}
+
+html.comfort-text-large .sidebar-nav a,
+html.comfort-text-xlarge .sidebar-nav a {
+    font-size: 1rem;
+    padding: 0.8rem 1rem;
+    min-height: 44px;
+}
+
+html.comfort-text-large .sidebar-nav a.disabled,
+html.comfort-text-xlarge .sidebar-nav a.disabled {
+    opacity: 0.72;
+}
+
+html.comfort-text-large .form-label,
+html.comfort-text-xlarge .form-label,
+html.comfort-text-large .member-support-form .form-label,
+html.comfort-text-xlarge .member-support-form .form-label {
+    font-size: 0.95rem;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+html.comfort-text-large .form-control,
+html.comfort-text-xlarge .form-control,
+html.comfort-text-large .form-select,
+html.comfort-text-xlarge .form-select,
+html.comfort-text-large textarea.form-control,
+html.comfort-text-xlarge textarea.form-control {
+    font-size: 1rem;
+    min-height: 44px;
+}
+
+html.comfort-text-large textarea.form-control,
+html.comfort-text-xlarge textarea.form-control {
+    min-height: 5.5rem;
+}
+
+html.comfort-text-large .stat-tile .stat-label,
+html.comfort-text-xlarge .stat-tile .stat-label {
+    font-size: 0.88rem;
+}
+
+html.comfort-text-large .stat-tile .stat-value,
+html.comfort-text-xlarge .stat-tile .stat-value {
+    font-size: 1.75rem;
+}
+
+html.comfort-text-large .section-table,
+html.comfort-text-xlarge .section-table,
+html.comfort-text-large .table,
+html.comfort-text-xlarge .table {
+    font-size: 0.95rem;
+}
+
+html.comfort-text-large .table th,
+html.comfort-text-xlarge .table th {
+    font-size: 0.92rem;
+}
+
+html.comfort-text-large .detail-item label,
+html.comfort-text-xlarge .detail-item label,
+html.comfort-text-large .member-meta,
+html.comfort-text-xlarge .member-meta,
+html.comfort-text-large .text-muted,
+html.comfort-text-xlarge .text-muted,
+html.comfort-text-large .small,
+html.comfort-text-xlarge .small {
+    font-size: 0.95rem;
+}
+
+html.comfort-text-large .expand-btn,
+html.comfort-text-xlarge .expand-btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.5rem;
+}
+
+html.comfort-text-large .welcome-card h4,
+html.comfort-text-xlarge .welcome-card h4 {
+    font-size: 1.35rem;
+}
+
+html.comfort-text-large .welcome-card p,
+html.comfort-text-xlarge .welcome-card p,
+html.comfort-text-large .welcome-meta,
+html.comfort-text-xlarge .welcome-meta {
+    font-size: 0.95rem;
+}
+
+html.comfort-text-large .member-support-chatbox-head h5,
+html.comfort-text-xlarge .member-support-chatbox-head h5 {
+    font-size: 1.05rem;
+}
+
+html.comfort-text-large .member-support-chatbox-head p,
+html.comfort-text-xlarge .member-support-chatbox-head p {
+    font-size: 0.92rem;
+}
+
+html.comfort-text-large .btn-sm,
+html.comfort-text-xlarge .btn-sm {
+    min-height: 40px;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.92rem;
+}
+
+/* Extra large text bumps */
+html.comfort-text-xlarge .sidebar-label {
+    font-size: 0.92rem;
+}
+
+html.comfort-text-xlarge .sidebar-nav a,
+html.comfort-text-xlarge .form-control,
+html.comfort-text-xlarge .form-select {
+    font-size: 1.05rem;
+    min-height: 48px;
+}
+
+html.comfort-text-xlarge .stat-tile .stat-label {
+    font-size: 0.95rem;
+}
+
+html.comfort-text-xlarge .stat-tile .stat-value {
+    font-size: 2rem;
+}
+
+html.comfort-text-xlarge .section-table,
+html.comfort-text-xlarge .table {
+    font-size: 1.02rem;
+}
+
+html.comfort-text-xlarge .welcome-card h4 {
+    font-size: 1.5rem;
+}
+
+html.comfort-text-xlarge .btn-sm {
+    min-height: 44px;
+    font-size: 1rem;
+}
+
+/* Site admin */
+html.comfort-text-large.site-admin-body .site-admin-form legend,
+html.comfort-text-xlarge.site-admin-body .site-admin-form legend {
+    font-size: 1.05rem;
+}
+
+html.comfort-text-large.site-admin-body .site-admin-card p,
+html.comfort-text-xlarge.site-admin-body .site-admin-card p,
+html.comfort-text-large.site-admin-body .site-admin-meta,
+html.comfort-text-xlarge.site-admin-body .site-admin-meta {
+    font-size: 0.95rem;
+}
+
+/* Landing */
+html.comfort-text-large.landing-body .landing-brand-tagline-item,
+html.comfort-text-xlarge.landing-body .landing-brand-tagline-item {
+    font-size: 0.88rem;
+    line-height: 1.35;
+}
+
+html.comfort-text-large.landing-body .hero-banner h1,
+html.comfort-text-xlarge.landing-body .hero-banner h1 {
+    line-height: 1.12;
+}
+
+html.comfort-text-large.landing-body .hero-banner p,
+html.comfort-text-xlarge.landing-body .hero-banner p,
+html.comfort-text-large.landing-body .pillar-card p,
+html.comfort-text-xlarge.landing-body .pillar-card p,
+html.comfort-text-large.landing-body .ecosystem-section p,
+html.comfort-text-xlarge.landing-body .ecosystem-section p {
+    font-size: 1.02rem;
+    line-height: 1.7;
+}
+
+html.comfort-text-large.landing-body .nav-link,
+html.comfort-text-xlarge.landing-body .nav-link,
+html.comfort-text-large.landing-body .btn-login,
+html.comfort-text-xlarge.landing-body .btn-login {
+    font-size: 1rem;
+    min-height: 44px;
+}
+
+html.comfort-text-large.landing-body .notice-carousel h5,
+html.comfort-text-xlarge.landing-body .notice-carousel h5 {
+    font-size: 1.1rem;
+}
+
+html.comfort-text-large.landing-body .notice-carousel p,
+html.comfort-text-xlarge.landing-body .notice-carousel p {
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+html.comfort-text-xlarge.landing-body .landing-brand-tagline-item {
+    font-size: 0.98rem;
+}
+
+html.comfort-text-xlarge.landing-body .hero-banner p,
+html.comfort-text-xlarge.landing-body .pillar-card p,
+html.comfort-text-xlarge.landing-body .ecosystem-section p {
+    font-size: 1.08rem;
+}
+
+/* Login */
+html.comfort-text-large.login-body .login-card,
+html.comfort-text-xlarge.login-body .login-card {
+    font-size: 1rem;
+}
+
+html.comfort-text-large.login-body .login-card h4,
+html.comfort-text-xlarge.login-body .login-card h4 {
+    font-size: 1.35rem;
+}
+
+html.comfort-text-xlarge.login-body .login-card h4 {
+    font-size: 1.5rem;
+}
+
+body.login-body .comfort-view-panel,
+body.landing-body .comfort-view-panel {
+    top: 4.75rem;
+}
+
+@media (max-width: 575px) {
+    .comfort-view-toggle--topbar .comfort-view-toggle-label,
+    .comfort-view-toggle--nav .comfort-view-toggle-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    .comfort-view-toggle--topbar,
+    .comfort-view-toggle--nav {
+        padding: 0.55rem;
+        max-width: none;
+    }
+
+    .comfort-view-panel {
+        left: 1rem;
+        right: 1rem;
+        width: auto;
+    }
+}
+
+@media (max-width: 400px) {
+    html.comfort-text-large .topbar-title,
+    html.comfort-text-xlarge .topbar-title {
+        font-size: 0.95rem;
+    }
+}

@@ -1,11 +1,12 @@
 from collections import defaultdict
 
-from app.models import Contractor, Member
+from app.models import Contractor, Member, Supplier
 
 
 def dashboard_stats():
     members = Member.query.all()
     contractors = Contractor.query.all()
+    suppliers = Supplier.query.all()
 
     by_batch = defaultdict(int)
     for member in members:
@@ -16,6 +17,12 @@ def dashboard_stats():
     for contractor in contractors:
         contractor_by_batch[contractor.batch] += 1
         contractor_referrers.add(contractor.member_referrer_id)
+
+    supplier_by_batch = defaultdict(int)
+    supplier_referrers = set()
+    for supplier in suppliers:
+        supplier_by_batch[supplier.batch] += 1
+        supplier_referrers.add(supplier.member_referrer_id)
 
     roots = [m for m in members if m.referrer_id is None]
     with_referrer = [m for m in members if m.referrer_id is not None]
@@ -36,6 +43,10 @@ def dashboard_stats():
         "contractor_batch_counts": dict(sorted(contractor_by_batch.items())),
         "max_contractor_batch": max(contractor_by_batch.keys()) if contractor_by_batch else 0,
         "contractor_member_referrers": len(contractor_referrers),
+        "total_suppliers": len(suppliers),
+        "supplier_batch_counts": dict(sorted(supplier_by_batch.items())),
+        "max_supplier_batch": max(supplier_by_batch.keys()) if supplier_by_batch else 0,
+        "supplier_member_referrers": len(supplier_referrers),
         "top_referrers": [
             {
                 "member_id": m.member_id,
@@ -127,6 +138,8 @@ def member_dashboard_stats(member_id):
         "status": member.status,
         "direct_referrals": len(member.referrals),
         "downline_count": _count_downline(member),
+        "contractor_referrals": len(member.contractor_referrals),
+        "supplier_referrals": len(member.supplier_referrals),
         "ledger_transactions": ledger["transaction_count"],
         "ledger_total": ledger["total_earnings"],
     }

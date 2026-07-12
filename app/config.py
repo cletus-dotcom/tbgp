@@ -39,6 +39,9 @@ SUPABASE_PARTNER_IMAGES_BUCKET = os.getenv(
     "partner-images",
 )
 
+MEMBER_WHATSAPP_MEMBERSHIP = os.getenv("MEMBER_WHATSAPP_MEMBERSHIP", "")
+MEMBER_WHATSAPP_OTHER_MATTERS = os.getenv("MEMBER_WHATSAPP_OTHER_MATTERS", "")
+
 
 def supabase_storage_configured():
     return bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
@@ -96,6 +99,21 @@ MEMBER_SEPARATION_TYPES = [
     "Terminated",
     "Deceased",
 ]
+
+MEMBER_SELF_EDITABLE_FIELDS = (
+    "gender",
+    "civil_status",
+    "phone",
+    "email",
+    "address",
+    "highest_education",
+    "occupation_income_source",
+    "monthly_income",
+    "number_of_dependents",
+    "beneficiary_name",
+    "beneficiary_phone",
+    "beneficiary_address",
+)
 
 MAX_SHARING_LEVELS = 7
 CLIENT_POOL_PERCENT = int(os.getenv("CLIENT_POOL_PERCENT", "50"))

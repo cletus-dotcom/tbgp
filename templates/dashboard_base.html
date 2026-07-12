@@ -7,11 +7,13 @@
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tbgp-theme.css') }}">
+    {% include 'partials/comfort_view_head.html' %}
     <style>
         {% block extra_css %}{% endblock %}
     </style>
 </head>
-<body class="dashboard-body">
+<body class="dashboard-body"
+      data-accessibility-api-url="{% if accessibility_user_logged_in %}{{ accessibility_api_url }}{% endif %}">
     <header class="topbar">
         <div class="topbar-left">
             <button class="btn-menu" id="menuToggle" aria-label="Toggle menu">
@@ -29,6 +31,9 @@
             </div>
         </div>
         <div class="topbar-right">
+            {% with placement='topbar' %}
+            {% include 'partials/comfort_view_toggle.html' %}
+            {% endwith %}
             <span class="topbar-title">{% block topbar_title %}Dashboard{% endblock %}</span>
         </div>
     </header>
@@ -66,6 +71,21 @@
             <li>
                 <a href="{{ url_for('main_routes.hierarchy') }}" class="{% if active_page == 'hierarchy' %}active{% endif %}">
                     <i class="bi bi-diagram-3"></i> My Hierarchy
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main_routes.my_member_referrals') }}" class="{% if active_page == 'my_member_referrals' %}active{% endif %}">
+                    <i class="bi bi-people"></i> My Member Referrals
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main_routes.my_contractor_referrals') }}" class="{% if active_page == 'my_contractor_referrals' %}active{% endif %}">
+                    <i class="bi bi-building"></i> My Contractors
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main_routes.my_supplier_referrals') }}" class="{% if active_page == 'my_supplier_referrals' %}active{% endif %}">
+                    <i class="bi bi-box-seam"></i> My Suppliers
                 </a>
             </li>
             {% else %}
@@ -298,7 +318,9 @@
     {% endif %}
 
     {% include 'partials/idle_screensaver.html' %}
+    {% include 'partials/comfort_view_panel.html' %}
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/comfort-view.js') }}"></script>
     <script src="{{ url_for('static', filename='js/idle-screensaver.js') }}"></script>
     <script src="{{ url_for('static', filename='js/brand-tagline-marquee.js') }}"></script>
     <script src="{{ url_for('static', filename='js/dashboard-sidebar.js') }}"></script>

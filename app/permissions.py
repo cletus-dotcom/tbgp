@@ -43,6 +43,16 @@ def member_may_view_profile(member_id):
     return False
 
 
+def member_may_edit_own_profile(member_id):
+    """Members may update only their own linked profile, not downline records."""
+    if is_staff_or_admin(session.get("role")):
+        return True
+    if is_member_role(session.get("role")):
+        linked = session_member_id()
+        return linked is not None and int(linked) == int(member_id)
+    return False
+
+
 def member_may_access(member_id):
     return member_may_view_profile(member_id)
 

@@ -1,13 +1,19 @@
 {% extends "dashboard_base.html" %}
-{% block page_title %}Contractors{% endblock %}
-{% block topbar_title %}Contractors{% endblock %}
+{% block page_title %}{% if is_member_referral_view %}My Contractor Referrals{% else %}Contractors{% endif %}{% endblock %}
+{% block topbar_title %}{% if is_member_referral_view %}My Contractor Referrals{% else %}Contractors{% endif %}{% endblock %}
 
 {% block content %}
 <div class="dashboard-card section-card">
     <div class="section-header">
         <div>
-            <h5><i class="bi bi-building"></i> All Contractors</h5>
-            <p class="section-subtitle">{{ contractors|length }} contractors across all batches</p>
+            <h5><i class="bi bi-building"></i> {% if is_member_referral_view %}My Contractor Referrals{% else %}All Contractors{% endif %}</h5>
+            <p class="section-subtitle">
+                {% if is_member_referral_view %}
+                {{ contractors|length }} contractor(s) you referred
+                {% else %}
+                {{ contractors|length }} contractors across all batches
+                {% endif %}
+            </p>
         </div>
         <div class="section-actions">
             {% if can_manage_data(session.get('role')) %}

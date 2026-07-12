@@ -222,15 +222,20 @@ USER_MANUALS = {
             {
                 "heading": "Dashboard",
                 "items": [
-                    "Use Dashboard to see your member summary, batch, referrals, downline count, and ledger earnings.",
+                    "Use Dashboard for your member summary, batch, member/contractor/supplier referrals, downline count, and ledger earnings.",
+                    "Use the Member Support box on the dashboard to send a WhatsApp message for membership concerns or other matters.",
+                    "Open Reading in the top bar to choose Standard, Large, or Extra large text and turn High contrast on or off.",
+                    "When logged in, reading settings are saved to your account and follow you across devices.",
+                    "On Dashboard, click any summary card to open member referrals, downline, contractor/supplier referrals, profile, or ledger details.",
                     "If your account is not linked to a member record, contact the Admin or Staff.",
                 ],
             },
             {
                 "heading": "My Information",
                 "items": [
-                    "Use My Information to review your member profile.",
-                    "Ask Staff or Admin to correct profile information that you cannot edit directly.",
+                    "Use My Information to review and update your member profile.",
+                    "You can edit gender, civil status, phone, email, address, highest education, occupation or income source, monthly income, number of dependents, and beneficiary details.",
+                    "Ask Staff or Admin to change your name, batch, referrer, status, or other membership records.",
                 ],
             },
             {

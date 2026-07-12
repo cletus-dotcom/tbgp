@@ -458,3 +458,16 @@ def migrate_users_table():
         ))
         logger.info("Added users.member_id")
         db.session.commit()
+
+    columns = {col["name"] for col in inspector.get_columns("users")}
+    if "comfort_text_size" not in columns:
+        db.session.execute(text(
+            "ALTER TABLE users ADD COLUMN comfort_text_size VARCHAR(20) NOT NULL DEFAULT 'standard'"
+        ))
+        logger.info("Added users.comfort_text_size")
+    if "comfort_high_contrast" not in columns:
+        db.session.execute(text(
+            "ALTER TABLE users ADD COLUMN comfort_high_contrast BOOLEAN NOT NULL DEFAULT FALSE"
+        ))
+        logger.info("Added users.comfort_high_contrast")
+    db.session.commit()

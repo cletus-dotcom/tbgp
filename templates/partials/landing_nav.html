@@ -28,7 +28,12 @@
                         <a class="nav-link{% if landing_nav_active == 'home' %} active{% endif %}" href="{{ url_for('main_routes.index') }}">Home</a>
                     </li>
                 </ul>
-                <a href="{{ url_for('main_routes.login') }}" class="btn-login">Login</a>
+                <div class="landing-nav-actions d-flex align-items-center flex-wrap gap-2">
+                    {% with placement='nav' %}
+                    {% include 'partials/comfort_view_toggle.html' %}
+                    {% endwith %}
+                    <a href="{{ url_for('main_routes.login') }}" class="btn-login">Login</a>
+                </div>
             </div>
         </div>
     </div>

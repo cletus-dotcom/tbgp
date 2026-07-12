@@ -22,6 +22,8 @@ class User(db.Model):
     role = db.Column(db.String(20), default="Admin")
     status = db.Column(db.String(20), default="Active")
     member_id = db.Column(db.Integer, db.ForeignKey("members.member_id"), nullable=True)
+    comfort_text_size = db.Column(db.String(20), default="standard", nullable=False)
+    comfort_high_contrast = db.Column(db.Boolean, default=False, nullable=False)
 
     linked_member = db.relationship("Member", foreign_keys=[member_id])
 
@@ -72,6 +74,25 @@ class Member(db.Model):
         if self.suffix:
             name = f"{name} {self.suffix}"
         return name.strip()
+
+    def self_edit_payload(self):
+        return {
+            "member_id": self.member_id,
+            "full_name": self.full_name,
+            "batch": self.batch,
+            "gender": self.gender or "",
+            "civil_status": self.civil_status or "",
+            "phone": self.phone or "",
+            "email": self.email or "",
+            "address": self.address or "",
+            "highest_education": self.highest_education or "",
+            "occupation_income_source": self.occupation_income_source or "",
+            "monthly_income": self.monthly_income or "",
+            "number_of_dependents": self.number_of_dependents,
+            "beneficiary_name": self.beneficiary_name or "",
+            "beneficiary_phone": self.beneficiary_phone or "",
+            "beneficiary_address": self.beneficiary_address or "",
+        }
 
     def edit_payload(self):
         return {

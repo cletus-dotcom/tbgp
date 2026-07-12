@@ -36,6 +36,10 @@ services:
         sync: false
       - key: SUPABASE_PARTNER_IMAGES_BUCKET
         value: partner-images
+      - key: MEMBER_WHATSAPP_MEMBERSHIP
+        sync: false
+      - key: MEMBER_WHATSAPP_OTHER_MATTERS
+        sync: false
 
 databases:
   - name: tbgp-db

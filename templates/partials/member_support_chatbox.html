@@ -1,0 +1,29 @@
+<div class="member-support-chatbox" id="memberSupportChatbox">
+    <div class="member-support-chatbox-head">
+        <i class="bi bi-whatsapp" aria-hidden="true"></i>
+        <div>
+            <h5>Member Support</h5>
+            <p>Send a message to TBGP support via WhatsApp.</p>
+        </div>
+    </div>
+    <form id="memberSupportForm" class="member-support-form" novalidate>
+        <div class="mb-2">
+            <label class="form-label" for="memberSupportSubject">Subject</label>
+            <select class="form-select form-select-sm" id="memberSupportSubject" name="subject" required>
+                {% for subject in member_support_subjects %}
+                <option value="{{ subject.value }}" data-whatsapp="{{ subject.whatsapp }}">{{ subject.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-2">
+            <label class="form-label" for="memberSupportDetails">Details</label>
+            <textarea class="form-control form-control-sm" id="memberSupportDetails" name="details" rows="4" maxlength="2000" placeholder="Describe your concern..." required></textarea>
+        </div>
+        <div class="member-support-form-actions">
+            <button type="submit" class="btn btn-sm btn-primary member-support-submit">
+                <i class="bi bi-send-fill"></i> Send via WhatsApp
+            </button>
+            <span class="member-support-status text-muted small" id="memberSupportStatus" role="status" aria-live="polite"></span>
+        </div>
+    </form>
+</div>

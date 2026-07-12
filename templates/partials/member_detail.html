@@ -144,5 +144,16 @@
             </button>
         </div>
     </div>
+    {% elif is_own_profile_view %}
+    <div class="detail-item" style="grid-column: 1 / -1;">
+        <label>Profile Actions</label>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button"
+                class="btn btn-sm btn-brand member-self-edit-btn"
+                data-member="{{ m.self_edit_payload() | tojson | forceescape }}">
+                <i class="bi bi-pencil-square"></i> Edit My Information
+            </button>
+        </div>
+    </div>
     {% endif %}
 </div>

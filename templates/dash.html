@@ -1,21 +1,32 @@
 {% extends "dashboard_base.html" %}
+{% from 'partials/stat_tile_link.html' import stat_tile_link %}
 {% block page_title %}Dashboard{% endblock %}
 {% block topbar_title %}Dashboard{% endblock %}
 
 {% block content %}
 <div class="dashboard-card welcome-card">
-    <h4>Welcome, {{ fullname }}!</h4>
-    <p>{% if is_personal_dashboard %}Your TBGP member portal{% else %}TBGP Portal Dashboard{% endif %}</p>
-    <div class="welcome-meta">
-        <span><i class="bi bi-person-badge"></i> {{ role }}</span>
-        {% if is_personal_dashboard and personal_stats %}
-        <span><i class="bi bi-hash"></i> Member #{{ personal_stats.member_id }}</span>
-        <span><i class="bi bi-people"></i> {{ personal_stats.direct_referrals }} Direct Referral(s)</span>
-        {% elif stats %}
-        <span><i class="bi bi-people"></i> {{ stats.total_members }} Members</span>
-        <span><i class="bi bi-building"></i> {{ stats.total_contractors }} Contractors</span>
+    <div class="welcome-card-layout">
+        <div class="welcome-card-main">
+            <h4>Welcome, {{ fullname }}!</h4>
+            <p>{% if is_personal_dashboard %}Your TBGP member portal{% else %}TBGP Portal Dashboard{% endif %}</p>
+            <div class="welcome-meta">
+                <span><i class="bi bi-person-badge"></i> {{ role }}</span>
+                {% if is_personal_dashboard and personal_stats %}
+                <span><i class="bi bi-hash"></i> Member #{{ personal_stats.member_id }}</span>
+                <span><i class="bi bi-people"></i> {{ personal_stats.direct_referrals }} Member referral(s)</span>
+                <span><i class="bi bi-building"></i> {{ personal_stats.contractor_referrals }} Contractor referral(s)</span>
+                <span><i class="bi bi-box-seam"></i> {{ personal_stats.supplier_referrals }} Supplier referral(s)</span>
+                {% elif stats %}
+                <span><i class="bi bi-people"></i> {{ stats.total_members }} Members</span>
+                <span><i class="bi bi-building"></i> {{ stats.total_contractors }} Contractors</span>
+                <span><i class="bi bi-box-seam"></i> {{ stats.total_suppliers }} Suppliers</span>
+                {% endif %}
+                <span><i class="bi bi-calendar3"></i> <span id="welcomeDate">—</span></span>
+            </div>
+        </div>
+        {% if is_personal_dashboard and member_support_subjects is defined %}
+        {% include 'partials/member_support_chatbox.html' %}
         {% endif %}
-        <span><i class="bi bi-calendar3"></i> <span id="welcomeDate">—</span></span>
     </div>
 </div>
 
@@ -23,22 +34,21 @@
 <div class="dashboard-card">
     <h5 class="text-brand fw-bold mb-3">My Summary</h5>
     {% if personal_stats %}
-    <div class="stats-grid">
-        <div class="stat-tile">
-            <div class="stat-value">{{ personal_stats.batch }}</div>
-            <div class="stat-label">Batch</div>
+    <div class="stats-section">
+        <h6 class="stats-section-title"><i class="bi bi-diagram-3"></i> My Referrals</h6>
+        <div class="stats-grid">
+            {{ stat_tile_link(url_for('main_routes.my_member_referrals'), personal_stats.direct_referrals, 'Member Referrals') }}
+            {{ stat_tile_link(url_for('main_routes.hierarchy'), personal_stats.downline_count, 'Total Member Downline') }}
+            {{ stat_tile_link(url_for('main_routes.my_contractor_referrals'), personal_stats.contractor_referrals, 'Contractor Referrals') }}
+            {{ stat_tile_link(url_for('main_routes.my_supplier_referrals'), personal_stats.supplier_referrals, 'Supplier Referrals') }}
         </div>
-        <div class="stat-tile">
-            <div class="stat-value">{{ personal_stats.direct_referrals }}</div>
-            <div class="stat-label">Direct Referrals</div>
-        </div>
-        <div class="stat-tile">
-            <div class="stat-value">{{ personal_stats.downline_count }}</div>
-            <div class="stat-label">Total Downline</div>
-        </div>
-        <div class="stat-tile">
-            <div class="stat-value">{{ '{:,.2f}'.format(personal_stats.ledger_total) }}</div>
-            <div class="stat-label">Ledger Earnings</div>
+    </div>
+
+    <div class="stats-section mt-3">
+        <h6 class="stats-section-title"><i class="bi bi-wallet2"></i> Account</h6>
+        <div class="stats-grid">
+            {{ stat_tile_link(url_for('main_routes.members'), personal_stats.batch, 'Batch') }}
+            {{ stat_tile_link(url_for('main_routes.member_ledger'), '{:,.2f}'.format(personal_stats.ledger_total), 'Ledger Earnings') }}
         </div>
     </div>
     <p class="text-muted small mb-0 mt-3">
@@ -57,44 +67,30 @@
     <div class="stats-section">
         <h6 class="stats-section-title"><i class="bi bi-people"></i> Members</h6>
         <div class="stats-grid">
-            <div class="stat-tile">
-                <div class="stat-value">{{ stats.total_members }}</div>
-                <div class="stat-label">Total Members</div>
-            </div>
-            <div class="stat-tile">
-                <div class="stat-value">{{ stats.root_members }}</div>
-                <div class="stat-label">Root Members</div>
-            </div>
-            <div class="stat-tile">
-                <div class="stat-value">{{ stats.referred_members }}</div>
-                <div class="stat-label">Referred</div>
-            </div>
-            <div class="stat-tile">
-                <div class="stat-value">{{ stats.max_batch }}</div>
-                <div class="stat-label">Latest Batch</div>
-            </div>
+            {{ stat_tile_link(url_for('main_routes.members'), stats.total_members, 'Total Members') }}
+            {{ stat_tile_link(url_for('main_routes.members'), stats.root_members, 'Root Members') }}
+            {{ stat_tile_link(url_for('main_routes.members'), stats.referred_members, 'Referred') }}
+            {{ stat_tile_link(url_for('main_routes.members'), stats.max_batch, 'Latest Batch') }}
         </div>
     </div>
 
     <div class="stats-section">
         <h6 class="stats-section-title"><i class="bi bi-building"></i> Contractors</h6>
         <div class="stats-grid">
-            <div class="stat-tile">
-                <div class="stat-value">{{ stats.total_contractors }}</div>
-                <div class="stat-label">Total Contractors</div>
-            </div>
-            <div class="stat-tile">
-                <div class="stat-value">{{ stats.contractor_member_referrers }}</div>
-                <div class="stat-label">Member Referrers</div>
-            </div>
-            <div class="stat-tile">
-                <div class="stat-value">{{ stats.contractor_batch_counts|length }}</div>
-                <div class="stat-label">Active Batches</div>
-            </div>
-            <div class="stat-tile">
-                <div class="stat-value">{{ stats.max_contractor_batch }}</div>
-                <div class="stat-label">Latest Batch</div>
-            </div>
+            {{ stat_tile_link(url_for('main_routes.contractors'), stats.total_contractors, 'Total Contractors') }}
+            {{ stat_tile_link(url_for('main_routes.contractors'), stats.contractor_member_referrers, 'Member Referrers') }}
+            {{ stat_tile_link(url_for('main_routes.contractors'), stats.contractor_batch_counts|length, 'Active Batches') }}
+            {{ stat_tile_link(url_for('main_routes.contractors'), stats.max_contractor_batch, 'Latest Batch') }}
+        </div>
+    </div>
+
+    <div class="stats-section">
+        <h6 class="stats-section-title"><i class="bi bi-box-seam"></i> Suppliers</h6>
+        <div class="stats-grid">
+            {{ stat_tile_link(url_for('main_routes.suppliers'), stats.total_suppliers, 'Total Suppliers') }}
+            {{ stat_tile_link(url_for('main_routes.suppliers'), stats.supplier_member_referrers, 'Member Referrers') }}
+            {{ stat_tile_link(url_for('main_routes.suppliers'), stats.supplier_batch_counts|length, 'Active Batches') }}
+            {{ stat_tile_link(url_for('main_routes.suppliers'), stats.max_supplier_batch, 'Latest Batch') }}
         </div>
     </div>
 </div>
@@ -108,15 +104,12 @@
     </div>
     <div class="stats-grid">
         {% for batch, count in stats.batch_counts.items() %}
-        <div class="stat-tile">
-            <div class="stat-value">{{ count }}</div>
-            <div class="stat-label">Batch {{ batch }}</div>
-        </div>
+        {{ stat_tile_link(url_for('main_routes.members'), count, 'Batch ' ~ batch) }}
         {% endfor %}
     </div>
 </div>
 
-<div class="dashboard-card section-card">
+<a href="{{ url_for('main_routes.hierarchy') }}" class="dashboard-card section-card stat-section-link" aria-label="Top Referrers — view hierarchy">
     <div class="section-header">
         <div>
             <h5><i class="bi bi-trophy"></i> Top Referrers</h5>
@@ -162,7 +155,7 @@
     {% else %}
     <p class="text-muted mb-0">No referral data yet.</p>
     {% endif %}
-</div>
+</a>
 {% endif %}
 {% endblock %}
 
@@ -178,5 +171,65 @@
             day: 'numeric',
         }).format(new Date());
     }
+
+    (function () {
+        const form = document.getElementById('memberSupportForm');
+        if (!form) {
+            return;
+        }
+
+        const subjectSelect = document.getElementById('memberSupportSubject');
+        const detailsInput = document.getElementById('memberSupportDetails');
+        const statusEl = document.getElementById('memberSupportStatus');
+        const memberId = {{ personal_stats.member_id if personal_stats else 'null' }};
+        const memberName = {{ (personal_stats.full_name if personal_stats and personal_stats.full_name else fullname)|tojson }};
+
+        function setStatus(message, isError) {
+            if (!statusEl) {
+                return;
+            }
+            statusEl.textContent = message || '';
+            statusEl.classList.toggle('text-danger', Boolean(isError));
+            statusEl.classList.toggle('text-muted', !isError);
+        }
+
+        function buildMessage(subjectLabel, details) {
+            const lines = [
+                'TBGP Member Portal',
+                'Subject: ' + subjectLabel,
+            ];
+            if (memberId) {
+                lines.push('Member: #' + memberId + (memberName ? ' — ' + memberName : ''));
+            }
+            lines.push('');
+            lines.push('Details:');
+            lines.push(details.trim());
+            return lines.join('\n');
+        }
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            const selected = subjectSelect.options[subjectSelect.selectedIndex];
+            const whatsapp = (selected.dataset.whatsapp || '').replace(/\D/g, '');
+            const subjectLabel = selected.textContent.trim();
+            const details = (detailsInput.value || '').trim();
+
+            if (!details) {
+                setStatus('Please enter your message details.', true);
+                detailsInput.focus();
+                return;
+            }
+            if (!whatsapp) {
+                setStatus('WhatsApp support is not configured for this subject yet.', true);
+                return;
+            }
+
+            const url = 'https://wa.me/' + whatsapp + '?text=' + encodeURIComponent(
+                buildMessage(subjectLabel, details)
+            );
+            window.open(url, '_blank', 'noopener,noreferrer');
+            setStatus('Opening WhatsApp...', false);
+        });
+    })();
 </script>
 {% endblock %}

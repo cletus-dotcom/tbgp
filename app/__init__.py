@@ -98,11 +98,19 @@ def create_app():
 
     @app.context_processor
     def inject_globals():
+        from flask import session, url_for
+
+        from app.accessibility_service import DEFAULT_ACCESSIBILITY_PREFS, get_user_accessibility_prefs
         from app.payout_service import payout_queue_counts
         from app.platform_about import PLATFORM_DEVELOPER
         from app.site_content_service import get_services_contact_cta
 
         role = session.get("role")
+        user_id = session.get("user_id")
+        if user_id:
+            user_accessibility_prefs = get_user_accessibility_prefs(user_id)
+        else:
+            user_accessibility_prefs = dict(DEFAULT_ACCESSIBILITY_PREFS)
         return {
             "brand_blue": BRAND_BLUE,
             "brand_blue_dark": BRAND_BLUE_DARK,
@@ -152,6 +160,9 @@ def create_app():
             "member_lifetime_project_cap_after_limit": float(MEMBER_LIFETIME_PROJECT_CAP_AFTER_LIMIT),
             "services_contact_cta": get_services_contact_cta(),
             "platform_developer": PLATFORM_DEVELOPER,
+            "user_accessibility_prefs": user_accessibility_prefs,
+            "accessibility_user_logged_in": bool(user_id),
+            "accessibility_api_url": url_for("main_routes.accessibility_preferences"),
         }
 
     from app.routes import main_routes

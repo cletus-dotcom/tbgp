@@ -119,6 +119,9 @@
 {% if can_manage_data(session.get('role')) %}
 {% include 'partials/edit_member_modal.html' %}
 {% endif %}
+{% if is_own_profile_view %}
+{% include 'partials/edit_my_profile_modal.html' %}
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
@@ -414,6 +417,68 @@
             }
         });
     }
+
+    {% if is_own_profile_view %}
+    const selfEditModalEl = document.getElementById('editMyProfileModal');
+    const selfEditForm = document.getElementById('editMyProfileForm');
+    const selfEditAlert = document.getElementById('editMyProfileAlert');
+
+    const setSelfEditFields = (m) => {
+        document.getElementById('selfEditMemberIdDisplay').value = m.member_id;
+        document.getElementById('selfEditFullNameDisplay').value = m.full_name || '';
+        document.getElementById('selfEditGender').value = m.gender || '';
+        document.getElementById('selfEditCivilStatus').value = m.civil_status || '';
+        document.getElementById('selfEditPhone').value = m.phone || '';
+        document.getElementById('selfEditEmail').value = m.email || '';
+        document.getElementById('selfEditAddress').value = m.address || '';
+        document.getElementById('selfEditHighestEducation').value = m.highest_education || '';
+        document.getElementById('selfEditOccupation').value = m.occupation_income_source || '';
+        document.getElementById('selfEditMonthlyIncome').value = m.monthly_income || '';
+        document.getElementById('selfEditDependents').value = m.number_of_dependents ?? '';
+        document.getElementById('selfEditBeneficiaryName').value = m.beneficiary_name || '';
+        document.getElementById('selfEditBeneficiaryPhone').value = m.beneficiary_phone || '';
+        document.getElementById('selfEditBeneficiaryAddress').value = m.beneficiary_address || '';
+    };
+
+    document.addEventListener('click', e => {
+        const selfEditBtn = e.target.closest('.member-self-edit-btn');
+        if (!selfEditBtn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        hideFormError(selfEditAlert);
+        const json = selfEditBtn.dataset.member;
+        if (!json) {
+            showFormError(selfEditAlert, 'Could not load your profile. Please refresh.');
+            return;
+        }
+        try {
+            setSelfEditFields(JSON.parse(json));
+            bootstrap.Modal.getOrCreateInstance(selfEditModalEl).show();
+        } catch {
+            showFormError(selfEditAlert, 'Could not load your profile. Please refresh.');
+        }
+    });
+
+    selfEditForm?.addEventListener('submit', async e => {
+        e.preventDefault();
+        hideFormError(selfEditAlert);
+
+        const formData = new FormData(selfEditForm);
+
+        try {
+            const res = await fetch('/members/my-profile', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.status === 'success') {
+                bootstrap.Modal.getInstance(selfEditModalEl)?.hide();
+                window.location.reload();
+                return;
+            }
+            showFormError(selfEditAlert, data.msg || 'Update failed.');
+        } catch (err) {
+            showFormError(selfEditAlert, err.message || 'Update failed.');
+        }
+    });
+    {% endif %}
 
     const addMemberModal = document.getElementById('addMemberModal');
     const addMemberForm = document.getElementById('addMemberForm');
