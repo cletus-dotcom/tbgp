@@ -20,7 +20,7 @@ USER_MANUALS = {
                 "items": [
                     "Maintain the protected PortalAdmin account.",
                     "Use Delete All Members only when resetting demo or test data.",
-                    "Review the portal as an Admin-level user when needed.",
+                    "Review the portal as an Admin-level user when needed, including Products Commission under Income Management → Commission.",
                     "Delegate routine public website updates to SiteAdmin accounts.",
                     "Delegate daily portal encoding and payout work to Admin and Staff accounts.",
                 ],
@@ -122,7 +122,7 @@ USER_MANUALS = {
                 "items": [
                     "Use the sidebar for Members, Member Ledger, Contractors, Suppliers, and Hierarchy Tree.",
                     "Open Payouts for payout scheme reference, payout queue actions, and fund release reports.",
-                    "Open Income Management for project commissions, commission levels, generate sharing, and commission reports.",
+                    "Open Income Management for project commissions, products commission, commission levels, generate project commission, and commission reports.",
                     "Open Administration → Admin Options for user management.",
                     "Open Help for this manual, Features & Process Flow, and About the Platform.",
                     "Use Home at the bottom of the sidebar to return to the public landing page.",
@@ -163,8 +163,12 @@ USER_MANUALS = {
                 "heading": "Income Management",
                 "items": [
                     "Use Income Management → Project Commission to record projects, contractors, client referrals, addresses, and billings.",
-                    "Use Commission Management to adjust commission levels.",
-                    "Use Generate Sharing to preview and generate profit sharing for billing dates.",
+                    "Use Income Management → Products Commission to enter product commission amount, Ref-Seller, Ref-Buyer, and Ref-Buyer bonus carved from the PLATFORM share (65% gross). Auto-Bonus is 10% of commission (PLATFORM net 55%); AD-Bonus NN% is set by Admin (e.g. 34% bonus → PLATFORM net 31%).",
+                    "Products Commission splits each amount into Ref-Seller 8%, Ref-Buyer 12%, POP 10%, AD-Fund 5%, and PLATFORM 65%; each Ref pool uses a 7-level upline table, with unallocated shares going to AD-Fund.",
+                    "On Products Commission, optionally enter AD-Members Split Sharing amounts (members from Commission Management) charged against PLATFORM or AD-Fund; Update Computation refreshes the summary before save.",
+                    "Use the Products Commission computation card to preview sharing before saving; saving posts member and PLATFORM ledger credits.",
+                    "Use Commission Management to adjust project commission levels and maintain AD-Members Split Sharing (members eligible for Admin Discretion bonus).",
+                    "Use Generate Project Commission to preview and generate profit sharing for billing dates.",
                     "Generated sharing protects linked project and billing records from unsafe deletion.",
                     "Use Reports under Commission for project list and commission summary review.",
                 ],
@@ -189,7 +193,7 @@ USER_MANUALS = {
                 "items": [
                     "Use the sidebar for Members, Member Ledger, Contractors, Suppliers, and Hierarchy Tree.",
                     "Open Payouts for payout scheme reference, payout queue work, and fund release reports.",
-                    "Open Income Management for project commissions and generate sharing.",
+                    "Open Income Management for project commissions and generate project commission.",
                     "Open Help for this manual, Features & Process Flow, and About the Platform.",
                     "Open Reading in the top bar to choose Standard, Large, or Extra large text and turn High contrast on or off.",
                 ],
@@ -221,9 +225,9 @@ USER_MANUALS = {
                 ],
             },
             {
-                "heading": "Generate Sharing",
+                "heading": "Generate Project Commission",
                 "items": [
-                    "Use Income Management → Generate Sharing to preview available billings.",
+                    "Use Income Management → Generate Project Commission to preview available billings.",
                     "Review the billing date and records before generating sharing.",
                     "Generated sharing creates ledger entries and may lock related project billing details.",
                 ],
@@ -329,6 +333,11 @@ APP_FEATURES = [
         "description": "Encode project billings, configure commission levels, preview sharing, and generate member ledger earnings.",
     },
     {
+        "icon": "bi-box-seam",
+        "title": "Products Commission",
+        "description": "Admin entry for product commission with Ref-Seller/Ref-Buyer pools, Ref-Buyer PLATFORM bonuses, optional AD-Members split (from PLATFORM or AD-Fund), POP, AD-Fund, and 7-level Mandate sharing.",
+    },
+    {
         "icon": "bi-wallet2",
         "title": "Payout Processing",
         "description": "Manage payout requests, Staff release submissions, Admin release approvals, and OMPD deductions.",
@@ -378,7 +387,11 @@ APP_PROCESS_FLOW = [
         "description": "Staff/Admin adds the project, contractor, client referral, address, billing dates, and billing amounts.",
     },
     {
-        "title": "Preview and Generate Sharing",
+        "title": "Encode Products Commissions",
+        "description": "Admin or PortalAdmin enters product commission amount, Ref-Seller, Ref-Buyer, Ref-Buyer bonus, and optional AD-Members split amounts; the system splits pools and posts 7-level sharing.",
+    },
+    {
+        "title": "Preview and Generate Project Commission",
         "description": "Staff/Admin previews billings, then generates sharing. The system applies commission levels, per-project caps, and lifetime limit rules.",
     },
     {

@@ -1,0 +1,699 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Products Commission{% endblock %}
+{% block topbar_title %}Products Commission{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-xl-5">
+        <div class="dashboard-card section-card h-100">
+            <div class="section-header">
+                <div>
+                    <h5><i class="bi bi-box-seam"></i> Enter Products Commission</h5>
+                    <p class="section-subtitle">Admin / PortalAdmin entry for product sharing</p>
+                </div>
+            </div>
+
+            <form id="productCommissionForm" novalidate>
+                <div id="productCommissionAlert" class="alert alert-danger d-none py-2 small" role="alert"></div>
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label" for="productTitle">Product / Reference</label>
+                        <input type="text" id="productTitle" name="product_title" class="form-control"
+                               placeholder="Products Commission" maxlength="200">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="commissionDate">Date <span class="text-danger">*</span></label>
+                        <input type="date" id="commissionDate" name="commission_date" class="form-control" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="commissionAmount">Products Commission Amount <span class="text-danger">*</span></label>
+                        <input type="text" id="commissionAmount" name="commission_amount" class="form-control"
+                               inputmode="decimal" placeholder="0.00" required>
+                    </div>
+                    <div class="col-md-6">
+                        {% with field_id='refSellerId', field_name='ref_seller_id', label='Ref-Seller', required=true %}
+                        {% include 'partials/member_search_select.html' %}
+                        {% endwith %}
+                    </div>
+                    <div class="col-md-6">
+                        {% with field_id='refBuyerId', field_name='ref_buyer_id', label='Ref-Buyer', required=true %}
+                        {% include 'partials/member_search_select.html' %}
+                        {% endwith %}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label d-block">Ref-Buyer Bonus (from PLATFORM)</label>
+                        <div class="d-flex flex-wrap gap-3 align-items-center">
+                            <label class="form-check">
+                                <input class="form-check-input" type="radio" name="bonus_type" id="bonusAuto"
+                                       value="auto" checked>
+                                <span class="form-check-label">Auto-Bonus ({{ '{:,.0f}'.format(product_bonus_auto_percent) }}%)</span>
+                            </label>
+                            <label class="form-check">
+                                <input class="form-check-input" type="radio" name="bonus_type" id="bonusAd"
+                                       value="ad">
+                                <span class="form-check-label">AD-Bonus</span>
+                            </label>
+                            <div class="input-group" style="max-width: 10rem;">
+                                <input type="number" id="adBonusPercent" name="ad_bonus_percent" class="form-control"
+                                       min="0" max="{{ product_split.platform }}" step="0.01"
+                                       value="{{ product_bonus_ad_default_percent }}" disabled>
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <p class="text-muted small mb-1 mt-1">
+                            Bonus is deducted from the PLATFORM share ({{ '{:,.0f}'.format(product_split.platform) }}% of commission) and credited to Ref-Buyer only.
+                        </p>
+                        <p class="small mb-0" id="platformBonusTrace">
+                            <span class="text-muted">PLATFORM:</span>
+                            <strong>{{ '{:,.0f}'.format(product_split.platform) }}%</strong>
+                            <span class="text-muted">→</span>
+                            <strong id="platformNetPercent">{{ '{:,.0f}'.format(product_split.platform - product_bonus_auto_percent) }}%</strong>
+                            <span class="text-muted">after</span>
+                            <strong id="bonusTracePercent">{{ '{:,.0f}'.format(product_bonus_auto_percent) }}%</strong>
+                            <span id="bonusTraceLabel">Auto-Bonus</span>
+                        </p>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label mb-1">AD-Members Split Sharing</label>
+                        <p class="text-muted small mb-2">
+                            Optional amounts credited to AD-Members (from Commission Management).
+                            Charge is deducted from PLATFORM or AD-Fund before posting.
+                        </p>
+                        {% if ad_split_members %}
+                        <div class="table-responsive">
+                            <table class="table table-sm section-table mb-0" id="adMemberSplitTable">
+                                <thead>
+                                    <tr>
+                                        <th>AD-Member</th>
+                                        <th style="width: 8rem;">Amount</th>
+                                        <th style="width: 9rem;">Charge From</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in ad_split_members %}
+                                    <tr class="ad-member-split-row"
+                                        data-member-id="{{ row.member_id }}"
+                                        data-member-name="{{ row.member.full_name if row.member else '' }}">
+                                        <td>
+                                            <div class="fw-semibold">
+                                                #{{ row.member_id }} — {{ row.member.full_name if row.member else '—' }}
+                                            </div>
+                                            {% if row.description %}
+                                            <div class="text-muted small">{{ row.description }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm ad-split-amount"
+                                                   inputmode="decimal" placeholder="0.00" aria-label="AD-member amount">
+                                        </td>
+                                        <td>
+                                            <select class="form-select form-select-sm ad-split-charge" aria-label="Charge from">
+                                                <option value="platform" selected>PLATFORM</option>
+                                                <option value="ad_fund">AD-Fund</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-muted small mb-0">
+                            No AD-Members configured. Add them under Commission Management → AD-Members Split Sharing.
+                        </p>
+                        {% endif %}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="productNotes">Notes</label>
+                        <textarea id="productNotes" name="notes" class="form-control" rows="2" maxlength="500"></textarea>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <button type="button" class="btn btn-outline-light" id="previewProductBtn">
+                        <i class="bi bi-calculator"></i> Update Computation
+                    </button>
+                    <button type="submit" class="btn btn-brand">
+                        <i class="bi bi-save"></i> Save &amp; Post Shares
+                    </button>
+                </div>
+            </form>
+
+            <hr class="border-secondary my-4">
+            <p class="text-muted small fw-semibold text-uppercase mb-2">Fixed Split</p>
+            <ul class="small mb-0 ps-3">
+                <li>Ref-Seller {{ '{:,.0f}'.format(product_split.ref_seller) }}%</li>
+                <li>Ref-Buyer {{ '{:,.0f}'.format(product_split.ref_buyer) }}%</li>
+                <li>POP {{ '{:,.0f}'.format(product_split.pop_pct) }}%</li>
+                <li>AD-Fund {{ '{:,.0f}'.format(product_split.ad_fund) }}%</li>
+                <li>PLATFORM {{ '{:,.0f}'.format(product_split.platform) }}% gross (reduced by Ref-Buyer bonus)</li>
+            </ul>
+            <p class="text-muted small mb-0">
+                Example: Auto-Bonus {{ '{:,.0f}'.format(product_bonus_auto_percent) }}% → PLATFORM net
+                {{ '{:,.0f}'.format(product_split.platform - product_bonus_auto_percent) }}%.
+                AD-Bonus 34% → PLATFORM net 31%.
+            </p>
+            <p class="text-muted small fw-semibold text-uppercase mb-2 mt-3">Pool Levels (Ref-Seller &amp; Ref-Buyer)</p>
+            <ul class="small mb-0 ps-3">
+                {% for lvl in product_pool_levels %}
+                <li>Level {{ lvl.level }} — {{ '{:,.0f}'.format(lvl.percentage) }}% — {{ lvl.description }}</li>
+                {% endfor %}
+            </ul>
+            <p class="text-muted small mt-2 mb-0">Unallocated pool shares go to AD-Fund. Level 7 credits the Mandate account sub-ledger for each stream.</p>
+        </div>
+    </div>
+
+    <div class="col-xl-7">
+        <div class="dashboard-card section-card h-100" id="productComputationCard">
+            <div class="section-header">
+                <div>
+                    <h5><i class="bi bi-pie-chart"></i> Computation Summary</h5>
+                    <p class="section-subtitle">Live sharing preview for the current entry</p>
+                </div>
+            </div>
+
+            <div id="computationEmpty" class="text-muted small">
+                Enter amount, Ref-Seller, and Ref-Buyer, then click Update Computation.
+            </div>
+
+            <div id="computationBody" class="d-none">
+                <div class="row g-2 mb-3" id="computationTotals"></div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <h6 class="text-brand mb-2">Ref-Seller Pool</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm section-table mb-0">
+                                <thead>
+                                    <tr><th>Lvl</th><th>%</th><th>Recipient</th><th class="text-end">Amount</th></tr>
+                                </thead>
+                                <tbody id="sellerLevelsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-brand mb-2">Ref-Buyer Pool</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm section-table mb-0">
+                                <thead>
+                                    <tr><th>Lvl</th><th>%</th><th>Recipient</th><th class="text-end">Amount</th></tr>
+                                </thead>
+                                <tbody id="buyerLevelsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="adSplitSummaryWrap" class="d-none mt-3">
+                    <h6 class="text-brand mb-2">AD-Members Split</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm section-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>AD-Member</th>
+                                    <th>Charged From</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adSplitSummaryBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <h6 class="text-brand mb-2 mt-3">Account Earnings Summary</h6>
+                <p class="text-muted small mb-2">Click a row to expand the earning details for that account.</p>
+                <div class="table-responsive">
+                    <table class="table table-sm section-table mb-0 account-earnings-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 2rem;"></th>
+                                <th>Account</th>
+                                <th>Type</th>
+                                <th class="text-end">Lines</th>
+                                <th class="text-end">Total Earnings</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accountSummaryBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-card section-card mt-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-clock-history"></i> Saved Products Commissions</h5>
+            <p class="section-subtitle">{{ products|length }} record(s)</p>
+        </div>
+    </div>
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Product</th>
+                    <th>Amount</th>
+                    <th>Ref-Seller</th>
+                    <th>Ref-Buyer</th>
+                    <th>Bonus</th>
+                    <th>Shared</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in products %}
+                <tr>
+                    <td>{{ p.commission_date.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        <strong>{{ p.product_title }}</strong>
+                        <div class="text-muted small">#{{ p.product_commission_id }}</div>
+                    </td>
+                    <td>{{ '{:,.2f}'.format(p.commission_amount) }}</td>
+                    <td>
+                        {% if p.ref_seller %}#{{ p.ref_seller_id }} — {{ p.ref_seller.full_name }}{% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if p.ref_buyer %}#{{ p.ref_buyer_id }} — {{ p.ref_buyer.full_name }}{% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {{ 'Auto' if p.bonus_type == 'auto' else 'AD' }}
+                        {{ '{:,.2f}'.format(p.bonus_percent) }}%
+                        <div class="text-muted small">{{ '{:,.2f}'.format(p.bonus_amount) }}</div>
+                    </td>
+                    <td>{{ '{:,.2f}'.format(p.total_shared) }}</td>
+                    <td class="text-end text-nowrap">
+                        <button type="button" class="btn btn-sm btn-outline-light product-view-btn"
+                                data-product="{{ p.to_dict() | tojson | forceescape }}">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger product-delete-btn"
+                                data-product-id="{{ p.product_commission_id }}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="text-muted">No products commissions saved yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="productDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-brand text-white">
+                <h5 class="modal-title"><i class="bi bi-box-seam"></i> Products Commission Detail</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="productDetailBody"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/member-search-select.js') }}"></script>
+<script>
+(function () {
+    const form = document.getElementById('productCommissionForm');
+    const alertEl = document.getElementById('productCommissionAlert');
+    const bonusAuto = document.getElementById('bonusAuto');
+    const bonusAd = document.getElementById('bonusAd');
+    const adBonusPercent = document.getElementById('adBonusPercent');
+    const computationEmpty = document.getElementById('computationEmpty');
+    const computationBody = document.getElementById('computationBody');
+    const previewBtn = document.getElementById('previewProductBtn');
+
+    const memberPayloads = [
+        {% for m in members %}
+        {
+            id: {{ m.member_id }},
+            batch: {{ m.batch }},
+            label: {{ ('#' ~ m.member_id ~ ' — ' ~ m.full_name ~ ' (Batch ' ~ m.batch ~ ')') | tojson }},
+            search: {{ m.search_text() | tojson }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const maybePreview = () => {
+        if (document.getElementById('commissionAmount').value
+            && document.getElementById('refSellerId').value
+            && document.getElementById('refBuyerId').value) {
+            previewComputation();
+        }
+    };
+
+    initMemberSearchSelect('refSellerId', memberPayloads, { onChange: maybePreview });
+    initMemberSearchSelect('refBuyerId', memberPayloads, { onChange: maybePreview });
+
+    const money = (n) => Number(n || 0).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+
+    function showError(msg) {
+        alertEl.textContent = msg || 'Something went wrong.';
+        alertEl.classList.remove('d-none');
+    }
+    function hideError() {
+        alertEl.classList.add('d-none');
+    }
+
+    const platformGrossPercent = {{ product_split.platform }};
+    const autoBonusPercent = {{ product_bonus_auto_percent }};
+
+    function updatePlatformBonusTrace() {
+        const isAd = bonusAd.checked;
+        const bonusPct = isAd ? Number(adBonusPercent.value || 0) : autoBonusPercent;
+        const netPct = Math.max(platformGrossPercent - bonusPct, 0);
+        document.getElementById('platformNetPercent').textContent = netPct.toLocaleString('en-US', {
+            maximumFractionDigits: 2,
+        });
+        document.getElementById('bonusTracePercent').textContent = bonusPct.toLocaleString('en-US', {
+            maximumFractionDigits: 2,
+        });
+        document.getElementById('bonusTraceLabel').textContent = isAd ? 'AD-Bonus' : 'Auto-Bonus';
+    }
+
+    function syncBonusInputs() {
+        const isAd = bonusAd.checked;
+        adBonusPercent.disabled = !isAd;
+        if (isAd) adBonusPercent.focus();
+        updatePlatformBonusTrace();
+    }
+    bonusAuto?.addEventListener('change', syncBonusInputs);
+    bonusAd?.addEventListener('change', syncBonusInputs);
+    syncBonusInputs();
+
+    if (!document.getElementById('commissionDate').value) {
+        document.getElementById('commissionDate').value = new Date().toISOString().slice(0, 10);
+    }
+
+    function formPayload() {
+        const adAllocations = [];
+        document.querySelectorAll('.ad-member-split-row').forEach((row) => {
+            const amount = (row.querySelector('.ad-split-amount')?.value || '').trim();
+            if (!amount) return;
+            adAllocations.push({
+                member_id: Number(row.dataset.memberId),
+                amount,
+                charge_from: row.querySelector('.ad-split-charge')?.value || 'platform',
+            });
+        });
+        return {
+            product_title: document.getElementById('productTitle').value,
+            commission_date: document.getElementById('commissionDate').value,
+            commission_amount: document.getElementById('commissionAmount').value,
+            ref_seller_id: document.getElementById('refSellerId').value,
+            ref_buyer_id: document.getElementById('refBuyerId').value,
+            bonus_type: bonusAd.checked ? 'ad' : 'auto',
+            ad_bonus_percent: adBonusPercent.value,
+            notes: document.getElementById('productNotes').value,
+            ad_allocations: adAllocations,
+        };
+    }
+
+    function renderLevels(tbody, rows) {
+        tbody.innerHTML = (rows || []).map(row => `
+            <tr>
+                <td>${row.level}</td>
+                <td>${money(row.percentage)}</td>
+                <td>${row.label || '—'}</td>
+                <td class="text-end">${money(row.amount)}</td>
+            </tr>
+        `).join('');
+    }
+
+    function renderComputation(c) {
+        if (!c) {
+            computationEmpty.classList.remove('d-none');
+            computationBody.classList.add('d-none');
+            return;
+        }
+        computationEmpty.classList.add('d-none');
+        computationBody.classList.remove('d-none');
+
+        document.getElementById('computationTotals').innerHTML = `
+            <div class="col-6 col-lg-4"><div class="stat-tile p-2"><div class="stat-value">${money(c.commission_amount)}</div><div class="stat-label">Commission</div></div></div>
+            <div class="col-6 col-lg-4"><div class="stat-tile p-2"><div class="stat-value">${money(c.seller_pool)}</div><div class="stat-label">Ref-Seller ${c.split.ref_seller_percent}%</div></div></div>
+            <div class="col-6 col-lg-4"><div class="stat-tile p-2"><div class="stat-value">${money(c.buyer_pool)}</div><div class="stat-label">Ref-Buyer ${c.split.ref_buyer_percent}%</div></div></div>
+            <div class="col-6 col-lg-4"><div class="stat-tile p-2"><div class="stat-value">${money(c.bonus_amount)}</div><div class="stat-label">Ref-Buyer Bonus ${money(c.bonus_percent)}%</div></div></div>
+            <div class="col-6 col-lg-4"><div class="stat-tile p-2"><div class="stat-value">${money(c.pop_amount)}</div><div class="stat-label">POP ${c.split.pop_percent}%</div></div></div>
+            <div class="col-6 col-lg-4"><div class="stat-tile p-2"><div class="stat-value">${money(c.ad_fund_amount)}</div><div class="stat-label">AD-Fund (after AD split)</div></div></div>
+            <div class="col-6 col-lg-4"><div class="stat-tile p-2"><div class="stat-value">${money(c.platform_net)}</div><div class="stat-label">PLATFORM (after bonus / AD split)</div></div></div>
+            <div class="col-6 col-lg-4"><div class="stat-tile p-2"><div class="stat-value">${money(c.ad_split_amount || 0)}</div><div class="stat-label">AD-Member Split</div></div></div>
+            <div class="col-6 col-lg-4"><div class="stat-tile p-2"><div class="stat-value">${money(c.total_shared)}</div><div class="stat-label">Member Shared</div></div></div>
+            <div class="col-6 col-lg-4"><div class="stat-tile p-2"><div class="stat-value">${money(c.total_mandate)}</div><div class="stat-label">Mandate</div></div></div>
+        `;
+
+        renderLevels(document.getElementById('sellerLevelsBody'), c.seller_levels);
+        renderLevels(document.getElementById('buyerLevelsBody'), c.buyer_levels);
+        renderAdSplitSummary(c.ad_allocations || []);
+        renderAccountSummary(document.getElementById('accountSummaryBody'), c.account_summary || []);
+    }
+
+    function renderAdSplitSummary(rows) {
+        const wrap = document.getElementById('adSplitSummaryWrap');
+        const tbody = document.getElementById('adSplitSummaryBody');
+        if (!wrap || !tbody) return;
+        if (!rows.length) {
+            wrap.classList.add('d-none');
+            tbody.innerHTML = '';
+            return;
+        }
+        wrap.classList.remove('d-none');
+        const chargeLabel = (value) => value === 'ad_fund' ? 'AD-Fund' : 'PLATFORM';
+        tbody.innerHTML = rows.map(row => `
+            <tr>
+                <td>${escapeHtml(row.member_id ? `#${row.member_id} — ${row.member_name || ''}` : (row.member_name || '—'))}</td>
+                <td>${escapeHtml(chargeLabel(row.charge_from))}</td>
+                <td class="text-end">${money(row.amount)}</td>
+            </tr>
+        `).join('');
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function renderAccountSummary(tbody, summaryRows) {
+        if (!tbody) return;
+        if (!summaryRows.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-muted">No account earnings.</td></tr>';
+            return;
+        }
+
+        const summaryTotal = summaryRows.reduce((sum, row) => sum + Number(row.total_amount || 0), 0);
+        tbody.innerHTML = summaryRows.map((row, idx) => {
+            const accountLabel = `${row.account_id ? `#${row.account_id} — ` : ''}${row.account_name || '—'}`;
+            const details = row.details || [];
+            const detailRows = details.length
+                ? details.map(detail => `
+                    <tr>
+                        <td>${escapeHtml(detail.label || '—')}</td>
+                        <td class="text-end">${detail.level > 0 ? detail.level : '—'}</td>
+                        <td class="text-end">${money(detail.percentage)}</td>
+                        <td class="text-end">${money(detail.share_amount)}</td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="4" class="text-muted">No detail lines.</td></tr>';
+
+            return `
+                <tr class="account-summary-row" data-account-toggle="${idx}" role="button" tabindex="0" aria-expanded="false">
+                    <td class="text-center">
+                        <i class="bi bi-chevron-right account-summary-chevron" aria-hidden="true"></i>
+                    </td>
+                    <td>${escapeHtml(accountLabel)}</td>
+                    <td>${escapeHtml(row.recipient_type)}</td>
+                    <td class="text-end">${row.line_count}</td>
+                    <td class="text-end">${money(row.total_amount)}</td>
+                </tr>
+                <tr class="account-summary-detail d-none" data-account-detail="${idx}">
+                    <td></td>
+                    <td colspan="4">
+                        <div class="account-summary-detail-panel">
+                            <table class="table table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Source</th>
+                                        <th class="text-end">Level</th>
+                                        <th class="text-end">%</th>
+                                        <th class="text-end">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${detailRows}</tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('') + `
+            <tr class="fw-semibold">
+                <td></td>
+                <td colspan="3">Total</td>
+                <td class="text-end">${money(summaryTotal)}</td>
+            </tr>
+        `;
+    }
+
+    document.addEventListener('click', (e) => {
+        const row = e.target.closest('.account-earnings-table .account-summary-row');
+        if (!row) return;
+        const tbody = row.closest('tbody');
+        const idx = row.dataset.accountToggle;
+        const detail = tbody?.querySelector(`[data-account-detail="${idx}"]`);
+        if (!detail) return;
+        const expanded = detail.classList.toggle('d-none') === false;
+        row.classList.toggle('is-expanded', expanded);
+        row.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const row = e.target.closest('.account-earnings-table .account-summary-row');
+        if (!row) return;
+        e.preventDefault();
+        row.click();
+    });
+
+    async function previewComputation() {
+        hideError();
+        try {
+            const res = await fetch('/admin/prof/products-commission/preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formPayload()),
+            });
+            const data = await res.json();
+            if (data.status !== 'success') {
+                showError(data.msg || 'Preview failed.');
+                return null;
+            }
+            renderComputation(data.computation);
+            return data.computation;
+        } catch (err) {
+            showError(err.message || 'Preview failed.');
+            return null;
+        }
+    }
+
+    previewBtn?.addEventListener('click', () => previewComputation());
+
+    document.getElementById('commissionAmount')?.addEventListener('change', maybePreview);
+    document.getElementById('adBonusPercent')?.addEventListener('input', () => {
+        updatePlatformBonusTrace();
+        maybePreview();
+    });
+    bonusAuto?.addEventListener('change', () => previewComputation());
+    bonusAd?.addEventListener('change', () => previewComputation());
+
+    document.querySelectorAll('.ad-split-amount').forEach((input) => {
+        input.addEventListener('change', maybePreview);
+        input.addEventListener('blur', maybePreview);
+    });
+    document.querySelectorAll('.ad-split-charge').forEach((select) => {
+        select.addEventListener('change', maybePreview);
+    });
+
+    form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideError();
+        if (!document.getElementById('refSellerId').value || !document.getElementById('refBuyerId').value) {
+            showError('Please select Ref-Seller and Ref-Buyer from the search results.');
+            return;
+        }
+        try {
+            const res = await fetch('/admin/prof/products-commission', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formPayload()),
+            });
+            const data = await res.json();
+            if (data.status !== 'success') {
+                showError(data.msg || 'Save failed.');
+                return;
+            }
+            window.location.reload();
+        } catch (err) {
+            showError(err.message || 'Save failed.');
+        }
+    });
+
+    document.addEventListener('click', async (e) => {
+        const viewBtn = e.target.closest('.product-view-btn');
+        if (viewBtn) {
+            const product = JSON.parse(viewBtn.dataset.product || '{}');
+            const body = document.getElementById('productDetailBody');
+            body.innerHTML = `
+                <p class="mb-2"><strong>${product.product_title || ''}</strong>
+                   <span class="text-muted">#${product.product_commission_id} · ${product.commission_date}</span></p>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-4"><div class="small text-muted">Amount</div><div>${money(product.commission_amount)}</div></div>
+                    <div class="col-md-4"><div class="small text-muted">Ref-Seller</div><div>#${product.ref_seller_id} — ${product.ref_seller_name || ''}</div></div>
+                    <div class="col-md-4"><div class="small text-muted">Ref-Buyer</div><div>#${product.ref_buyer_id} — ${product.ref_buyer_name || ''}</div></div>
+                    <div class="col-md-3"><div class="small text-muted">Seller Pool</div><div>${money(product.seller_pool)}</div></div>
+                    <div class="col-md-3"><div class="small text-muted">Buyer Pool</div><div>${money(product.buyer_pool)}</div></div>
+                    <div class="col-md-3"><div class="small text-muted">Bonus</div><div>${money(product.bonus_amount)}</div></div>
+                    <div class="col-md-3"><div class="small text-muted">PLATFORM</div><div>${money(product.platform_amount)}</div></div>
+                    <div class="col-md-3"><div class="small text-muted">POP</div><div>${money(product.pop_amount)}</div></div>
+                    <div class="col-md-3"><div class="small text-muted">AD-Fund</div><div>${money(product.ad_fund_amount)}</div></div>
+                    <div class="col-md-3"><div class="small text-muted">Shared</div><div>${money(product.total_shared)}</div></div>
+                    <div class="col-md-3"><div class="small text-muted">Mandate</div><div>${money(product.total_mandate)}</div></div>
+                </div>
+                ${(product.ad_allocations || []).length ? `
+                <h6 class="text-brand mb-2">AD-Members Split</h6>
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm section-table mb-0">
+                        <thead><tr><th>AD-Member</th><th>Charged From</th><th class="text-end">Amount</th></tr></thead>
+                        <tbody>
+                            ${product.ad_allocations.map(row => `
+                                <tr>
+                                    <td>${escapeHtml(row.member_id ? `#${row.member_id} — ${row.member_name || ''}` : (row.member_name || '—'))}</td>
+                                    <td>${escapeHtml(row.charge_from === 'ad_fund' ? 'AD-Fund' : 'PLATFORM')}</td>
+                                    <td class="text-end">${money(row.amount)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>` : ''}
+                <div class="table-responsive">
+                    <table class="table table-sm section-table mb-0 account-earnings-table">
+                        <thead><tr><th style="width:2rem;"></th><th>Account</th><th>Type</th><th class="text-end">Lines</th><th class="text-end">Total Earnings</th></tr></thead>
+                        <tbody id="productDetailAccountSummary"></tbody>
+                    </table>
+                </div>
+            `;
+            renderAccountSummary(
+                document.getElementById('productDetailAccountSummary'),
+                product.account_summary || []
+            );
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('productDetailModal')).show();
+            return;
+        }
+
+        const deleteBtn = e.target.closest('.product-delete-btn');
+        if (deleteBtn) {
+            const id = deleteBtn.dataset.productId;
+            if (!confirm(`Delete products commission #${id}? Ledger credits will also be removed.`)) return;
+            try {
+                const res = await fetch(`/admin/prof/products-commission/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                alert(data.msg || data.status);
+                if (data.status === 'success') window.location.reload();
+            } catch (err) {
+                alert(err.message || 'Delete failed.');
+            }
+        }
+    });
+
+})();
+</script>
+{% endblock %}

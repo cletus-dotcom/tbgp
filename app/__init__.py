@@ -185,11 +185,17 @@ def create_app():
             migrate_project_commissions_table,
             migrate_project_billings_table,
             migrate_sharing_entries_table,
+            migrate_product_commissions_table,
+            migrate_ad_split_members_table,
+            migrate_product_commission_ad_allocations_table,
         )
 
         migrate_members_table()
         migrate_project_commissions_table()
         migrate_project_billings_table()
+        migrate_product_commissions_table()
+        migrate_ad_split_members_table()
+        migrate_product_commission_ad_allocations_table()
         migrate_member_ledger_table()
         migrate_payout_tables()
         migrate_payout_ompd()

@@ -340,6 +340,38 @@ class CommissionLevel(db.Model):
         }
 
 
+class AdSplitMember(db.Model):
+    """Members eligible for Admin Discretion (AD) bonus split sharing."""
+
+    __tablename__ = "ad_split_members"
+
+    ad_split_id = db.Column(db.Integer, primary_key=True)
+    member_id = db.Column(
+        db.Integer, db.ForeignKey("members.member_id"), nullable=False, unique=True
+    )
+    description = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=True)
+
+    member = db.relationship("Member", foreign_keys=[member_id])
+    created_by = db.relationship("User", foreign_keys=[created_by_user_id])
+
+    def to_dict(self):
+        return {
+            "ad_split_id": self.ad_split_id,
+            "member_id": self.member_id,
+            "member_name": self.member.full_name if self.member else None,
+            "member_batch": self.member.batch if self.member else None,
+            "member_status": self.member.status if self.member else None,
+            "description": self.description or "",
+            "created_at": self.created_at.isoformat() if self.created_at else "",
+            "updated_at": self.updated_at.isoformat() if self.updated_at else "",
+        }
+
+
 class SharingBatch(db.Model):
     __tablename__ = "sharing_batches"
 
@@ -370,6 +402,9 @@ class MemberLedger(db.Model):
     billing_date = db.Column(db.Date, nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey("project_commissions.project_id"), nullable=True)
     billing_id = db.Column(db.Integer, db.ForeignKey("project_billings.billing_id"), nullable=True)
+    product_commission_id = db.Column(
+        db.Integer, db.ForeignKey("product_commissions.product_commission_id"), nullable=True
+    )
     project_title = db.Column(db.String(200))
     recipient_type = db.Column(db.String(20), nullable=False)
     share_scheme = db.Column(db.String(40))
@@ -479,6 +514,134 @@ class PayoutNotification(db.Model):
     created_at = db.Column(db.DateTime, nullable=False)
 
     user = db.relationship("User", foreign_keys=[user_id])
+
+
+class ProductCommission(db.Model):
+    __tablename__ = "product_commissions"
+
+    product_commission_id = db.Column(db.Integer, primary_key=True)
+    product_title = db.Column(db.String(200), nullable=False, default="Products Commission")
+    commission_amount = db.Column(db.Numeric(14, 2), nullable=False)
+    commission_date = db.Column(db.Date, nullable=False)
+    ref_seller_id = db.Column(db.Integer, db.ForeignKey("members.member_id"), nullable=False)
+    ref_buyer_id = db.Column(db.Integer, db.ForeignKey("members.member_id"), nullable=False)
+    bonus_type = db.Column(db.String(10), nullable=False, default="auto")
+    bonus_percent = db.Column(db.Numeric(6, 2), nullable=False, default=10)
+    notes = db.Column(db.Text)
+
+    seller_pool = db.Column(db.Numeric(14, 2), default=0)
+    buyer_pool = db.Column(db.Numeric(14, 2), default=0)
+    pop_amount = db.Column(db.Numeric(14, 2), default=0)
+    ad_fund_amount = db.Column(db.Numeric(14, 2), default=0)
+    platform_amount = db.Column(db.Numeric(14, 2), default=0)
+    bonus_amount = db.Column(db.Numeric(14, 2), default=0)
+    total_shared = db.Column(db.Numeric(14, 2), default=0)
+    total_mandate = db.Column(db.Numeric(14, 2), default=0)
+
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=True)
+
+    ref_seller = db.relationship("Member", foreign_keys=[ref_seller_id])
+    ref_buyer = db.relationship("Member", foreign_keys=[ref_buyer_id])
+    created_by = db.relationship("User", foreign_keys=[created_by_user_id])
+    shares = db.relationship(
+        "ProductCommissionShare",
+        backref="product_commission",
+        cascade="all, delete-orphan",
+        order_by="ProductCommissionShare.share_id.asc()",
+    )
+    ad_allocations = db.relationship(
+        "ProductCommissionAdAllocation",
+        backref="product_commission",
+        cascade="all, delete-orphan",
+        order_by="ProductCommissionAdAllocation.allocation_id.asc()",
+    )
+
+    def to_dict(self):
+        shares = [share.to_dict() for share in self.shares]
+        from app.product_commission_service import summarize_product_account_earnings
+
+        return {
+            "product_commission_id": self.product_commission_id,
+            "product_title": self.product_title,
+            "commission_amount": _money(self.commission_amount),
+            "commission_date": self.commission_date.isoformat() if self.commission_date else "",
+            "ref_seller_id": self.ref_seller_id,
+            "ref_seller_name": self.ref_seller.full_name if self.ref_seller else None,
+            "ref_buyer_id": self.ref_buyer_id,
+            "ref_buyer_name": self.ref_buyer.full_name if self.ref_buyer else None,
+            "bonus_type": self.bonus_type,
+            "bonus_percent": _money(self.bonus_percent),
+            "notes": self.notes or "",
+            "seller_pool": _money(self.seller_pool),
+            "buyer_pool": _money(self.buyer_pool),
+            "pop_amount": _money(self.pop_amount),
+            "ad_fund_amount": _money(self.ad_fund_amount),
+            "platform_amount": _money(self.platform_amount),
+            "bonus_amount": _money(self.bonus_amount),
+            "total_shared": _money(self.total_shared),
+            "total_mandate": _money(self.total_mandate),
+            "created_at": self.created_at.isoformat() if self.created_at else "",
+            "shares": shares,
+            "ad_allocations": [row.to_dict() for row in self.ad_allocations],
+            "account_summary": summarize_product_account_earnings(shares),
+        }
+
+
+class ProductCommissionAdAllocation(db.Model):
+    __tablename__ = "product_commission_ad_allocations"
+
+    allocation_id = db.Column(db.Integer, primary_key=True)
+    product_commission_id = db.Column(
+        db.Integer, db.ForeignKey("product_commissions.product_commission_id"), nullable=False
+    )
+    member_id = db.Column(db.Integer, db.ForeignKey("members.member_id"), nullable=False)
+    amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    charge_from = db.Column(db.String(20), nullable=False, default="platform")
+
+    member = db.relationship("Member")
+
+    def to_dict(self):
+        return {
+            "allocation_id": self.allocation_id,
+            "product_commission_id": self.product_commission_id,
+            "member_id": self.member_id,
+            "member_name": self.member.full_name if self.member else None,
+            "amount": _money(self.amount),
+            "charge_from": self.charge_from,
+        }
+
+
+class ProductCommissionShare(db.Model):
+    __tablename__ = "product_commission_shares"
+
+    share_id = db.Column(db.Integer, primary_key=True)
+    product_commission_id = db.Column(
+        db.Integer, db.ForeignKey("product_commissions.product_commission_id"), nullable=False
+    )
+    member_id = db.Column(db.Integer, db.ForeignKey("members.member_id"), nullable=True)
+    recipient_type = db.Column(db.String(20), nullable=False, default="member")
+    recipient_label = db.Column(db.String(120))
+    share_scheme = db.Column(db.String(40))
+    level = db.Column(db.Integer, nullable=False, default=0)
+    percentage = db.Column(db.Numeric(6, 2), nullable=False, default=0)
+    share_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+
+    member = db.relationship("Member")
+
+    def to_dict(self):
+        return {
+            "share_id": self.share_id,
+            "product_commission_id": self.product_commission_id,
+            "member_id": self.member_id,
+            "member_name": self.member.full_name if self.member else None,
+            "recipient_type": self.recipient_type,
+            "recipient_label": self.recipient_label,
+            "share_scheme": self.share_scheme,
+            "level": self.level,
+            "percentage": _money(self.percentage),
+            "share_amount": _money(self.share_amount),
+        }
 
 
 class SharingEntry(db.Model):

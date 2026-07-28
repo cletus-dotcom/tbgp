@@ -1,0 +1,46 @@
+{#
+  Searchable member picker.
+  Required context:
+    field_id, field_name, label
+  Optional:
+    required (bool), placeholder
+  Expects page JS to call initMemberSearchSelect(field_id, members)
+#}
+{% set required = required|default(false) %}
+{% set placeholder = placeholder|default('Search by name, ID, batch…') %}
+<div class="member-search-select" data-member-search-select="{{ field_id }}">
+    <label class="form-label" for="{{ field_id }}Display">
+        {{ label }}{% if required %} <span class="text-danger">*</span>{% endif %}
+    </label>
+    <input type="hidden"
+           id="{{ field_id }}"
+           name="{{ field_name }}"
+           value=""
+           {% if required %}required{% endif %}>
+    <div class="member-search-control">
+        <i class="bi bi-search member-search-icon" aria-hidden="true"></i>
+        <input type="text"
+               id="{{ field_id }}Display"
+               class="form-control member-search-input"
+               placeholder="{{ placeholder }}"
+               autocomplete="off"
+               spellcheck="false"
+               role="combobox"
+               aria-expanded="false"
+               aria-controls="{{ field_id }}List"
+               aria-autocomplete="list">
+        <button type="button"
+                class="member-search-clear d-none"
+                data-clear-for="{{ field_id }}"
+                aria-label="Clear selected member">
+            <i class="bi bi-x-lg"></i>
+        </button>
+        <div id="{{ field_id }}List"
+             class="member-search-dropdown d-none"
+             role="listbox"
+             hidden></div>
+    </div>
+    <p class="member-search-hint text-muted small mb-0 mt-1">
+        Type to search by first name, last name, member ID, or batch.
+    </p>
+</div>

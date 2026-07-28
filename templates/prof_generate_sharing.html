@@ -1,12 +1,12 @@
 {% extends "dashboard_base.html" %}
-{% block page_title %}Generate Sharing{% endblock %}
-{% block topbar_title %}Generate Sharing{% endblock %}
+{% block page_title %}Generate Project Commission{% endblock %}
+{% block topbar_title %}Generate Project Commission{% endblock %}
 
 {% block content %}
 <div class="dashboard-card section-card mb-3">
     <div class="section-header">
         <div>
-            <h5><i class="bi bi-share"></i> Generate Sharing</h5>
+            <h5><i class="bi bi-share"></i> Generate Project Commission</h5>
             <p class="section-subtitle">
                 Compute profit sharing by billing date
                 ({{ client_pool_percent }}% Ref-Client / {{ contractor_pool_percent }}% Ref-Contractor / {{ admin_account_percent }}% PLATFORM)
@@ -35,7 +35,7 @@
             </button>
             <button type="submit" class="btn btn-brand" id="generateBtn"
                 {% if not can_generate_selected %}disabled{% endif %}>
-                <i class="bi bi-lightning"></i> Generate Sharing
+                <i class="bi bi-lightning"></i> Generate Project Commission
             </button>
         </div>
     </form>

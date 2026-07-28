@@ -211,9 +211,16 @@ def migrate_member_ledger_table():
     alters = {
         "transaction_type": "VARCHAR(10) NOT NULL DEFAULT 'credit'",
         "payout_request_id": "INTEGER",
+        "product_commission_id": "INTEGER REFERENCES product_commissions(product_commission_id)",
     }
     for col_name, col_type in alters.items():
         if col_name not in columns:
+            # product_commission_id may be added before product_commissions exists on first run;
+            # create_all runs first so the table should exist. Skip FK if table missing.
+            if col_name == "product_commission_id":
+                table_names = set(inspector.get_table_names())
+                if "product_commissions" not in table_names:
+                    continue
             db.session.execute(text(f"ALTER TABLE member_ledger ADD COLUMN {col_name} {col_type}"))
             logger.info("Added member_ledger.%s", col_name)
 
@@ -470,4 +477,104 @@ def migrate_users_table():
             "ALTER TABLE users ADD COLUMN comfort_high_contrast BOOLEAN NOT NULL DEFAULT FALSE"
         ))
         logger.info("Added users.comfort_high_contrast")
+    db.session.commit()
+
+
+def migrate_product_commissions_table():
+    inspector = inspect(db.engine)
+    table_names = set(inspector.get_table_names())
+
+    if "product_commissions" not in table_names:
+        db.session.execute(text("""
+            CREATE TABLE product_commissions (
+                product_commission_id SERIAL PRIMARY KEY,
+                product_title VARCHAR(200) NOT NULL DEFAULT 'Products Commission',
+                commission_amount NUMERIC(14, 2) NOT NULL,
+                commission_date DATE NOT NULL,
+                ref_seller_id INTEGER NOT NULL REFERENCES members(member_id),
+                ref_buyer_id INTEGER NOT NULL REFERENCES members(member_id),
+                bonus_type VARCHAR(10) NOT NULL DEFAULT 'auto',
+                bonus_percent NUMERIC(6, 2) NOT NULL DEFAULT 10,
+                notes TEXT,
+                seller_pool NUMERIC(14, 2) DEFAULT 0,
+                buyer_pool NUMERIC(14, 2) DEFAULT 0,
+                pop_amount NUMERIC(14, 2) DEFAULT 0,
+                ad_fund_amount NUMERIC(14, 2) DEFAULT 0,
+                platform_amount NUMERIC(14, 2) DEFAULT 0,
+                bonus_amount NUMERIC(14, 2) DEFAULT 0,
+                total_shared NUMERIC(14, 2) DEFAULT 0,
+                total_mandate NUMERIC(14, 2) DEFAULT 0,
+                created_at TIMESTAMP NOT NULL,
+                created_by_user_id INTEGER REFERENCES users(user_id)
+            )
+        """))
+        logger.info("Created product_commissions table")
+        db.session.commit()
+
+    inspector = inspect(db.engine)
+    if "product_commission_shares" not in inspector.get_table_names():
+        db.session.execute(text("""
+            CREATE TABLE product_commission_shares (
+                share_id SERIAL PRIMARY KEY,
+                product_commission_id INTEGER NOT NULL
+                    REFERENCES product_commissions(product_commission_id) ON DELETE CASCADE,
+                member_id INTEGER REFERENCES members(member_id),
+                recipient_type VARCHAR(20) NOT NULL DEFAULT 'member',
+                recipient_label VARCHAR(120),
+                share_scheme VARCHAR(40),
+                level INTEGER NOT NULL DEFAULT 0,
+                percentage NUMERIC(6, 2) NOT NULL DEFAULT 0,
+                share_amount NUMERIC(14, 2) NOT NULL DEFAULT 0
+            )
+        """))
+        logger.info("Created product_commission_shares table")
+        db.session.commit()
+
+    inspector = inspect(db.engine)
+    if "member_ledger" in inspector.get_table_names():
+        columns = {col["name"] for col in inspector.get_columns("member_ledger")}
+        if "product_commission_id" not in columns:
+            db.session.execute(text(
+                "ALTER TABLE member_ledger ADD COLUMN product_commission_id "
+                "INTEGER REFERENCES product_commissions(product_commission_id)"
+            ))
+            logger.info("Added member_ledger.product_commission_id")
+            db.session.commit()
+
+
+def migrate_ad_split_members_table():
+    inspector = inspect(db.engine)
+    if "ad_split_members" in inspector.get_table_names():
+        return
+
+    db.session.execute(text("""
+        CREATE TABLE ad_split_members (
+            ad_split_id SERIAL PRIMARY KEY,
+            member_id INTEGER NOT NULL UNIQUE REFERENCES members(member_id),
+            description VARCHAR(255),
+            created_at TIMESTAMP NOT NULL,
+            updated_at TIMESTAMP NOT NULL,
+            created_by_user_id INTEGER REFERENCES users(user_id)
+        )
+    """))
+    logger.info("Created ad_split_members table")
+    db.session.commit()
+
+
+def migrate_product_commission_ad_allocations_table():
+    inspector = inspect(db.engine)
+    if "product_commission_ad_allocations" in inspector.get_table_names():
+        return
+
+    db.session.execute(text("""
+        CREATE TABLE product_commission_ad_allocations (
+            allocation_id SERIAL PRIMARY KEY,
+            product_commission_id INTEGER NOT NULL
+                REFERENCES product_commissions(product_commission_id) ON DELETE CASCADE,
+            member_id INTEGER NOT NULL REFERENCES members(member_id),
+            amount NUMERIC(14, 2) NOT NULL DEFAULT 0,
+            charge_from VARCHAR(20) NOT NULL DEFAULT 'platform'
+        )
+    """))
+    logger.info("Created product_commission_ad_allocations table")
     db.session.commit()

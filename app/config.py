@@ -123,9 +123,48 @@ ADMIN_MEMBER_ID = os.getenv("ADMIN_MEMBER_ID")
 ADMIN_RECIPIENT_LABEL = "PLATFORM Account"
 MANDATE_RECIPIENT_LABEL = "Mandate Account"
 POP_RECIPIENT_LABEL = "Poorest of the Poor (POP)"
+AD_FUND_RECIPIENT_LABEL = "AD-Fund"
 POP_CAP_FLUSH_LABEL = f"{POP_RECIPIENT_LABEL} (Earnings cap flush)"
 POP_LIFETIME_LIMIT_FUND_LABEL = f"{POP_RECIPIENT_LABEL} Lifetime Limit Fund"
 ADMIN_SHARING_LEVEL = -1
+
+# Products Commission top-level split (must total 100%).
+PRODUCT_REF_SELLER_PERCENT = Decimal("8")
+PRODUCT_REF_BUYER_PERCENT = Decimal("12")
+PRODUCT_POP_PERCENT = Decimal("10")
+PRODUCT_AD_FUND_PERCENT = Decimal("5")
+PRODUCT_PLATFORM_PERCENT = Decimal("65")
+
+PRODUCT_BONUS_TYPE_AUTO = "auto"
+PRODUCT_BONUS_TYPE_AD = "ad"
+PRODUCT_BONUS_TYPES = (PRODUCT_BONUS_TYPE_AUTO, PRODUCT_BONUS_TYPE_AD)
+PRODUCT_BONUS_AUTO_PERCENT = Decimal("10")  # Auto-Bonus: 10% of commission from PLATFORM
+PRODUCT_BONUS_AD_DEFAULT_PERCENT = Decimal(
+    os.getenv("PRODUCT_BONUS_AD_DEFAULT_PERCENT", "5")
+)
+
+COMMISSION_SCHEME_PRODUCT_REF_SELLER = "product_ref_seller"
+COMMISSION_SCHEME_PRODUCT_REF_BUYER = "product_ref_buyer"
+COMMISSION_SCHEME_PRODUCT_BUYER_BONUS = "product_buyer_bonus"
+COMMISSION_SCHEME_PRODUCT_POP = "product_pop"
+COMMISSION_SCHEME_PRODUCT_AD_FUND = "product_ad_fund"
+COMMISSION_SCHEME_PRODUCT_PLATFORM = "product_platform"
+COMMISSION_SCHEME_PRODUCT_AD_SPLIT = "product_ad_split"
+
+PRODUCT_AD_CHARGE_PLATFORM = "platform"
+PRODUCT_AD_CHARGE_AD_FUND = "ad_fund"
+PRODUCT_AD_CHARGE_SOURCES = (PRODUCT_AD_CHARGE_PLATFORM, PRODUCT_AD_CHARGE_AD_FUND)
+
+# Ref-Seller / Ref-Buyer pool level table (levels 1–6 upline, level 7 Mandate).
+DEFAULT_PRODUCT_POOL_LEVELS = [
+    (1, Decimal("50.00"), "Product seller/buyer referrer"),
+    (2, Decimal("25.00"), "Upline 1"),
+    (3, Decimal("5.00"), "Upline 2"),
+    (4, Decimal("5.00"), "Upline 3"),
+    (5, Decimal("5.00"), "Upline 4"),
+    (6, Decimal("5.00"), "Upline 5"),
+    (7, Decimal("5.00"), "Mandate account (Level 7)"),
+]
 
 MEMBER_EARNINGS_CAP_FIRST_PROJECT = Decimal(os.getenv("MEMBER_EARNINGS_CAP_FIRST_PROJECT", "15000000"))
 MEMBER_EARNINGS_CAP_SECOND_PROJECT = Decimal(os.getenv("MEMBER_EARNINGS_CAP_SECOND_PROJECT", "10000000"))
@@ -298,6 +337,10 @@ def mandate_subaccount_label(share_scheme):
         return f"{MANDATE_RECIPIENT_LABEL} (Platform Ref-Client)"
     if share_scheme == COMMISSION_SCHEME_PLATFORM_REF_CONTRACTOR:
         return f"{MANDATE_RECIPIENT_LABEL} (Platform Ref-Contractor)"
+    if share_scheme == COMMISSION_SCHEME_PRODUCT_REF_SELLER:
+        return f"{MANDATE_RECIPIENT_LABEL} (Product Ref-Seller)"
+    if share_scheme == COMMISSION_SCHEME_PRODUCT_REF_BUYER:
+        return f"{MANDATE_RECIPIENT_LABEL} (Product Ref-Buyer)"
     return MANDATE_RECIPIENT_LABEL
 
 
@@ -306,6 +349,8 @@ MANDATE_SUBACCOUNT_LABELS = {
     "contractor": "Ref-Contractor pool — Level 7 Mandate account",
     "platform_ref_client": "Platform Ref-Client pool — Level 7 Mandate account",
     "platform_ref_contractor": "Platform Ref-Contractor pool — Level 7 Mandate account",
+    "product_ref_seller": "Product Ref-Seller pool — Level 7 Mandate account",
+    "product_ref_buyer": "Product Ref-Buyer pool — Level 7 Mandate account",
 }
 
 

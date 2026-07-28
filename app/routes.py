@@ -42,6 +42,7 @@ from app.config import (
     CONTRACTOR_POOL_PERCENT,
     CONTRACTORS_SHEET,
     SUPPLIERS_SHEET,
+    DEFAULT_PRODUCT_POOL_LEVELS,
     MAX_SHARING_LEVELS,
     MEMBERS_SHEET,
     MEMBER_LIFETIME_EARNINGS_CAP,
@@ -54,6 +55,15 @@ from app.config import (
     PAYOUT_STATUS_PENDING,
     PAYOUT_STATUS_RELEASED,
     PAYOUT_STATUS_RELEASE_SUBMITTED,
+    PRODUCT_AD_FUND_PERCENT,
+    PRODUCT_BONUS_AD_DEFAULT_PERCENT,
+    PRODUCT_BONUS_AUTO_PERCENT,
+    PRODUCT_BONUS_TYPE_AD,
+    PRODUCT_BONUS_TYPE_AUTO,
+    PRODUCT_PLATFORM_PERCENT,
+    PRODUCT_POP_PERCENT,
+    PRODUCT_REF_BUYER_PERCENT,
+    PRODUCT_REF_SELLER_PERCENT,
     USER_ROLE_ADMIN,
     USER_ROLE_MEMBER,
     USER_ROLE_PORTAL_ADMIN,
@@ -102,6 +112,7 @@ from app.accessibility_service import (
 )
 from app.import_service import import_members_from_upload, import_members_from_xlsx, preview_members_upload
 from app.models import (
+    AdSplitMember,
     CommissionLevel,
     Contractor,
     Member,
@@ -109,6 +120,9 @@ from app.models import (
     OmpdFundEntry,
     PayoutRequest,
     PayoutNotification,
+    ProductCommission,
+    ProductCommissionAdAllocation,
+    ProductCommissionShare,
     ProjectBilling,
     ProjectCommission,
     SharingBatch,
@@ -159,6 +173,11 @@ from app.prof_sharing_service import (
     remove_sharing_batch,
     sharing_batch_summary,
     ungenerated_billing_dates,
+)
+from app.product_commission_service import (
+    compute_product_commission,
+    delete_product_commission,
+    save_product_commission,
 )
 
 main_routes = Blueprint("main_routes", __name__)
@@ -1898,6 +1917,151 @@ def prof_project_commission_delete(project_id):
         return jsonify({"status": "error", "msg": f"Delete failed: {exc}"}), 500
 
 
+@main_routes.route("/admin/prof/products-commission")
+@login_required
+@admin_required
+def prof_products_commission():
+    user = _dashboard_user()
+    products = (
+        ProductCommission.query
+        .options(
+            joinedload(ProductCommission.ref_seller),
+            joinedload(ProductCommission.ref_buyer),
+            joinedload(ProductCommission.shares).joinedload(ProductCommissionShare.member),
+            joinedload(ProductCommission.ad_allocations).joinedload(
+                ProductCommissionAdAllocation.member
+            ),
+        )
+        .order_by(
+            ProductCommission.commission_date.desc(),
+            ProductCommission.product_commission_id.desc(),
+        )
+        .all()
+    )
+    members_list = (
+        Member.query
+        .filter(Member.status == "Active")
+        .order_by(Member.batch.asc(), Member.member_id.asc())
+        .all()
+    )
+    ad_split_members = (
+        AdSplitMember.query
+        .options(joinedload(AdSplitMember.member))
+        .order_by(AdSplitMember.ad_split_id.asc())
+        .all()
+    )
+    return render_template(
+        "prof_products_commission.html",
+        fullname=user.full_name or "Admin",
+        role=normalize_role(user.role),
+        active_page="prof_products_commission",
+        products=products,
+        members=members_list,
+        ad_split_members=ad_split_members,
+        product_bonus_auto_percent=float(PRODUCT_BONUS_AUTO_PERCENT),
+        product_bonus_ad_default_percent=float(PRODUCT_BONUS_AD_DEFAULT_PERCENT),
+        product_split={
+            "ref_seller": float(PRODUCT_REF_SELLER_PERCENT),
+            "ref_buyer": float(PRODUCT_REF_BUYER_PERCENT),
+            "pop_pct": float(PRODUCT_POP_PERCENT),
+            "ad_fund": float(PRODUCT_AD_FUND_PERCENT),
+            "platform": float(PRODUCT_PLATFORM_PERCENT),
+        },
+        product_pool_levels=[
+            {"level": level, "percentage": float(pct), "description": desc}
+            for level, pct, desc in DEFAULT_PRODUCT_POOL_LEVELS
+        ],
+    )
+
+
+@main_routes.route("/admin/prof/products-commission/preview", methods=["POST"])
+@login_required
+@admin_required
+def prof_products_commission_preview():
+    data = request.get_json() if request.is_json else request.form
+    try:
+        commission_date = _parse_form_date(data.get("commission_date"), "commission_date")
+        if not commission_date:
+            raise ValueError("Commission date is required.")
+        amount = _parse_decimal(data.get("commission_amount"), "commission_amount")
+        ref_seller_id = _parse_form_int(data.get("ref_seller_id"), "ref_seller_id")
+        ref_buyer_id = _parse_form_int(data.get("ref_buyer_id"), "ref_buyer_id")
+        if not ref_seller_id or not ref_buyer_id:
+            raise ValueError("Ref-Seller and Ref-Buyer are required.")
+        result = compute_product_commission(
+            commission_amount=amount,
+            ref_seller_id=ref_seller_id,
+            ref_buyer_id=ref_buyer_id,
+            bonus_type=data.get("bonus_type") or PRODUCT_BONUS_TYPE_AUTO,
+            ad_bonus_percent=data.get("ad_bonus_percent"),
+            product_title=(data.get("product_title") or "").strip() or "Products Commission",
+            commission_date=commission_date,
+            ad_allocations=data.get("ad_allocations"),
+        )
+        result.pop("_share_objects", None)
+        result.pop("_allocation_objects", None)
+        return jsonify({"status": "success", "computation": result})
+    except ValueError as exc:
+        return jsonify({"status": "error", "msg": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"status": "error", "msg": f"Preview failed: {exc}"}), 500
+
+
+@main_routes.route("/admin/prof/products-commission", methods=["POST"])
+@login_required
+@admin_required
+def prof_products_commission_save():
+    data = request.get_json() if request.is_json else request.form
+    try:
+        commission_date = _parse_form_date(data.get("commission_date"), "commission_date")
+        if not commission_date:
+            raise ValueError("Commission date is required.")
+        amount = _parse_decimal(data.get("commission_amount"), "commission_amount")
+        ref_seller_id = _parse_form_int(data.get("ref_seller_id"), "ref_seller_id")
+        ref_buyer_id = _parse_form_int(data.get("ref_buyer_id"), "ref_buyer_id")
+        if not ref_seller_id or not ref_buyer_id:
+            raise ValueError("Ref-Seller and Ref-Buyer are required.")
+
+        product = save_product_commission(
+            commission_amount=amount,
+            ref_seller_id=ref_seller_id,
+            ref_buyer_id=ref_buyer_id,
+            bonus_type=data.get("bonus_type") or PRODUCT_BONUS_TYPE_AUTO,
+            ad_bonus_percent=data.get("ad_bonus_percent"),
+            product_title=(data.get("product_title") or "").strip() or "Products Commission",
+            commission_date=commission_date,
+            notes=data.get("notes"),
+            created_by_user_id=session.get("user_id"),
+            ad_allocations=data.get("ad_allocations"),
+        )
+        return jsonify({
+            "status": "success",
+            "msg": f"Products commission #{product.product_commission_id} saved.",
+            "product": product.to_dict(),
+        })
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": str(exc)}), 400
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": f"Save failed: {exc}"}), 500
+
+
+@main_routes.route("/admin/prof/products-commission/<int:product_commission_id>", methods=["DELETE"])
+@login_required
+@admin_required
+def prof_products_commission_delete(product_commission_id):
+    try:
+        delete_product_commission(product_commission_id)
+        return jsonify({"status": "success", "msg": "Products commission deleted."})
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": str(exc)}), 400
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": f"Delete failed: {exc}"}), 500
+
+
 @main_routes.route("/admin/prof/commission-levels")
 @login_required
 @admin_required
@@ -1907,6 +2071,18 @@ def prof_commission_levels():
     contractor_levels = get_commission_levels(COMMISSION_SCHEME_CONTRACTOR)
     client_total_pct = sum(float(row.percentage or 0) for row in client_levels)
     contractor_total_pct = sum(float(row.percentage or 0) for row in contractor_levels)
+    ad_split_members = (
+        AdSplitMember.query
+        .options(joinedload(AdSplitMember.member))
+        .order_by(AdSplitMember.ad_split_id.asc())
+        .all()
+    )
+    active_members = (
+        Member.query
+        .filter(Member.status == "Active")
+        .order_by(Member.batch.asc(), Member.member_id.asc())
+        .all()
+    )
     return render_template(
         "prof_commission_levels.html",
         fullname=user.full_name or "Admin",
@@ -1916,7 +2092,83 @@ def prof_commission_levels():
         contractor_levels=contractor_levels,
         client_total_pct=client_total_pct,
         contractor_total_pct=contractor_total_pct,
+        ad_split_members=ad_split_members,
+        members=active_members,
     )
+
+
+@main_routes.route("/admin/prof/ad-split-members", methods=["POST"])
+@login_required
+@admin_required
+def prof_ad_split_members_save():
+    data = request.get_json() if request.is_json else request.form
+    ad_split_id = (data.get("ad_split_id") or "").strip()
+
+    try:
+        member_id = _parse_form_int(data.get("member_id"), "member_id")
+        if not member_id:
+            raise ValueError("Member is required.")
+        member = db.session.get(Member, member_id)
+        if not member:
+            raise ValueError("Member not found.")
+        if member.status != "Active":
+            raise ValueError("Only active members can be added to AD-Members Split Sharing.")
+
+        description = (data.get("description") or "").strip() or None
+        if description and len(description) > 255:
+            raise ValueError("Description must be 255 characters or fewer.")
+
+        if ad_split_id:
+            row = db.session.get(AdSplitMember, int(ad_split_id))
+            if not row:
+                return jsonify({"status": "error", "msg": "AD-Member entry not found."}), 404
+            conflict = AdSplitMember.query.filter(
+                AdSplitMember.member_id == member_id,
+                AdSplitMember.ad_split_id != row.ad_split_id,
+            ).first()
+            if conflict:
+                raise ValueError(f"Member #{member_id} is already in AD-Members Split Sharing.")
+            row.member_id = member_id
+            row.description = description
+            row.updated_at = datetime.utcnow()
+            msg = "AD-Member updated."
+        else:
+            if AdSplitMember.query.filter_by(member_id=member_id).first():
+                raise ValueError(f"Member #{member_id} is already in AD-Members Split Sharing.")
+            row = AdSplitMember(
+                member_id=member_id,
+                description=description,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+                created_by_user_id=session.get("user_id"),
+            )
+            db.session.add(row)
+            msg = "AD-Member added."
+
+        db.session.commit()
+        return jsonify({"status": "success", "msg": msg, "ad_member": row.to_dict()})
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": str(exc)}), 400
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": f"Save failed: {exc}"}), 500
+
+
+@main_routes.route("/admin/prof/ad-split-members/<int:ad_split_id>", methods=["DELETE"])
+@login_required
+@admin_required
+def prof_ad_split_members_delete(ad_split_id):
+    row = db.session.get(AdSplitMember, ad_split_id)
+    if not row:
+        return jsonify({"status": "error", "msg": "AD-Member entry not found."}), 404
+    try:
+        db.session.delete(row)
+        db.session.commit()
+        return jsonify({"status": "success", "msg": "AD-Member removed."})
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": f"Delete failed: {exc}"}), 500
 
 
 @main_routes.route("/admin/prof/commission-levels", methods=["POST"])
