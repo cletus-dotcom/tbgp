@@ -1,13 +1,28 @@
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
 from app.auth import login_required, site_admin_required
-from app.config import is_portal_admin_role, is_site_admin_role, normalize_role, supabase_storage_configured
+from app.config import (
+    MARKETPLACE_CATEGORIES,
+    MARKETPLACE_CATEGORY_SLUGS,
+    is_portal_admin_role,
+    is_site_admin_role,
+    normalize_role,
+    supabase_storage_configured,
+)
+from app.marketplace_service import (
+    delete_listing,
+    get_listing,
+    list_all_for_admin,
+    parse_listing_form,
+    save_listing,
+)
 from app.site_content_service import (
     delete_registry_partner,
     get_all_ecosystem_pages,
     get_ecosystem_page,
     get_ecosystem_slugs,
     get_landing_ecosystem_section,
+    get_marketplace_summaries,
     get_services_contact_cta,
     save_services_contact_cta,
     get_contractors,
@@ -20,11 +35,14 @@ from app.site_content_service import (
     apply_portal_partner_profile,
     save_ecosystem_page,
     save_landing_ecosystem_section,
+    save_marketplace_summaries,
     save_registry_partner,
 )
 from app.user_manual_content import resolve_user_manual
-from app.supabase_storage_service import upload_partner_image as store_partner_image
-
+from app.supabase_storage_service import (
+    upload_marketplace_image as store_marketplace_image,
+    upload_partner_image as store_partner_image,
+)
 site_admin_bp = Blueprint("site_admin", __name__, url_prefix="/site-admin")
 
 REGISTRY_TYPES = {
@@ -87,6 +105,8 @@ def _partner_edit_context(partner, registry_type, meta, is_new):
 @login_required
 @site_admin_required
 def home():
+    listings = list_all_for_admin()
+    published_count = sum(1 for row in listings if row.status == "published")
     return render_template(
         "site_admin/home.html",
         active_page="home",
@@ -95,6 +115,8 @@ def home():
         suppliers=get_suppliers(),
         landing_section=get_landing_ecosystem_section(),
         contact_cta=get_services_contact_cta(),
+        marketplace_count=len(listings),
+        marketplace_published=published_count,
     )
 
 
@@ -329,3 +351,155 @@ def registry_edit(slug):
         "site_admin/partner_edit.html",
         **_partner_edit_context(partner, partner_type, meta, is_new=False),
     )
+
+
+def _listing_edit_context(listing, is_new=False):
+    image_key = f"listing-{listing.listing_id}" if listing and getattr(listing, "listing_id", None) else "draft"
+    return {
+        "active_page": "marketplace",
+        "listing": listing,
+        "is_new": is_new,
+        "categories": MARKETPLACE_CATEGORIES,
+        "category_slugs": MARKETPLACE_CATEGORY_SLUGS,
+        "partner_image_upload_enabled": supabase_storage_configured(),
+        "partner_image_upload_url": url_for("site_admin.upload_marketplace_image"),
+        "image_key": image_key,
+    }
+
+
+@site_admin_bp.route("/marketplace")
+@login_required
+@site_admin_required
+def marketplace_list():
+    category = (request.args.get("category") or "").strip() or None
+    if category and category not in MARKETPLACE_CATEGORIES:
+        category = None
+    listings = list_all_for_admin(category)
+    return render_template(
+        "site_admin/marketplace_list.html",
+        active_page="marketplace",
+        listings=listings,
+        categories=MARKETPLACE_CATEGORIES,
+        category_slugs=MARKETPLACE_CATEGORY_SLUGS,
+        filter_category=category,
+        marketplace_summaries=get_marketplace_summaries(),
+    )
+
+
+@site_admin_bp.route("/marketplace/summaries", methods=["POST"])
+@login_required
+@site_admin_required
+def marketplace_summaries_save():
+    try:
+        save_marketplace_summaries(request.form)
+        flash("Marketplace executive summaries saved.", "success")
+    except ValueError as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("site_admin.marketplace_list") + "#executive-summaries")
+
+
+@site_admin_bp.route("/marketplace/new", methods=["GET", "POST"])
+@login_required
+@site_admin_required
+def marketplace_new():
+    if request.method == "POST":
+        try:
+            data = parse_listing_form(request.form)
+            listing = save_listing(data, created_by_user_id=session.get("user_id"))
+            flash("Marketplace listing created.", "success")
+            return redirect(url_for("site_admin.marketplace_edit", listing_id=listing.listing_id))
+        except ValueError as exc:
+            flash(str(exc), "danger")
+            draft = {
+                "category": request.form.get("category") or "real_property",
+                "title": request.form.get("title") or "",
+                "summary": request.form.get("summary") or "",
+                "body": request.form.get("body") or "",
+                "price_label": request.form.get("price_label") or "",
+                "location": request.form.get("location") or "",
+                "status": request.form.get("status") or "draft",
+                "thumbnail_url": request.form.get("thumbnail_url") or "",
+                "gallery": [],
+                "contact_name": request.form.get("contact_name") or "",
+                "contact_phone": request.form.get("contact_phone") or "",
+                "contact_email": request.form.get("contact_email") or "",
+                "sort_order": request.form.get("sort_order") or 0,
+            }
+            return render_template(
+                "site_admin/marketplace_edit.html",
+                **_listing_edit_context(draft, is_new=True),
+            )
+
+    default_category = request.args.get("category") or "real_property"
+    if default_category not in MARKETPLACE_CATEGORIES:
+        default_category = "real_property"
+    blank = {
+        "category": default_category,
+        "title": "",
+        "summary": "",
+        "body": "",
+        "price_label": "",
+        "location": "",
+        "status": "draft",
+        "thumbnail_url": "",
+        "gallery": [],
+        "contact_name": "",
+        "contact_phone": "",
+        "contact_email": "",
+        "sort_order": 0,
+    }
+    return render_template(
+        "site_admin/marketplace_edit.html",
+        **_listing_edit_context(blank, is_new=True),
+    )
+
+
+@site_admin_bp.route("/marketplace/<int:listing_id>/edit", methods=["GET", "POST"])
+@login_required
+@site_admin_required
+def marketplace_edit(listing_id):
+    listing = get_listing(listing_id)
+    if not listing:
+        flash("Listing not found.", "danger")
+        return redirect(url_for("site_admin.marketplace_list"))
+
+    if request.method == "POST":
+        if request.form.get("_action") == "delete":
+            delete_listing(listing_id)
+            flash("Listing deleted.", "success")
+            return redirect(url_for("site_admin.marketplace_list"))
+        try:
+            data = parse_listing_form(request.form, existing=listing)
+            save_listing(data, listing=listing)
+            flash("Marketplace listing updated.", "success")
+            return redirect(url_for("site_admin.marketplace_edit", listing_id=listing_id))
+        except ValueError as exc:
+            flash(str(exc), "danger")
+
+    return render_template(
+        "site_admin/marketplace_edit.html",
+        **_listing_edit_context(listing, is_new=False),
+    )
+
+
+@site_admin_bp.route("/marketplace/image", methods=["POST"])
+@login_required
+@site_admin_required
+def upload_marketplace_image():
+    if not supabase_storage_configured():
+        return jsonify({"error": "Supabase Storage is not configured on this server."}), 503
+
+    file = request.files.get("file")
+    kind = request.form.get("kind", "gallery")
+    if kind == "thumb":
+        kind = "thumb"
+    elif kind != "gallery":
+        kind = "gallery"
+    slug = request.form.get("slug", "draft")
+    try:
+        result = store_marketplace_image(file, slug, kind)
+        return jsonify(result)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception:
+        return jsonify({"error": "Image upload failed. Try again or paste an image URL."}), 500

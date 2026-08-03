@@ -64,6 +64,7 @@ class Member(db.Model):
     termination_type = db.Column(db.String(60))
     lifetime_cap_enabled = db.Column(db.Boolean, default=True)
     lifetime_cap_amount = db.Column(db.Numeric(14, 2), default=50000000)
+    marketplace_share_code = db.Column(db.String(40), unique=True, nullable=True)
 
     referrer = db.relationship("Member", remote_side=[member_id], backref="referrals")
 
@@ -689,3 +690,93 @@ class CmsRegistryPartner(db.Model):
     sort_order = db.Column(db.Integer, default=0, nullable=False)
     data = db.Column(db.JSON, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class MarketplaceListing(db.Model):
+    __tablename__ = "marketplace_listings"
+
+    listing_id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(40), nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    summary = db.Column(db.String(500))
+    body = db.Column(db.Text)
+    price_label = db.Column(db.String(120))
+    location = db.Column(db.String(255))
+    status = db.Column(db.String(20), nullable=False, default="draft", index=True)
+    thumbnail_url = db.Column(db.String(500))
+    gallery = db.Column(db.JSON, nullable=False, default=list)
+    contact_name = db.Column(db.String(120))
+    contact_phone = db.Column(db.String(40))
+    contact_email = db.Column(db.String(120))
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=True)
+
+    leads = db.relationship(
+        "MarketplaceLead",
+        backref="listing",
+        cascade="all, delete-orphan",
+        order_by="MarketplaceLead.created_at.desc()",
+    )
+    created_by = db.relationship("User", foreign_keys=[created_by_user_id])
+
+    def to_dict(self):
+        return {
+            "listing_id": self.listing_id,
+            "category": self.category,
+            "title": self.title,
+            "summary": self.summary or "",
+            "body": self.body or "",
+            "price_label": self.price_label or "",
+            "location": self.location or "",
+            "status": self.status,
+            "thumbnail_url": self.thumbnail_url or "",
+            "gallery": self.gallery or [],
+            "contact_name": self.contact_name or "",
+            "contact_phone": self.contact_phone or "",
+            "contact_email": self.contact_email or "",
+            "sort_order": self.sort_order or 0,
+            "created_at": self.created_at.isoformat() if self.created_at else "",
+            "updated_at": self.updated_at.isoformat() if self.updated_at else "",
+        }
+
+
+class MarketplaceLead(db.Model):
+    __tablename__ = "marketplace_leads"
+
+    lead_id = db.Column(db.Integer, primary_key=True)
+    listing_id = db.Column(
+        db.Integer, db.ForeignKey("marketplace_listings.listing_id"), nullable=False
+    )
+    attributed_member_id = db.Column(
+        db.Integer, db.ForeignKey("members.member_id"), nullable=True, index=True
+    )
+    guest_name = db.Column(db.String(120), nullable=False)
+    guest_phone = db.Column(db.String(40))
+    guest_email = db.Column(db.String(120))
+    message = db.Column(db.Text)
+    source_path = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    attributed_member = db.relationship("Member", foreign_keys=[attributed_member_id])
+
+    def to_dict(self):
+        listing = self.listing
+        member = self.attributed_member
+        return {
+            "lead_id": self.lead_id,
+            "listing_id": self.listing_id,
+            "listing_title": listing.title if listing else None,
+            "listing_category": listing.category if listing else None,
+            "attributed_member_id": self.attributed_member_id,
+            "attributed_member_name": member.full_name if member else None,
+            "guest_name": self.guest_name,
+            "guest_phone": self.guest_phone or "",
+            "guest_email": self.guest_email or "",
+            "message": self.message or "",
+            "source_path": self.source_path or "",
+            "created_at": self.created_at.isoformat() if self.created_at else "",
+        }

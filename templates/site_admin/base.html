@@ -74,6 +74,16 @@
                     <i class="bi bi-box-seam"></i> Supplier Registry
                 </a>
             </li>
+            <li>
+                <a href="{{ url_for('site_admin.marketplace_list') }}" class="{% if active_page == 'marketplace' %}active{% endif %}">
+                    <i class="bi bi-shop"></i> Marketplace
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main_routes.marketplace_crm') }}" class="{% if active_page == 'marketplace_crm' %}active{% endif %}">
+                    <i class="bi bi-graph-up-arrow"></i> Marketplace CRM
+                </a>
+            </li>
         </ul>
 
         <p class="sidebar-label">Account</p>
@@ -82,6 +92,13 @@
             <li>
                 <a href="{{ url_for('site_admin.user_manual') }}" class="{% if active_page == 'user_manual' %}active{% endif %}">
                     <i class="bi bi-question-circle"></i> User Manual
+                </a>
+            </li>
+            {% endif %}
+            {% if can_view_marketplace_help(session.get('role')) %}
+            <li>
+                <a href="{{ url_for('main_routes.help_marketplace_crm') }}" class="{% if active_page == 'help_marketplace_crm' %}active{% endif %}">
+                    <i class="bi bi-shop"></i> Marketplace &amp; CRM Guide
                 </a>
             </li>
             {% endif %}

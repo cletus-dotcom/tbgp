@@ -1,0 +1,250 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Marketplace CRM{% endblock %}
+{% block topbar_title %}Marketplace CRM{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-graph-up-arrow"></i> Marketplace CRM</h5>
+            <p class="section-subtitle">Trace inquiries, listing performance, and member referrals</p>
+        </div>
+        <div class="section-actions d-flex flex-wrap gap-2">
+            <a href="{{ url_for('site_admin.marketplace_list') }}" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-shop"></i> Manage listings
+            </a>
+            <a href="{{ url_for('main_routes.marketplace_crm_export') }}{% if request.query_string %}?{{ request.query_string.decode('utf-8') }}{% endif %}"
+               class="btn btn-brand btn-sm">
+                <i class="bi bi-download"></i> Export CSV
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-lg-3">
+            <div class="stat-tile p-2">
+                <div class="stat-value">{{ overview.total_leads }}</div>
+                <div class="stat-label">Total inquiries</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-tile p-2">
+                <div class="stat-value">{{ overview.attributed_leads }}</div>
+                <div class="stat-label">Referred (attributed)</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-tile p-2">
+                <div class="stat-value">{{ overview.unattributed_leads }}</div>
+                <div class="stat-label">Direct / no referrer</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="stat-tile p-2">
+                <div class="stat-value">{{ overview.listings_with_leads }} / {{ overview.published_listings }}</div>
+                <div class="stat-label">Listings with leads / published</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-4">
+            <h6 class="text-brand mb-2">By category</h6>
+            <div class="table-responsive">
+                <table class="table table-sm section-table mb-0">
+                    <thead>
+                        <tr><th>Category</th><th class="text-end">Published</th><th class="text-end">Inquiries</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for row in overview.by_category %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('main_routes.marketplace_crm', category=row.category) }}">{{ row.label }}</a>
+                            </td>
+                            <td class="text-end">{{ row.published }}</td>
+                            <td class="text-end">{{ row.leads }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <h6 class="text-brand mb-2">Top listings</h6>
+            {% if overview.top_listings %}
+            <div class="table-responsive">
+                <table class="table table-sm section-table mb-0">
+                    <thead>
+                        <tr><th>Listing</th><th class="text-end">Inquiries</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for row in overview.top_listings %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('main_routes.marketplace_crm_listing', listing_id=row.listing.listing_id) }}">
+                                    {{ row.listing.title }}
+                                </a>
+                                <div class="text-muted small">
+                                    {{ categories[row.listing.category].label if row.listing.category in categories else row.listing.category }}
+                                </div>
+                            </td>
+                            <td class="text-end">{{ row.lead_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted small mb-0">No inquiries yet.</p>
+            {% endif %}
+        </div>
+        <div class="col-lg-4">
+            <h6 class="text-brand mb-2">Top referring members</h6>
+            {% if overview.top_referrers %}
+            <div class="table-responsive">
+                <table class="table table-sm section-table mb-0">
+                    <thead>
+                        <tr><th>Member</th><th class="text-end">Inquiries</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for row in overview.top_referrers %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('main_routes.marketplace_crm', referrer_id=row.member_id) }}">
+                                    #{{ row.member_id }} — {{ row.member_name }}
+                                </a>
+                            </td>
+                            <td class="text-end">{{ row.lead_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted small mb-0">No attributed referrals yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-funnel"></i> Inquiry log</h5>
+            <p class="section-subtitle">{{ leads|length }} matching record(s) (max 500)</p>
+        </div>
+    </div>
+
+    <form method="get" class="row g-2 align-items-end mb-3">
+        <div class="col-md-3">
+            <label class="form-label" for="q">Search</label>
+            <input type="text" class="form-control" id="q" name="q" value="{{ filters.q or '' }}"
+                   placeholder="Guest, email, listing, referrer…">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" for="category">Category</label>
+            <select class="form-select" id="category" name="category">
+                <option value="">All</option>
+                {% for slug in category_slugs %}
+                <option value="{{ slug }}" {% if filters.category == slug %}selected{% endif %}>
+                    {{ categories[slug].label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" for="listing_id">Listing</label>
+            <select class="form-select" id="listing_id" name="listing_id">
+                <option value="">All</option>
+                {% for item in listing_options %}
+                <option value="{{ item.listing_id }}" {% if filters.listing_id == item.listing_id %}selected{% endif %}>
+                    #{{ item.listing_id }} — {{ item.title }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" for="attribution">Referral</label>
+            <select class="form-select" id="attribution" name="attribution">
+                <option value="" {% if not filters.attribution %}selected{% endif %}>All</option>
+                <option value="attributed" {% if filters.attribution == 'attributed' %}selected{% endif %}>Has referrer</option>
+                <option value="unattributed" {% if filters.attribution == 'unattributed' %}selected{% endif %}>No referrer</option>
+            </select>
+        </div>
+        <div class="col-md-1">
+            <label class="form-label" for="referrer_id">Ref. ID</label>
+            <input type="number" class="form-control" id="referrer_id" name="referrer_id"
+                   value="{{ filters.referrer_id or '' }}" min="1" placeholder="ID">
+        </div>
+        <div class="col-md-1">
+            <label class="form-label" for="date_from">From</label>
+            <input type="date" class="form-control" id="date_from" name="date_from" value="{{ filters.date_from or '' }}">
+        </div>
+        <div class="col-md-1">
+            <label class="form-label" for="date_to">To</label>
+            <input type="date" class="form-control" id="date_to" name="date_to" value="{{ filters.date_to or '' }}">
+        </div>
+        <div class="col-12 d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-brand btn-sm">
+                <i class="bi bi-search"></i> Apply filters
+            </button>
+            <a href="{{ url_for('main_routes.marketplace_crm') }}" class="btn btn-outline-light btn-sm">Clear</a>
+        </div>
+    </form>
+
+    {% if leads %}
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Listing</th>
+                    <th>Who inquired</th>
+                    <th>Contact</th>
+                    <th>Referred by</th>
+                    <th>Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lead in leads %}
+                <tr>
+                    <td class="text-nowrap">{{ lead.created_at.strftime('%Y-%m-%d %H:%M') if lead.created_at else '—' }}</td>
+                    <td>
+                        {% if lead.listing %}
+                        <a href="{{ url_for('main_routes.marketplace_crm_listing', listing_id=lead.listing_id) }}">
+                            {{ lead.listing.title }}
+                        </a>
+                        <div class="text-muted small">
+                            {{ categories[lead.listing.category].label if lead.listing.category in categories else lead.listing.category }}
+                            · #{{ lead.listing_id }}
+                        </div>
+                        {% else %}
+                        #{{ lead.listing_id }}
+                        {% endif %}
+                    </td>
+                    <td>{{ lead.guest_name }}</td>
+                    <td>
+                        {% if lead.guest_phone %}<div>{{ lead.guest_phone }}</div>{% endif %}
+                        {% if lead.guest_email %}<div class="small">{{ lead.guest_email }}</div>{% endif %}
+                        {% if not lead.guest_phone and not lead.guest_email %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if lead.attributed_member %}
+                        <a href="{{ url_for('main_routes.marketplace_crm', referrer_id=lead.attributed_member_id) }}">
+                            #{{ lead.attributed_member_id }} — {{ lead.attributed_member.full_name }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">Direct / none</span>
+                        {% endif %}
+                    </td>
+                    <td class="small" style="max-width: 16rem;">{{ lead.message or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No inquiries match these filters.</p>
+    {% endif %}
+</div>
+{% endblock %}

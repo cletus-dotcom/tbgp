@@ -54,7 +54,7 @@ USER_MANUALS = {
     },
     USER_ROLE_SITE_ADMIN: {
         "title": "SiteAdmin User Manual",
-        "summary": "Manage the public TBGP landing site, ecosystem pages, partner registry, and services contact card.",
+        "summary": "Manage the public TBGP landing site, ecosystem pages, partner registry, marketplace listings, and services contact card.",
         "sections": [
             {
                 "heading": "Getting Started",
@@ -104,6 +104,19 @@ USER_MANUALS = {
                 ],
             },
             {
+                "heading": "Marketplace Listings",
+                "items": [
+                    "Use Marketplace in the sidebar to add, edit, publish, or delete real property and products listings.",
+                    "Set title, summary, details, price label, location, thumbnail, gallery images, and inquiry contact defaults.",
+                    "Only Published listings appear on the public marketplace and landing carousel.",
+                    "Edit Executive summaries on the Marketplace page to set the intro copy shown on each public category page.",
+                    "When Supabase Storage is configured, upload thumbnail and gallery images; otherwise paste public image URLs.",
+                    "Guest inquiries are interest-only (no online payment). Members share referral links and review attributed leads in My Marketplace.",
+                    "Admin and PortalAdmin accounts can also open Marketplace Listings from the portal Administration menu.",
+                    "Use Marketplace CRM to trace inquiries: filter by category, listing, date, and referrer; see who inquired and who referred them; open per-listing statistics; export CSV.",
+                ],
+            },
+            {
                 "heading": "Help and Account",
                 "items": [
                     "Open User Manual in the sidebar for this guide.",
@@ -124,6 +137,7 @@ USER_MANUALS = {
                     "Open Payouts for payout scheme reference, payout queue actions, and fund release reports.",
                     "Open Income Management for project commissions, products commission, commission levels, generate project commission, and commission reports.",
                     "Open Administration → Admin Options for user management.",
+                    "Open Administration → Site Content or Marketplace Listings to publish marketplace items and edit category executive summaries.",
                     "Open Help for this manual, Features & Process Flow, and About the Platform.",
                     "Use Home at the bottom of the sidebar to return to the public landing page.",
                     "Open Reading in the top bar to choose Standard, Large, or Extra large text and turn High contrast on or off.",
@@ -135,6 +149,16 @@ USER_MANUALS = {
                     "Use Dashboard for network-wide statistics on members, contractors, and suppliers.",
                     "Click any summary card to open the related Members, Contractors, or Suppliers list.",
                     "Review batch distribution, top referrers, and latest batch counts from the dashboard sections.",
+                ],
+            },
+            {
+                "heading": "Marketplace Listings",
+                "items": [
+                    "Use Administration → Marketplace Listings to create, edit, publish, or delete real property and products listings.",
+                    "Published listings appear on the public marketplace pages and landing carousel.",
+                    "Edit Executive summaries on the same page to control the intro copy on each marketplace category page.",
+                    "Use Administration → Marketplace CRM to view inquiry statistics, search/filter leads, and see who inquired and which member referred them.",
+                    "Open a listing from Marketplace CRM for per-item inquiry counts, referrer breakdown, and guest contact details. Export filtered results to CSV when needed.",
                 ],
             },
             {
@@ -253,6 +277,7 @@ USER_MANUALS = {
                     "Use Dashboard for your member summary and earnings overview.",
                     "Use My Information, My Ledger, and My Hierarchy for your own records only.",
                     "Use My Member Referrals, My Contractors, and My Suppliers to review partners you referred.",
+                    "Use My Marketplace to copy your share links and review guest inquiries attributed to you.",
                     "Open Help for this manual, Features & Process Flow, and About the Platform.",
                     "Use Home at the bottom of the sidebar to return to the public landing page.",
                 ],
@@ -266,6 +291,15 @@ USER_MANUALS = {
                     "When logged in, reading settings are saved to your account and follow you across devices.",
                     "Click any summary card to open member referrals, downline, contractor/supplier referrals, profile, or ledger details.",
                     "If your account is not linked to a member record, contact the Admin or Staff.",
+                ],
+            },
+            {
+                "heading": "My Marketplace CRM",
+                "items": [
+                    "Open My Marketplace to copy your personal marketplace hub link and category links.",
+                    "When a guest opens your /m/<code>/marketplace link, TBGP remembers you for about 30 days and credits inquiries to your CRM log.",
+                    "Guests can browse listings and submit interest inquiries only; there is no online checkout in this version.",
+                    "Review attributed guest name, contact details, listing, and message in the Inquiry CRM log.",
                 ],
             },
             {
@@ -350,12 +384,17 @@ APP_FEATURES = [
     {
         "icon": "bi-globe2",
         "title": "Public Site and Partner Registry",
-        "description": "Publish ecosystem pages, partner profiles with image uploads, and services contact content managed through Site Content.",
+        "description": "Publish ecosystem pages, partner profiles with image uploads, marketplace listings, and services contact content managed through Site Content.",
     },
     {
         "icon": "bi-shield-lock",
         "title": "Role-Based Access",
         "description": "Separate PortalAdmin, SiteAdmin, Admin, Staff, and Member permissions so users only see tools appropriate to their role.",
+    },
+    {
+        "icon": "bi-shop",
+        "title": "Marketplace and Member CRM",
+        "description": "Public marketplace for property and products; members share referral links and review attributed guest inquiries.",
     },
     {
         "icon": "bi-file-earmark-spreadsheet",
@@ -376,11 +415,15 @@ APP_PROCESS_FLOW = [
     },
     {
         "title": "Publish Public Site Content",
-        "description": "SiteAdmin or PortalAdmin updates landing copy, ecosystem pages, partner registry entries with images, and the services contact card.",
+        "description": "SiteAdmin, Admin, or PortalAdmin updates landing copy, ecosystem pages, partner registry, marketplace listings and executive summaries, and the services contact card.",
     },
     {
         "title": "Build the Referral Network",
         "description": "Member referrers and contractor or supplier referrers are recorded so hierarchy, commission paths, referral lists, and ledger ownership are clear.",
+    },
+    {
+        "title": "Share Marketplace Links",
+        "description": "Members copy personal marketplace links; guests browse listings and submit inquiries that are attributed to the referring member’s CRM log.",
     },
     {
         "title": "Encode Project Commissions",
@@ -407,6 +450,120 @@ APP_PROCESS_FLOW = [
         "description": "Admin and authorized users review project reports, commission summaries, payout reports, and PDF exports for reconciliation.",
     },
 ]
+
+
+MARKETPLACE_CRM_GUIDE = {
+    "title": "Marketplace & CRM Guide",
+    "summary": (
+        "Public inquiry marketplace for Real Property and Products, member share-link attribution, "
+        "and Admin Marketplace CRM for tracing inquiries and referrers. No online checkout in this version."
+    ),
+    "overview": [
+        "TBGP Marketplace is a public inquiry marketplace (interest only—no payment or cart).",
+        "Categories: Real Property and Products.",
+        "Site Admin / Admin / PortalAdmin publish listings and category executive summaries.",
+        "Members share personal marketplace links; guests who inquire via those links are attributed to the member.",
+        "Marketplace CRM lets Admin and Site Content editors search, filter, and review inquiry statistics.",
+    ],
+    "roles": [
+        {"role": "Guest", "access": "Browse marketplace, open listings, submit inquiries."},
+        {"role": "Member", "access": "Copy share links and review attributed inquiries in My Marketplace."},
+        {
+            "role": "Admin / PortalAdmin / SiteAdmin",
+            "access": "Create and publish listings, edit executive summaries, use Marketplace CRM.",
+        },
+        {
+            "role": "Staff",
+            "access": "Read this guide for operational awareness; listing publish and CRM tools remain with Admin / Site Content editors.",
+        },
+    ],
+    "modules": [
+        {
+            "title": "Public Marketplace",
+            "items": [
+                "Landing page carousel links to Real Property and Products.",
+                "Each category page shows an executive summary plus a thumbnail grid of published listings.",
+                "Listing detail shows basic information, gallery, and an inquiry form (name plus phone or email, and optional message).",
+            ],
+        },
+        {
+            "title": "Member Share & Attribution",
+            "items": [
+                "Each member receives a marketplace share code (created on first visit to My Marketplace).",
+                "Share URLs use the form /m/<code>/marketplace/…",
+                "Opening a share link sets a ~30-day attribution cookie (last share link visited wins).",
+                "An inquiry is stored against the listing and credited to the attributed member when the cookie is present.",
+            ],
+        },
+        {
+            "title": "Listing Management",
+            "items": [
+                "Path: Site Content → Marketplace, or Administration → Marketplace Listings.",
+                "Create, edit, publish, or delete listings (draft/published, price label, location, summary, body, images, contacts).",
+                "Edit executive summaries (title and body) shown on each public category page.",
+            ],
+        },
+        {
+            "title": "Marketplace CRM (Admin)",
+            "items": [
+                "Path: Administration → Marketplace CRM (/admin/marketplace-crm).",
+                "Overview: total inquiries, attributed vs direct, listings with leads, counts by category, top listings, top referrers.",
+                "Inquiry log columns: who inquired, contact, listing, referred by, message.",
+                "Filters: search, category, listing, has/no referrer, referrer member ID, date range.",
+                "Per-listing page: item stats, referrer breakdown, and full guest list.",
+                "Export CSV for the current filter set.",
+            ],
+        },
+        {
+            "title": "Member CRM (My Marketplace)",
+            "items": [
+                "Members copy hub and per-category share links.",
+                "Inquiry log shows only leads attributed to that member.",
+            ],
+        },
+    ],
+    "process_flow": [
+        {
+            "title": "Publish listings",
+            "description": "Admin or SiteAdmin creates and publishes Real Property or Products listings and optional executive summaries.",
+        },
+        {
+            "title": "Listings go public",
+            "description": "Published items appear on the landing marketplace carousel and category grids.",
+        },
+        {
+            "title": "Guest browses or member shares",
+            "description": "Guests open the public marketplace, or a member shares /m/<code>/marketplace/… so attribution is stored.",
+        },
+        {
+            "title": "Guest submits inquiry",
+            "description": "Inquiry is saved with guest details, listing, and optional attributed member.",
+        },
+        {
+            "title": "CRM follow-up",
+            "description": "Member sees the lead in My Marketplace; Admin reviews it in Marketplace CRM (stats, filters, export).",
+        },
+        {
+            "title": "Offline sale (optional)",
+            "description": "If a deal closes offline, staff may encode Products Commission manually using the CRM record as evidence. Inquiries do not auto-post commission.",
+        },
+    ],
+    "urls": [
+        {"label": "Landing marketplace", "path": "/#marketplace"},
+        {"label": "Real Property", "path": "/marketplace/real_property"},
+        {"label": "Products", "path": "/marketplace/products"},
+        {"label": "Member share pattern", "path": "/m/<code>/marketplace/..."},
+        {"label": "My Marketplace (members)", "path": "/my-marketplace"},
+        {"label": "Manage listings", "path": "/site-admin/marketplace"},
+        {"label": "Marketplace CRM", "path": "/admin/marketplace-crm"},
+    ],
+    "out_of_scope": [
+        "Online payment or checkout",
+        "Member-created listings",
+        "Construction Sites category (retired)",
+        "Automatic commission posting from an inquiry",
+    ],
+}
 
 
 MANUAL_ROLE_ORDER = [

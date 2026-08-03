@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ category_meta.label }} — TBGP Marketplace{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+{% endblock %}
+
+{% block body_class %}landing-body{% endblock %}
+
+{% block body %}
+{% set landing_nav_active = 'marketplace' %}
+{% include 'partials/landing_nav.html' %}
+
+<section class="marketplace-page">
+    <div class="container">
+        <nav class="ecosystem-breadcrumb" aria-label="Breadcrumb">
+            <a href="{{ url_for('main_routes.index') }}">Home</a>
+            <span aria-hidden="true">/</span>
+            <a href="{{ url_for('main_routes.index') }}#marketplace">Marketplace</a>
+            <span aria-hidden="true">/</span>
+            <span>{{ category_meta.label }}</span>
+        </nav>
+
+        {% if attributed_member %}
+        <div class="marketplace-referral-banner" role="status">
+            Referred by <strong>#{{ attributed_member.member_id }} — {{ attributed_member.full_name }}</strong>.
+            Inquiries you submit here are logged to this member’s marketplace CRM.
+        </div>
+        {% endif %}
+
+        <header class="marketplace-page-header">
+            <p class="section-subtitle">Marketplace</p>
+            <h1 class="section-title">{{ category_meta.label }}</h1>
+            <p>{{ category_meta.tagline }}</p>
+        </header>
+
+        {% if executive_summary and (executive_summary.title or executive_summary.body) %}
+        <article class="marketplace-exec-summary">
+            <h2>{{ executive_summary.title or 'Executive Summary' }}</h2>
+            <p>{{ executive_summary.body }}</p>
+        </article>
+        {% endif %}
+
+        <div class="marketplace-category-tabs">
+            {% for slug in category_slugs %}
+            <a href="{{ url_for('main_routes.marketplace_category', category=slug) }}"
+               class="marketplace-category-tab {% if slug == category %}is-active{% endif %}">
+                <i class="bi {{ categories[slug].icon }}" aria-hidden="true"></i>
+                {{ categories[slug].label }}
+            </a>
+            {% endfor %}
+        </div>
+
+        {% if listings %}
+        <div class="marketplace-grid">
+            {% for item in listings %}
+            <a href="{{ url_for('main_routes.marketplace_detail', category=category, listing_id=item.listing_id) }}"
+               class="marketplace-card">
+                <div class="marketplace-card-media">
+                    {% if item.thumbnail_url %}
+                    <img src="{{ item.thumbnail_url }}" alt="{{ item.title }}">
+                    {% else %}
+                    <div class="marketplace-card-placeholder" aria-hidden="true">
+                        <i class="bi {{ category_meta.icon }}"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="marketplace-card-body">
+                    <h2>{{ item.title }}</h2>
+                    {% if item.price_label %}<p class="marketplace-card-price">{{ item.price_label }}</p>{% endif %}
+                    {% if item.location %}<p class="marketplace-card-location">{{ item.location }}</p>{% endif %}
+                    {% if item.summary %}<p class="marketplace-card-summary">{{ item.summary }}</p>{% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted">No published listings in this category yet. Check back soon.</p>
+        {% endif %}
+    </div>
+</section>
+
+{% include 'partials/landing_footer.html' %}
+{% endblock %}

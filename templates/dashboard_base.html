@@ -39,13 +39,13 @@
     </header>
 
     <aside id="sidebar" class="sidebar" aria-label="Main navigation">
-        {% set help_pages = ['user_manual', 'about_features_process_flow', 'about_platform'] %}
+        {% set help_pages = ['user_manual', 'about_features_process_flow', 'about_platform', 'help_marketplace_crm'] %}
         {% set payout_pages = ['payout_scheme', 'payout_queue', 'payout_reports'] %}
         {% set payout_pending = payout_queue_counts.pending_requests + payout_queue_counts.pending_releases + payout_queue_counts.awaiting_release %}
         {% set sidebar_help_open = active_page in help_pages %}
         {% set sidebar_payouts_open = active_page in payout_pages or payout_pending > 0 %}
         {% set sidebar_income_open = active_page and active_page.startswith('prof_') %}
-        {% set sidebar_admin_open = active_page == 'site_admin' %}
+        {% set sidebar_admin_open = active_page == 'site_admin' or active_page == 'marketplace' or active_page == 'marketplace_crm' %}
 
         <p class="sidebar-label">Navigation</p>
         <ul class="sidebar-nav">
@@ -86,6 +86,11 @@
             <li>
                 <a href="{{ url_for('main_routes.my_supplier_referrals') }}" class="{% if active_page == 'my_supplier_referrals' %}active{% endif %}">
                     <i class="bi bi-box-seam"></i> My Suppliers
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main_routes.my_marketplace') }}" class="{% if active_page == 'my_marketplace' %}active{% endif %}">
+                    <i class="bi bi-shop"></i> My Marketplace
                 </a>
             </li>
             {% else %}
@@ -238,6 +243,12 @@
             <a href="{{ url_for('site_admin.home') }}" class="sidebar-sublink {% if active_page == 'site_admin' %}active{% endif %}">
                 Site Content
             </a>
+            <a href="{{ url_for('site_admin.marketplace_list') }}" class="sidebar-sublink {% if active_page == 'marketplace' %}active{% endif %}">
+                Marketplace Listings
+            </a>
+            <a href="{{ url_for('main_routes.marketplace_crm') }}" class="sidebar-sublink {% if active_page == 'marketplace_crm' %}active{% endif %}">
+                Marketplace CRM
+            </a>
             {% endif %}
             {% if can_access_admin_options(session.get('role')) %}
             <button class="sidebar-sublink d-flex align-items-center w-100" id="adminOptionsBtn" type="button">
@@ -274,6 +285,12 @@
                class="sidebar-sublink {% if active_page == 'about_features_process_flow' %}active{% endif %}">
                 Features &amp; Process Flow
             </a>
+            {% if can_view_marketplace_help(session.get('role')) %}
+            <a href="{{ url_for('main_routes.help_marketplace_crm') }}"
+               class="sidebar-sublink {% if active_page == 'help_marketplace_crm' %}active{% endif %}">
+                Marketplace &amp; CRM Guide
+            </a>
+            {% endif %}
             <a href="{{ url_for('main_routes.about_platform') }}"
                class="sidebar-sublink {% if active_page == 'about_platform' %}active{% endif %}">
                 About the Platform

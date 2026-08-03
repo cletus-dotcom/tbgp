@@ -155,6 +155,31 @@ PRODUCT_AD_CHARGE_PLATFORM = "platform"
 PRODUCT_AD_CHARGE_AD_FUND = "ad_fund"
 PRODUCT_AD_CHARGE_SOURCES = (PRODUCT_AD_CHARGE_PLATFORM, PRODUCT_AD_CHARGE_AD_FUND)
 
+MARKETPLACE_CATEGORY_REAL_PROPERTY = "real_property"
+MARKETPLACE_CATEGORY_PRODUCTS = "products"
+MARKETPLACE_CATEGORIES = {
+    MARKETPLACE_CATEGORY_REAL_PROPERTY: {
+        "slug": MARKETPLACE_CATEGORY_REAL_PROPERTY,
+        "label": "Real Property",
+        "short_label": "Property",
+        "icon": "bi-house-door",
+        "tagline": "Homes, lots, and investment properties for sale.",
+    },
+    MARKETPLACE_CATEGORY_PRODUCTS: {
+        "slug": MARKETPLACE_CATEGORY_PRODUCTS,
+        "label": "Products",
+        "short_label": "Products",
+        "icon": "bi-box-seam",
+        "tagline": "Featured products available through the TBGP network.",
+    },
+}
+MARKETPLACE_CATEGORY_SLUGS = tuple(MARKETPLACE_CATEGORIES.keys())
+MARKETPLACE_STATUS_DRAFT = "draft"
+MARKETPLACE_STATUS_PUBLISHED = "published"
+MARKETPLACE_STATUSES = (MARKETPLACE_STATUS_DRAFT, MARKETPLACE_STATUS_PUBLISHED)
+MARKETPLACE_ATTRIBUTION_COOKIE = "tbgp_mp_ref"
+MARKETPLACE_ATTRIBUTION_DAYS = 30
+
 # Ref-Seller / Ref-Buyer pool level table (levels 1–6 upline, level 7 Mandate).
 DEFAULT_PRODUCT_POOL_LEVELS = [
     (1, Decimal("50.00"), "Product seller/buyer referrer"),
@@ -243,8 +268,22 @@ def is_site_admin_role(role=None):
 
 
 def can_manage_site_content(role=None):
-    """Edit public landing pages, ecosystem content, and partner registry."""
-    return normalize_role(role) in (USER_ROLE_PORTAL_ADMIN, USER_ROLE_SITE_ADMIN)
+    """Edit public landing pages, ecosystem content, partner registry, and marketplace."""
+    return normalize_role(role) in (
+        USER_ROLE_PORTAL_ADMIN,
+        USER_ROLE_SITE_ADMIN,
+        USER_ROLE_ADMIN,
+    )
+
+
+def can_view_marketplace_help(role=None):
+    """Marketplace & CRM help guide for operational roles (not Members)."""
+    return normalize_role(role) in (
+        USER_ROLE_PORTAL_ADMIN,
+        USER_ROLE_ADMIN,
+        USER_ROLE_SITE_ADMIN,
+        USER_ROLE_STAFF,
+    )
 
 
 def is_admin_role(role=None):

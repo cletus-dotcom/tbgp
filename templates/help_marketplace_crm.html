@@ -1,0 +1,130 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}{{ guide.title }}{% endblock %}
+{% block topbar_title %}{{ guide.title }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card about-hero mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-shop"></i> {{ guide.title }}</h5>
+            <p class="section-subtitle">{{ guide.summary }}</p>
+        </div>
+        <span class="badge bg-brand text-dark">Help</span>
+    </div>
+</div>
+
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header mb-3">
+        <div>
+            <h5><i class="bi bi-info-circle"></i> Overview</h5>
+        </div>
+    </div>
+    <ul class="mb-0 ps-3">
+        {% for item in guide.overview %}
+        <li class="mb-1">{{ item }}</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header mb-3">
+        <div>
+            <h5><i class="bi bi-people"></i> Roles</h5>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm section-table mb-0">
+            <thead>
+                <tr><th>Role</th><th>Access</th></tr>
+            </thead>
+            <tbody>
+                {% for row in guide.roles %}
+                <tr>
+                    <td class="text-nowrap fw-semibold">{{ row.role }}</td>
+                    <td>{{ row.access }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header mb-3">
+        <div>
+            <h5><i class="bi bi-grid-3x3-gap"></i> Modules</h5>
+            <p class="section-subtitle">Marketplace surfaces and CRM tools.</p>
+        </div>
+    </div>
+    <div class="row g-3">
+        {% for module in guide.modules %}
+        <div class="col-md-6">
+            <div class="about-feature-card h-100">
+                <h6>{{ module.title }}</h6>
+                <ul class="mb-0 ps-3 small">
+                    {% for item in module.items %}
+                    <li class="mb-1">{{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header mb-3">
+        <div>
+            <h5><i class="bi bi-diagram-2"></i> Process Flow</h5>
+            <p class="section-subtitle">From publish to CRM follow-up.</p>
+        </div>
+    </div>
+    <div class="about-flow">
+        {% for step in guide.process_flow %}
+        <div class="about-flow-step">
+            <div class="about-flow-number">{{ loop.index }}</div>
+            <div>
+                <h6>{{ step.title }}</h6>
+                <p>{{ step.description }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header mb-3">
+        <div>
+            <h5><i class="bi bi-link-45deg"></i> Key URLs</h5>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm section-table mb-0">
+            <thead>
+                <tr><th>Surface</th><th>Path</th></tr>
+            </thead>
+            <tbody>
+                {% for row in guide.urls %}
+                <tr>
+                    <td>{{ row.label }}</td>
+                    <td><code>{{ row.path }}</code></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="dashboard-card section-card">
+    <div class="section-header mb-3">
+        <div>
+            <h5><i class="bi bi-slash-circle"></i> Not in this version</h5>
+        </div>
+    </div>
+    <ul class="mb-0 ps-3">
+        {% for item in guide.out_of_scope %}
+        <li class="mb-1">{{ item }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

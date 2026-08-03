@@ -28,6 +28,7 @@ from app.site_content_service import (
     get_ecosystem_page,
     get_ecosystem_slugs,
     get_landing_ecosystem_section,
+    get_marketplace_summary,
     apply_portal_partner_profile,
     get_partner_by_slug,
     get_portal_record_for_partner,
@@ -64,6 +65,8 @@ from app.config import (
     PRODUCT_POP_PERCENT,
     PRODUCT_REF_BUYER_PERCENT,
     PRODUCT_REF_SELLER_PERCENT,
+    MARKETPLACE_CATEGORIES,
+    MARKETPLACE_CATEGORY_SLUGS,
     USER_ROLE_ADMIN,
     USER_ROLE_MEMBER,
     USER_ROLE_PORTAL_ADMIN,
@@ -76,6 +79,8 @@ from app.config import (
     can_view_payout_reports,
     can_view_payout_scheme,
     can_purge_member_database,
+    can_manage_site_content,
+    can_view_marketplace_help,
     payout_scheme_summary,
     is_admin_role,
     is_member_role,
@@ -87,7 +92,12 @@ from app.config import (
     staff_may_manage_user,
 )
 
-from app.user_manual_content import APP_FEATURES, APP_PROCESS_FLOW, resolve_user_manual
+from app.user_manual_content import (
+    APP_FEATURES,
+    APP_PROCESS_FLOW,
+    MARKETPLACE_CRM_GUIDE,
+    resolve_user_manual,
+)
 from app.contractor_import_service import (
     import_contractors_from_upload,
     import_contractors_from_xlsx,
@@ -178,6 +188,23 @@ from app.product_commission_service import (
     compute_product_commission,
     delete_product_commission,
     save_product_commission,
+)
+from app.marketplace_service import (
+    create_lead,
+    ensure_member_share_code,
+    get_attributed_member,
+    get_marketplace_category,
+    get_member_by_share_code,
+    get_published_listing,
+    landing_featured_counts,
+    list_published_by_category,
+    listing_crm_stats,
+    marketplace_crm_overview,
+    marketplace_listing_options,
+    member_lead_count,
+    member_leads,
+    search_marketplace_leads,
+    set_attribution_cookie,
 )
 
 main_routes = Blueprint("main_routes", __name__)
@@ -275,6 +302,9 @@ def index():
         landing_section=get_landing_ecosystem_section(),
         ecosystem_pages=get_all_ecosystem_pages(),
         ecosystem_slugs=get_ecosystem_slugs(),
+        marketplace_categories=MARKETPLACE_CATEGORIES,
+        marketplace_category_slugs=MARKETPLACE_CATEGORY_SLUGS,
+        marketplace_counts=landing_featured_counts(),
     )
 
 
@@ -294,6 +324,256 @@ def ecosystem_page(slug):
         context["contractors"] = get_contractors()
         context["suppliers"] = get_suppliers()
     return render_template("ecosystem_page.html", **context)
+
+
+def _marketplace_page_context(category, share_member=None):
+    meta = get_marketplace_category(category)
+    if not meta:
+        abort(404)
+    attributed = share_member or get_attributed_member()
+    return {
+        "category": category,
+        "category_meta": meta,
+        "categories": MARKETPLACE_CATEGORIES,
+        "category_slugs": MARKETPLACE_CATEGORY_SLUGS,
+        "attributed_member": attributed,
+        "share_member": share_member,
+        "executive_summary": get_marketplace_summary(category),
+        "landing_nav_active": None,
+    }
+
+
+@main_routes.route("/marketplace/<category>")
+def marketplace_category(category):
+    ctx = _marketplace_page_context(category)
+    ctx["listings"] = list_published_by_category(category)
+    return render_template("marketplace_category.html", **ctx)
+
+
+@main_routes.route("/marketplace/<category>/<int:listing_id>", methods=["GET", "POST"])
+def marketplace_detail(category, listing_id):
+    listing = get_published_listing(category, listing_id)
+    if not listing:
+        abort(404)
+    ctx = _marketplace_page_context(category)
+    ctx["listing"] = listing
+    form_error = None
+    form_success = None
+    form_values = {"guest_name": "", "guest_phone": "", "guest_email": "", "message": ""}
+
+    if request.method == "POST":
+        form_values = {
+            "guest_name": request.form.get("guest_name") or "",
+            "guest_phone": request.form.get("guest_phone") or "",
+            "guest_email": request.form.get("guest_email") or "",
+            "message": request.form.get("message") or "",
+        }
+        try:
+            create_lead(
+                listing,
+                guest_name=form_values["guest_name"],
+                guest_phone=form_values["guest_phone"],
+                guest_email=form_values["guest_email"],
+                message=form_values["message"],
+                source_path=request.path,
+            )
+            form_success = "Thank you. Your inquiry was sent. A TBGP representative will follow up."
+            form_values = {"guest_name": "", "guest_phone": "", "guest_email": "", "message": ""}
+        except ValueError as exc:
+            form_error = str(exc)
+
+    ctx["form_error"] = form_error
+    ctx["form_success"] = form_success
+    ctx["form_values"] = form_values
+    return render_template("marketplace_detail.html", **ctx)
+
+
+@main_routes.route("/m/<share_code>/marketplace/<category>")
+def marketplace_category_shared(share_code, category):
+    member = get_member_by_share_code(share_code)
+    if not member:
+        abort(404)
+    response = redirect(url_for("main_routes.marketplace_category", category=category))
+    return set_attribution_cookie(response, member)
+
+
+@main_routes.route("/m/<share_code>/marketplace/<category>/<int:listing_id>")
+def marketplace_detail_shared(share_code, category, listing_id):
+    member = get_member_by_share_code(share_code)
+    if not member:
+        abort(404)
+    response = redirect(
+        url_for("main_routes.marketplace_detail", category=category, listing_id=listing_id)
+    )
+    return set_attribution_cookie(response, member)
+
+
+@main_routes.route("/m/<share_code>/marketplace")
+def marketplace_hub_shared(share_code):
+    member = get_member_by_share_code(share_code)
+    if not member:
+        abort(404)
+    response = redirect(url_for("main_routes.marketplace_category", category="real_property"))
+    return set_attribution_cookie(response, member)
+
+
+@main_routes.route("/my-marketplace")
+@login_required
+def my_marketplace():
+    user = User.query.get(session.get("user_id"))
+    if not is_member_role(user.role):
+        return redirect(url_for("main_routes.members"))
+
+    linked_id = require_linked_member()
+    if not linked_id:
+        return access_denied_response("Your account is not linked to a member record.")
+
+    member = db.session.get(Member, linked_id)
+    share_code = ensure_member_share_code(member)
+    base_url = request.url_root.rstrip("/")
+    share_links = {
+        "hub": f"{base_url}/m/{share_code}/marketplace",
+    }
+    for slug in MARKETPLACE_CATEGORY_SLUGS:
+        share_links[slug] = f"{base_url}/m/{share_code}/marketplace/{slug}"
+
+    leads = member_leads(linked_id)
+    return render_template(
+        "my_marketplace.html",
+        fullname=user.full_name or "Member",
+        role=normalize_role(user.role),
+        active_page="my_marketplace",
+        member=member,
+        share_code=share_code,
+        share_links=share_links,
+        categories=MARKETPLACE_CATEGORIES,
+        category_slugs=MARKETPLACE_CATEGORY_SLUGS,
+        leads=leads,
+        lead_count=member_lead_count(linked_id),
+    )
+
+
+def _marketplace_crm_filters_from_request():
+    referrer_raw = (request.args.get("referrer_id") or "").strip()
+    listing_raw = (request.args.get("listing_id") or "").strip()
+    referrer_id = None
+    listing_id = None
+    if referrer_raw.isdigit():
+        referrer_id = int(referrer_raw)
+    if listing_raw.isdigit():
+        listing_id = int(listing_raw)
+    return {
+        "q": (request.args.get("q") or "").strip(),
+        "category": (request.args.get("category") or "").strip() or None,
+        "listing_id": listing_id,
+        "referrer_id": referrer_id,
+        "attribution": (request.args.get("attribution") or "").strip() or None,
+        "date_from": (request.args.get("date_from") or "").strip() or None,
+        "date_to": (request.args.get("date_to") or "").strip() or None,
+    }
+
+
+@main_routes.route("/admin/marketplace-crm")
+@login_required
+def marketplace_crm():
+    user = _dashboard_user()
+    if not can_manage_site_content(user.role):
+        return access_denied_response("Marketplace CRM is available to Admin and Site Content editors.")
+
+    filters = _marketplace_crm_filters_from_request()
+    if filters["category"] and filters["category"] not in MARKETPLACE_CATEGORIES:
+        filters["category"] = None
+
+    overview = marketplace_crm_overview()
+    leads = search_marketplace_leads(**filters)
+    listing_options = marketplace_listing_options(filters["category"])
+
+    return render_template(
+        "marketplace_crm.html",
+        fullname=user.full_name or "Admin",
+        role=normalize_role(user.role),
+        active_page="marketplace_crm",
+        overview=overview,
+        leads=leads,
+        filters=filters,
+        categories=MARKETPLACE_CATEGORIES,
+        category_slugs=MARKETPLACE_CATEGORY_SLUGS,
+        listing_options=listing_options,
+    )
+
+
+@main_routes.route("/admin/marketplace-crm/listing/<int:listing_id>")
+@login_required
+def marketplace_crm_listing(listing_id):
+    user = _dashboard_user()
+    if not can_manage_site_content(user.role):
+        return access_denied_response("Marketplace CRM is available to Admin and Site Content editors.")
+
+    stats = listing_crm_stats(listing_id)
+    if not stats:
+        abort(404)
+
+    return render_template(
+        "marketplace_crm_listing.html",
+        fullname=user.full_name or "Admin",
+        role=normalize_role(user.role),
+        active_page="marketplace_crm",
+        stats=stats,
+        listing=stats["listing"],
+        categories=MARKETPLACE_CATEGORIES,
+        category_slugs=MARKETPLACE_CATEGORY_SLUGS,
+    )
+
+
+@main_routes.route("/admin/marketplace-crm/export.csv")
+@login_required
+def marketplace_crm_export():
+    user = _dashboard_user()
+    if not can_manage_site_content(user.role):
+        return access_denied_response("Marketplace CRM is available to Admin and Site Content editors.")
+
+    filters = _marketplace_crm_filters_from_request()
+    if filters["category"] and filters["category"] not in MARKETPLACE_CATEGORIES:
+        filters["category"] = None
+    leads = search_marketplace_leads(**filters, limit=5000)
+
+    output = BytesIO()
+    # UTF-8 BOM for Excel
+    output.write("\ufeff".encode("utf-8"))
+    writer_lines = [
+        "lead_id,created_at,category,listing_id,listing_title,guest_name,guest_phone,guest_email,"
+        "message,referred_by_id,referred_by_name,source_path\n"
+    ]
+    for lead in leads:
+        listing = lead.listing
+        member = lead.attributed_member
+        category = listing.category if listing else ""
+        category_label = MARKETPLACE_CATEGORIES.get(category, {}).get("label", category)
+        cells = [
+            lead.lead_id,
+            lead.created_at.isoformat(sep=" ", timespec="minutes") if lead.created_at else "",
+            category_label,
+            lead.listing_id,
+            (listing.title if listing else "").replace('"', '""'),
+            (lead.guest_name or "").replace('"', '""'),
+            lead.guest_phone or "",
+            lead.guest_email or "",
+            (lead.message or "").replace('"', '""').replace("\n", " "),
+            lead.attributed_member_id or "",
+            (member.full_name if member else "").replace('"', '""'),
+            lead.source_path or "",
+        ]
+        writer_lines.append(
+            ",".join(f'"{cell}"' if isinstance(cell, str) else str(cell) for cell in cells) + "\n"
+        )
+    output.write("".join(writer_lines).encode("utf-8"))
+    output.seek(0)
+    return send_file(
+        output,
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name=f"marketplace-crm-{datetime.utcnow().strftime('%Y%m%d-%H%M')}.csv",
+    )
 
 
 @main_routes.route("/partners/<partner_slug>")
@@ -444,6 +724,24 @@ def about_features_process_flow():
         active_page="about_features_process_flow",
         features=APP_FEATURES,
         process_flow=APP_PROCESS_FLOW,
+    )
+
+
+@main_routes.route("/help/marketplace-crm")
+@login_required
+def help_marketplace_crm():
+    user = _dashboard_user()
+    if not can_view_marketplace_help(user.role):
+        return access_denied_response(
+            "The Marketplace & CRM guide is available to Admin, SiteAdmin, and Staff roles."
+        )
+    role = normalize_role(user.role)
+    return render_template(
+        "help_marketplace_crm.html",
+        fullname=user.full_name or "User",
+        role=role,
+        active_page="help_marketplace_crm",
+        guide=MARKETPLACE_CRM_GUIDE,
     )
 
 

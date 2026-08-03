@@ -11,6 +11,7 @@ from app.partners_registry import ALL_PARTNERS, CONTRACTORS, SUPPLIERS
 
 LANDING_ECOSYSTEM_KEY = "ecosystem_pillars"
 SERVICES_CONTACT_CTA_KEY = "services_contact_cta"
+MARKETPLACE_SUMMARIES_KEY = "marketplace_summaries"
 
 DEFAULT_LANDING_ECOSYSTEM = {
     "subtitle": "The Cooperative Ecosystem",
@@ -21,6 +22,25 @@ DEFAULT_SERVICES_CONTACT_CTA = {
     "title": "LET'S TALK FOR YOUR REQUIRED SERVICES:",
     "phone_display": "0920 202 3891",
     "phone_tel": "+639202023891",
+}
+
+DEFAULT_MARKETPLACE_SUMMARIES = {
+    "real_property": {
+        "title": "Real Property Executive Summary",
+        "body": (
+            "Browse homes, lots, and investment properties curated for TBGP members and guests. "
+            "Submit an inquiry on any listing and a representative will follow up. "
+            "Members who share their marketplace link receive attributed guest inquiries in My Marketplace."
+        ),
+    },
+    "products": {
+        "title": "Products Executive Summary",
+        "body": (
+            "Explore featured products available through the TBGP network. "
+            "Listings are informational with inquiry-only contact—no online checkout. "
+            "Purchases closed offline can be credited through the portal commission workflows."
+        ),
+    },
 }
 
 
@@ -43,6 +63,14 @@ def seed_cms_content():
             CmsLandingSection(
                 section_key=SERVICES_CONTACT_CTA_KEY,
                 data=copy.deepcopy(DEFAULT_SERVICES_CONTACT_CTA),
+            )
+        )
+
+    if CmsLandingSection.query.get(MARKETPLACE_SUMMARIES_KEY) is None:
+        db.session.add(
+            CmsLandingSection(
+                section_key=MARKETPLACE_SUMMARIES_KEY,
+                data=copy.deepcopy(DEFAULT_MARKETPLACE_SUMMARIES),
             )
         )
 
@@ -130,6 +158,58 @@ def save_services_contact_cta(data):
     row = CmsLandingSection.query.get(SERVICES_CONTACT_CTA_KEY)
     if row is None:
         row = CmsLandingSection(section_key=SERVICES_CONTACT_CTA_KEY)
+    row.data = payload
+    row.updated_at = datetime.utcnow()
+    db.session.add(row)
+    db.session.commit()
+    return payload
+
+
+def get_marketplace_summaries():
+    row = CmsLandingSection.query.get(MARKETPLACE_SUMMARIES_KEY)
+    data = copy.deepcopy(row.data) if row and row.data else {}
+    merged = copy.deepcopy(DEFAULT_MARKETPLACE_SUMMARIES)
+    for slug, defaults in DEFAULT_MARKETPLACE_SUMMARIES.items():
+        item = data.get(slug) or {}
+        merged[slug] = {
+            "title": (item.get("title") or defaults["title"]).strip(),
+            "body": (item.get("body") or defaults["body"]).strip(),
+        }
+    return merged
+
+
+def get_marketplace_summary(category):
+    return get_marketplace_summaries().get(category) or {
+        "title": "Executive Summary",
+        "body": "",
+    }
+
+
+def save_marketplace_summaries(form_or_data):
+    """Save executive summaries from a form (summary_title_<slug>, summary_body_<slug>) or dict."""
+    current = get_marketplace_summaries()
+    payload = {}
+    for slug in DEFAULT_MARKETPLACE_SUMMARIES:
+        title = None
+        body = None
+        if hasattr(form_or_data, "get"):
+            if f"summary_title_{slug}" in form_or_data or f"summary_body_{slug}" in form_or_data:
+                title = form_or_data.get(f"summary_title_{slug}")
+                body = form_or_data.get(f"summary_body_{slug}")
+            elif isinstance(form_or_data, dict) and slug in form_or_data:
+                item = form_or_data.get(slug) or {}
+                title = item.get("title")
+                body = item.get("body")
+        payload[slug] = {
+            "title": (title if title is not None else current[slug]["title"]).strip()
+            or DEFAULT_MARKETPLACE_SUMMARIES[slug]["title"],
+            "body": (body if body is not None else current[slug]["body"]).strip()
+            or DEFAULT_MARKETPLACE_SUMMARIES[slug]["body"],
+        }
+
+    row = CmsLandingSection.query.get(MARKETPLACE_SUMMARIES_KEY)
+    if row is None:
+        row = CmsLandingSection(section_key=MARKETPLACE_SUMMARIES_KEY)
     row.data = payload
     row.updated_at = datetime.utcnow()
     db.session.add(row)

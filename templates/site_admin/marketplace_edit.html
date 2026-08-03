@@ -1,0 +1,159 @@
+{% extends "site_admin/base.html" %}
+{% block page_title %}{% if is_new %}New Marketplace Listing{% else %}Edit Listing{% endif %}{% endblock %}
+{% block topbar_title %}{% if is_new %}New marketplace listing{% else %}Edit listing{% endif %}{% endblock %}
+
+{% block content %}
+<div class="site-admin-page">
+    <form method="post" class="site-admin-form"
+          data-partner-image-upload-enabled="{{ 'true' if partner_image_upload_enabled else 'false' }}"
+          {% if partner_image_upload_enabled %}data-partner-image-upload-url="{{ partner_image_upload_url }}"{% endif %}>
+        <input type="hidden" id="slug" name="image_key" value="{{ image_key }}">
+
+        <fieldset>
+            <legend>Listing</legend>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label" for="category">Category</label>
+                    <select class="form-select" id="category" name="category" required>
+                        {% for slug in category_slugs %}
+                        <option value="{{ slug }}" {% if listing.category == slug %}selected{% endif %}>
+                            {{ categories[slug].label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="status">Status</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="draft" {% if listing.status == 'draft' %}selected{% endif %}>Draft</option>
+                        <option value="published" {% if listing.status == 'published' %}selected{% endif %}>Published</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="sort_order">Sort order</label>
+                    <input class="form-control" id="sort_order" name="sort_order" type="number" value="{{ listing.sort_order or 0 }}">
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="title">Title</label>
+                    <input class="form-control" id="title" name="title" value="{{ listing.title or '' }}" required maxlength="200">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="price_label">Price / label</label>
+                    <input class="form-control" id="price_label" name="price_label" value="{{ listing.price_label or '' }}"
+                           placeholder="e.g. ₱2.5M or Contact for price" maxlength="120">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="location">Location</label>
+                    <input class="form-control" id="location" name="location" value="{{ listing.location or '' }}" maxlength="255">
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="summary">Short summary</label>
+                    <input class="form-control" id="summary" name="summary" value="{{ listing.summary or '' }}" maxlength="500">
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="body">Details</label>
+                    <textarea class="form-control" id="body" name="body" rows="6">{{ listing.body or '' }}</textarea>
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Images</legend>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="partner-image-field" data-image-kind="thumb">
+                        <label class="form-label" for="thumbnail_url">Thumbnail</label>
+                        <div class="partner-image-preview-wrap">
+                            <img class="partner-image-preview" src="{{ listing.thumbnail_url or '' }}" alt="Thumbnail preview"
+                                 {% if not listing.thumbnail_url %}hidden{% endif %}>
+                            <div class="partner-image-preview-empty" {% if listing.thumbnail_url %}hidden{% endif %}>No thumbnail yet</div>
+                        </div>
+                        <input class="form-control partner-image-url" id="thumbnail_url" name="thumbnail_url"
+                               value="{{ listing.thumbnail_url or '' }}" placeholder="https://... or upload below">
+                        {% if partner_image_upload_enabled %}
+                        <div class="partner-image-actions">
+                            <input type="file" class="partner-image-file" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+                            <button type="button" class="btn btn-outline-primary btn-sm partner-image-upload-btn">
+                                <i class="bi bi-upload"></i> Upload thumbnail
+                            </button>
+                            <span class="partner-image-status text-muted small"></span>
+                        </div>
+                        {% else %}
+                        <div class="form-text">Paste a public image URL. Configure Supabase Storage to enable uploads.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <label class="form-label">Gallery</label>
+                <div class="repeater-list" data-repeater="gallery" data-fields="url,alt">
+                    {% for item in (listing.gallery or []) %}
+                    <div class="repeater-item">
+                        <div class="row g-2">
+                            <div class="col-md-7">
+                                <label class="form-label">Image</label>
+                                <div class="partner-image-field partner-image-field-inline" data-image-kind="gallery">
+                                    <input class="form-control partner-image-url" name="gallery_url_{{ loop.index0 }}"
+                                           value="{{ item.url }}" placeholder="https://... or upload below">
+                                    {% if partner_image_upload_enabled %}
+                                    <div class="partner-image-actions">
+                                        <input type="file" class="partner-image-file" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+                                        <button type="button" class="btn btn-outline-primary btn-sm partner-image-upload-btn">
+                                            <i class="bi bi-upload"></i> Upload
+                                        </button>
+                                        <span class="partner-image-status text-muted small"></span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Alt text</label>
+                                <input class="form-control" name="gallery_alt_{{ loop.index0 }}" value="{{ item.alt or '' }}">
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end">
+                                <button type="button" class="btn btn-outline-danger btn-sm repeater-remove" aria-label="Remove">&times;</button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm mt-2 repeater-add" data-target="gallery">
+                    <i class="bi bi-plus"></i> Add gallery image
+                </button>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Inquiry contact defaults</legend>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label" for="contact_name">Contact name</label>
+                    <input class="form-control" id="contact_name" name="contact_name" value="{{ listing.contact_name or '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="contact_phone">Contact phone</label>
+                    <input class="form-control" id="contact_phone" name="contact_phone" value="{{ listing.contact_phone or '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="contact_email">Contact email</label>
+                    <input class="form-control" id="contact_email" name="contact_email" value="{{ listing.contact_email or '' }}">
+                </div>
+            </div>
+        </fieldset>
+
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> {% if is_new %}Create listing{% else %}Save changes{% endif %}
+            </button>
+            <a href="{{ url_for('site_admin.marketplace_list') }}" class="btn btn-outline-secondary">Cancel</a>
+            {% if not is_new %}
+            <button type="submit" name="_action" value="delete" class="btn btn-outline-danger ms-auto"
+                    onclick="return confirm('Delete this listing permanently?');">
+                <i class="bi bi-trash"></i> Delete
+            </button>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

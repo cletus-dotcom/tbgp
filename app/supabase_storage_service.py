@@ -98,3 +98,37 @@ def upload_partner_image(file_storage, partner_slug, image_kind):
         "path": object_name,
         "kind": image_kind,
     }
+
+
+def upload_marketplace_image(file_storage, listing_key, image_kind):
+    """Upload marketplace thumb/gallery image into the partner images bucket under marketplace/."""
+    image_kind = (image_kind or "gallery").strip().lower()
+    if image_kind not in {"thumb", "gallery"}:
+        raise ValueError("Invalid image type.")
+
+    payload, content_type = _validate_image_upload(file_storage)
+    key = _normalize_partner_slug(listing_key)
+    extension = _extension_for_upload(file_storage.filename, content_type)
+    object_name = f"marketplace/{key}/{image_kind}-{uuid.uuid4().hex}{extension}"
+
+    client = _get_supabase_client()
+    bucket = current_app.config.get(
+        "SUPABASE_PARTNER_IMAGES_BUCKET",
+        SUPABASE_PARTNER_IMAGES_BUCKET,
+    )
+    storage = client.storage.from_(bucket)
+    storage.upload(
+        object_name,
+        payload,
+        file_options={
+            "content-type": content_type,
+            "cache-control": "3600",
+            "upsert": "false",
+        },
+    )
+    public_url = storage.get_public_url(object_name)
+    return {
+        "url": public_url,
+        "path": object_name,
+        "kind": image_kind,
+    }

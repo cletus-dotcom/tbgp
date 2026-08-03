@@ -44,6 +44,13 @@
             <p>{{ suppliers|length }} material and equipment supply partners.</p>
             <a href="{{ url_for('site_admin.registry_suppliers') }}" class="btn btn-primary btn-sm">Manage suppliers</a>
         </article>
+
+        <article class="site-admin-card">
+            <h2><i class="bi bi-shop"></i> Marketplace</h2>
+            <p>{{ marketplace_count }} listing(s) — {{ marketplace_published }} published for the public marketplace carousel.</p>
+            <a href="{{ url_for('site_admin.marketplace_list') }}" class="btn btn-primary btn-sm">Manage listings</a>
+            <a href="{{ url_for('main_routes.marketplace_category', category='real_property') }}" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">Preview</a>
+        </article>
     </div>
 </div>
 {% endblock %}

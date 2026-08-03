@@ -28,6 +28,7 @@ MEMBER_COLUMN_DEFS = {
     "date_joined": "DATE",
     "lifetime_cap_enabled": "BOOLEAN DEFAULT TRUE",
     "lifetime_cap_amount": "NUMERIC(14, 2) DEFAULT 50000000",
+    "marketplace_share_code": "VARCHAR(40)",
 }
 
 
@@ -577,4 +578,124 @@ def migrate_product_commission_ad_allocations_table():
         )
     """))
     logger.info("Created product_commission_ad_allocations table")
+    db.session.commit()
+
+
+def migrate_marketplace_tables():
+    inspector = inspect(db.engine)
+    table_names = inspector.get_table_names()
+
+    if "marketplace_listings" not in table_names:
+        db.session.execute(text("""
+            CREATE TABLE marketplace_listings (
+                listing_id SERIAL PRIMARY KEY,
+                category VARCHAR(40) NOT NULL,
+                title VARCHAR(200) NOT NULL,
+                summary VARCHAR(500),
+                body TEXT,
+                price_label VARCHAR(120),
+                location VARCHAR(255),
+                status VARCHAR(20) NOT NULL DEFAULT 'draft',
+                thumbnail_url VARCHAR(500),
+                gallery JSON NOT NULL DEFAULT '[]',
+                contact_name VARCHAR(120),
+                contact_phone VARCHAR(40),
+                contact_email VARCHAR(120),
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL,
+                updated_at TIMESTAMP NOT NULL,
+                created_by_user_id INTEGER REFERENCES users(user_id)
+            )
+        """))
+        db.session.execute(text(
+            "CREATE INDEX ix_marketplace_listings_category ON marketplace_listings (category)"
+        ))
+        db.session.execute(text(
+            "CREATE INDEX ix_marketplace_listings_status ON marketplace_listings (status)"
+        ))
+        logger.info("Created marketplace_listings table")
+        db.session.commit()
+
+    if "marketplace_leads" not in inspector.get_table_names():
+        db.session.execute(text("""
+            CREATE TABLE marketplace_leads (
+                lead_id SERIAL PRIMARY KEY,
+                listing_id INTEGER NOT NULL
+                    REFERENCES marketplace_listings(listing_id) ON DELETE CASCADE,
+                attributed_member_id INTEGER REFERENCES members(member_id),
+                guest_name VARCHAR(120) NOT NULL,
+                guest_phone VARCHAR(40),
+                guest_email VARCHAR(120),
+                message TEXT,
+                source_path VARCHAR(255),
+                created_at TIMESTAMP NOT NULL
+            )
+        """))
+        db.session.execute(text(
+            "CREATE INDEX ix_marketplace_leads_member ON marketplace_leads (attributed_member_id)"
+        ))
+        logger.info("Created marketplace_leads table")
+        db.session.commit()
+
+    # Unique index for member share codes when column exists.
+    member_cols = {col["name"] for col in inspector.get_columns("members")}
+    if "marketplace_share_code" in member_cols:
+        indexes = {idx["name"] for idx in inspector.get_indexes("members")}
+        if "ix_members_marketplace_share_code" not in indexes:
+            try:
+                db.session.execute(text(
+                    "CREATE UNIQUE INDEX ix_members_marketplace_share_code "
+                    "ON members (marketplace_share_code) "
+                    "WHERE marketplace_share_code IS NOT NULL"
+                ))
+                logger.info("Created unique index on members.marketplace_share_code")
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+    _purge_retired_marketplace_sites_category()
+
+
+def _purge_retired_marketplace_sites_category():
+    """Remove retired Construction Sites (sites) marketplace listings and clean CMS summaries."""
+    inspector = inspect(db.engine)
+    if "marketplace_listings" not in inspector.get_table_names():
+        return
+
+    deleted = db.session.execute(
+        text("DELETE FROM marketplace_listings WHERE category = 'sites'")
+    )
+    if deleted.rowcount:
+        logger.info("Removed %s retired marketplace listings (category=sites)", deleted.rowcount)
+        db.session.commit()
+
+    if "cms_landing_sections" not in inspector.get_table_names():
+        return
+    row = db.session.execute(
+        text(
+            "SELECT data FROM cms_landing_sections "
+            "WHERE section_key = 'marketplace_summaries'"
+        )
+    ).fetchone()
+    if not row or not row[0]:
+        return
+    data = row[0]
+    if isinstance(data, str):
+        import json
+        try:
+            data = json.loads(data)
+        except Exception:
+            return
+    if not isinstance(data, dict) or "sites" not in data:
+        return
+    data = {key: value for key, value in data.items() if key != "sites"}
+    import json
+    db.session.execute(
+        text(
+            "UPDATE cms_landing_sections SET data = CAST(:payload AS json) "
+            "WHERE section_key = 'marketplace_summaries'"
+        ),
+        {"payload": json.dumps(data)},
+    )
+    logger.info("Removed sites executive summary from marketplace_summaries CMS")
     db.session.commit()

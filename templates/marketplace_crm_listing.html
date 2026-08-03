@@ -1,0 +1,149 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Listing CRM — {{ listing.title }}{% endblock %}
+{% block topbar_title %}Listing CRM{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-card-list"></i> {{ listing.title }}</h5>
+            <p class="section-subtitle">
+                #{{ listing.listing_id }}
+                · {{ categories[listing.category].label if listing.category in categories else listing.category }}
+                ·
+                {% if listing.status == 'published' %}
+                <span class="badge bg-success">Published</span>
+                {% else %}
+                <span class="badge bg-secondary">Draft</span>
+                {% endif %}
+            </p>
+        </div>
+        <div class="section-actions d-flex flex-wrap gap-2">
+            <a href="{{ url_for('main_routes.marketplace_crm') }}" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-arrow-left"></i> All CRM
+            </a>
+            <a href="{{ url_for('site_admin.marketplace_edit', listing_id=listing.listing_id) }}" class="btn btn-outline-light btn-sm">
+                Edit listing
+            </a>
+            {% if listing.status == 'published' %}
+            <a href="{{ url_for('main_routes.marketplace_detail', category=listing.category, listing_id=listing.listing_id) }}"
+               class="btn btn-brand btn-sm" target="_blank" rel="noopener">View public</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="stat-tile p-2">
+                <div class="stat-value">{{ stats.lead_count }}</div>
+                <div class="stat-label">Total inquiries</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-tile p-2">
+                <div class="stat-value">{{ stats.attributed_leads }}</div>
+                <div class="stat-label">With referrer</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-tile p-2">
+                <div class="stat-value">{{ stats.unattributed_leads }}</div>
+                <div class="stat-label">Direct / none</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-tile p-2">
+                <div class="stat-value">{{ listing.price_label or '—' }}</div>
+                <div class="stat-label">Price label</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <p class="text-muted small mb-1">Location</p>
+            <p>{{ listing.location or '—' }}</p>
+            {% if listing.summary %}
+            <p class="text-muted small mb-1">Summary</p>
+            <p>{{ listing.summary }}</p>
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <h6 class="text-brand mb-2">Referrers on this listing</h6>
+            {% if stats.top_referrers %}
+            <div class="table-responsive">
+                <table class="table table-sm section-table mb-0">
+                    <thead>
+                        <tr><th>Member</th><th class="text-end">Inquiries</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for row in stats.top_referrers %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('main_routes.marketplace_crm', listing_id=listing.listing_id, referrer_id=row.member_id) }}">
+                                    #{{ row.member_id }} — {{ row.member_name }}
+                                </a>
+                            </td>
+                            <td class="text-end">{{ row.lead_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted small mb-0">No attributed referrals for this listing.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-people"></i> Who inquired</h5>
+            <p class="section-subtitle">Guest details and referring member for each inquiry</p>
+        </div>
+    </div>
+
+    {% if stats.leads %}
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Who inquired</th>
+                    <th>Contact</th>
+                    <th>Referred by</th>
+                    <th>Message</th>
+                    <th>Source</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lead in stats.leads %}
+                <tr>
+                    <td class="text-nowrap">{{ lead.created_at.strftime('%Y-%m-%d %H:%M') if lead.created_at else '—' }}</td>
+                    <td>{{ lead.guest_name }}</td>
+                    <td>
+                        {% if lead.guest_phone %}<div>{{ lead.guest_phone }}</div>{% endif %}
+                        {% if lead.guest_email %}<div class="small">{{ lead.guest_email }}</div>{% endif %}
+                        {% if not lead.guest_phone and not lead.guest_email %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if lead.attributed_member %}
+                        #{{ lead.attributed_member_id }} — {{ lead.attributed_member.full_name }}
+                        {% else %}
+                        <span class="text-muted">Direct / none</span>
+                        {% endif %}
+                    </td>
+                    <td class="small">{{ lead.message or '—' }}</td>
+                    <td class="small text-muted">{{ lead.source_path or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No inquiries for this listing yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

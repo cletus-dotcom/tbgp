@@ -1,0 +1,114 @@
+{% extends "site_admin/base.html" %}
+{% block page_title %}Marketplace{% endblock %}
+{% block topbar_title %}Marketplace Listings{% endblock %}
+
+{% block content %}
+<div class="site-admin-page">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <p class="site-admin-lead mb-0">
+            Publish real property and products listings for the public marketplace.
+        </p>
+        <a href="{{ url_for('site_admin.marketplace_new', category=filter_category) }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg"></i> New listing
+        </a>
+        <a href="{{ url_for('main_routes.marketplace_crm') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-graph-up-arrow"></i> Marketplace CRM
+        </a>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <a href="{{ url_for('site_admin.marketplace_list') }}"
+           class="btn btn-sm {% if not filter_category %}btn-primary{% else %}btn-outline-secondary{% endif %}">All</a>
+        {% for slug in category_slugs %}
+        <a href="{{ url_for('site_admin.marketplace_list', category=slug) }}"
+           class="btn btn-sm {% if filter_category == slug %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            {{ categories[slug].label }}
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if listings %}
+    <div class="table-responsive">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                    <th>Price</th>
+                    <th>Updated</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in listings %}
+                <tr>
+                    <td style="width:4rem;">
+                        {% if row.thumbnail_url %}
+                        <img src="{{ row.thumbnail_url }}" alt="" class="rounded" style="width:48px;height:48px;object-fit:cover;">
+                        {% else %}
+                        <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <strong>{{ row.title }}</strong>
+                        {% if row.location %}<div class="text-muted small">{{ row.location }}</div>{% endif %}
+                    </td>
+                    <td>{{ categories[row.category].label if row.category in categories else row.category }}</td>
+                    <td>
+                        {% if row.status == 'published' %}
+                        <span class="badge bg-success">Published</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Draft</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ row.price_label or '—' }}</td>
+                    <td>{{ row.updated_at.strftime('%Y-%m-%d') if row.updated_at else '—' }}</td>
+                    <td class="text-end">
+                        <a href="{{ url_for('site_admin.marketplace_edit', listing_id=row.listing_id) }}" class="btn btn-outline-primary btn-sm">Edit</a>
+                        {% if row.status == 'published' %}
+                        <a href="{{ url_for('main_routes.marketplace_detail', category=row.category, listing_id=row.listing_id) }}"
+                           class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">View</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No marketplace listings yet. Create the first one to feature it on the landing page and public marketplace.</p>
+    {% endif %}
+
+    <hr class="my-4">
+
+    <section id="executive-summaries" class="mt-4">
+        <h2 class="h5 mb-2"><i class="bi bi-file-earmark-text"></i> Executive summaries</h2>
+        <p class="text-muted small mb-3">
+            Shown at the top of each public marketplace category page (Real Property and Products).
+        </p>
+        <form method="post" action="{{ url_for('site_admin.marketplace_summaries_save') }}" class="site-admin-form">
+            {% for slug in category_slugs %}
+            {% set summary = marketplace_summaries[slug] %}
+            <fieldset class="mb-3">
+                <legend>{{ categories[slug].label }}</legend>
+                <div class="mb-2">
+                    <label class="form-label" for="summary_title_{{ slug }}">Summary title</label>
+                    <input class="form-control" id="summary_title_{{ slug }}" name="summary_title_{{ slug }}"
+                           value="{{ summary.title }}" maxlength="200" required>
+                </div>
+                <div>
+                    <label class="form-label" for="summary_body_{{ slug }}">Executive summary</label>
+                    <textarea class="form-control" id="summary_body_{{ slug }}" name="summary_body_{{ slug }}"
+                              rows="4" required>{{ summary.body }}</textarea>
+                </div>
+            </fieldset>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-save"></i> Save executive summaries
+            </button>
+        </form>
+    </section>
+</div>
+{% endblock %}

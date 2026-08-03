@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}{{ listing.title }} — TBGP Marketplace{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+{% endblock %}
+
+{% block body_class %}landing-body{% endblock %}
+
+{% block body %}
+{% set landing_nav_active = 'marketplace' %}
+{% include 'partials/landing_nav.html' %}
+
+<section class="marketplace-page">
+    <div class="container">
+        <nav class="ecosystem-breadcrumb" aria-label="Breadcrumb">
+            <a href="{{ url_for('main_routes.index') }}">Home</a>
+            <span aria-hidden="true">/</span>
+            <a href="{{ url_for('main_routes.marketplace_category', category=category) }}">{{ category_meta.label }}</a>
+            <span aria-hidden="true">/</span>
+            <span>{{ listing.title }}</span>
+        </nav>
+
+        {% if attributed_member %}
+        <div class="marketplace-referral-banner" role="status">
+            Referred by <strong>#{{ attributed_member.member_id }} — {{ attributed_member.full_name }}</strong>.
+            Your inquiry will be recorded for this member.
+        </div>
+        {% endif %}
+
+        <div class="marketplace-detail-layout">
+            <div class="marketplace-detail-main">
+                <div class="marketplace-detail-hero">
+                    {% if listing.thumbnail_url %}
+                    <img src="{{ listing.thumbnail_url }}" alt="{{ listing.title }}">
+                    {% else %}
+                    <div class="marketplace-card-placeholder marketplace-detail-placeholder" aria-hidden="true">
+                        <i class="bi {{ category_meta.icon }}"></i>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if listing.gallery %}
+                <div class="marketplace-gallery">
+                    {% for item in listing.gallery %}
+                    {% if item.url %}
+                    <img src="{{ item.url }}" alt="{{ item.alt or listing.title }}">
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <header class="marketplace-detail-header">
+                    <p class="section-subtitle">{{ category_meta.label }}</p>
+                    <h1>{{ listing.title }}</h1>
+                    {% if listing.price_label %}<p class="marketplace-card-price">{{ listing.price_label }}</p>{% endif %}
+                    {% if listing.location %}<p class="marketplace-card-location">{{ listing.location }}</p>{% endif %}
+                </header>
+
+                {% if listing.summary %}
+                <p class="marketplace-detail-summary">{{ listing.summary }}</p>
+                {% endif %}
+                {% if listing.body %}
+                <div class="marketplace-detail-body">{{ listing.body }}</div>
+                {% endif %}
+
+                {% if listing.contact_name or listing.contact_phone or listing.contact_email %}
+                <div class="marketplace-detail-contact">
+                    <h2>Listing contact</h2>
+                    {% if listing.contact_name %}<p>{{ listing.contact_name }}</p>{% endif %}
+                    {% if listing.contact_phone %}<p>{{ listing.contact_phone }}</p>{% endif %}
+                    {% if listing.contact_email %}<p>{{ listing.contact_email }}</p>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <aside class="marketplace-inquiry-card">
+                <h2>Send an inquiry</h2>
+                <p class="text-muted small">No payment online. Leave your details and we will follow up.</p>
+
+                {% if form_success %}
+                <div class="alert alert-success py-2 small">{{ form_success }}</div>
+                {% endif %}
+                {% if form_error %}
+                <div class="alert alert-danger py-2 small">{{ form_error }}</div>
+                {% endif %}
+
+                <form method="post" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label" for="guest_name">Name <span class="text-danger">*</span></label>
+                        <input class="form-control" id="guest_name" name="guest_name" required value="{{ form_values.guest_name }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="guest_phone">Phone</label>
+                        <input class="form-control" id="guest_phone" name="guest_phone" value="{{ form_values.guest_phone }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="guest_email">Email</label>
+                        <input class="form-control" id="guest_email" name="guest_email" type="email" value="{{ form_values.guest_email }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="message">Message</label>
+                        <textarea class="form-control" id="message" name="message" rows="4">{{ form_values.message }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-brand w-100">Submit inquiry</button>
+                </form>
+            </aside>
+        </div>
+    </div>
+</section>
+
+{% include 'partials/landing_footer.html' %}
+{% endblock %}

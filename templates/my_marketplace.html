@@ -1,0 +1,135 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}My Marketplace{% endblock %}
+{% block topbar_title %}My Marketplace{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-shop"></i> My Marketplace</h5>
+            <p class="section-subtitle">
+                Share your link so guest inquiries on marketplace listings are credited to you.
+            </p>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <div class="stat-tile p-3">
+                <div class="stat-value">{{ lead_count }}</div>
+                <div class="stat-label">Attributed inquiries</div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <label class="form-label">Your marketplace hub link</label>
+            <div class="input-group">
+                <input type="text" class="form-control" id="shareHubLink" value="{{ share_links.hub }}" readonly>
+                <button type="button" class="btn btn-brand" data-copy-target="shareHubLink">
+                    <i class="bi bi-clipboard"></i> Copy
+                </button>
+            </div>
+            <p class="text-muted small mt-2 mb-0">Share code: <code>{{ share_code }}</code></p>
+        </div>
+    </div>
+
+    <p class="text-muted small fw-semibold text-uppercase mb-2">Category share links</p>
+    <div class="table-responsive">
+        <table class="table table-sm section-table mb-0">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Share link</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for slug in category_slugs %}
+                <tr>
+                    <td>{{ categories[slug].label }}</td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm" id="shareLink_{{ slug }}"
+                               value="{{ share_links[slug] }}" readonly>
+                    </td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-outline-light btn-sm" data-copy-target="shareLink_{{ slug }}">
+                            Copy
+                        </button>
+                        <a href="{{ share_links[slug] }}" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">Open</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-people"></i> Inquiry CRM log</h5>
+            <p class="section-subtitle">Guests who inquired after using your share link</p>
+        </div>
+    </div>
+
+    {% if leads %}
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Listing</th>
+                    <th>Guest</th>
+                    <th>Contact</th>
+                    <th>Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lead in leads %}
+                <tr>
+                    <td>{{ lead.created_at.strftime('%Y-%m-%d %H:%M') if lead.created_at else '—' }}</td>
+                    <td>
+                        {% if lead.listing %}
+                        <div>{{ lead.listing.title }}</div>
+                        <div class="text-muted small">{{ categories[lead.listing.category].label if lead.listing.category in categories else lead.listing.category }}</div>
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                    <td>{{ lead.guest_name }}</td>
+                    <td>
+                        {% if lead.guest_phone %}<div>{{ lead.guest_phone }}</div>{% endif %}
+                        {% if lead.guest_email %}<div class="small">{{ lead.guest_email }}</div>{% endif %}
+                    </td>
+                    <td class="small">{{ lead.message or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No attributed inquiries yet. Share your marketplace link to start collecting leads.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    document.querySelectorAll('[data-copy-target]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            const input = document.getElementById(btn.dataset.copyTarget);
+            if (!input) return;
+            try {
+                await navigator.clipboard.writeText(input.value);
+                const original = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-check2"></i> Copied';
+                setTimeout(() => { btn.innerHTML = original; }, 1500);
+            } catch (err) {
+                input.select();
+                document.execCommand('copy');
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}
