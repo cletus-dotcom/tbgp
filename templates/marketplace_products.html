@@ -37,173 +37,179 @@
             </a>
             {% endfor %}
         </div>
+    </div>
 
-        {# Hero #}
-        <header class="mp-funnel-hero{% if page.hero_image_url %} has-image{% endif %}">
-            {% if page.hero_image_url %}
-            <div class="mp-funnel-hero-media">
-                <img src="{{ page.hero_image_url }}" alt="" loading="eager" decoding="async">
-            </div>
-            {% endif %}
-            <div class="mp-funnel-hero-copy">
-                <p class="section-subtitle">Marketplace · Products</p>
-                <h1>{{ page.hero_title }}</h1>
-                <p class="mp-funnel-lead">{{ page.hero_lead }}</p>
-                <ul class="mp-funnel-bullets">
-                    {% for item in page.hero_bullets %}
-                    <li><i class="bi bi-check2-circle" aria-hidden="true"></i> {{ item }}</li>
-                    {% endfor %}
-                </ul>
-                <a href="#product-inquiry" class="btn btn-brand mt-3">Tell us about your project</a>
-            </div>
-        </header>
+    {# Split stage: faded hero background + products (left) / survey (right) #}
+    <section class="mp-funnel-stage{% if page.hero_image_url %} has-hero{% endif %}">
+        <div class="mp-funnel-stage-bg" aria-hidden="true"
+             {% if page.hero_image_url %}style="background-image: url({{ page.hero_image_url|tojson }});"{% endif %}></div>
+        <div class="mp-funnel-stage-fade" aria-hidden="true"></div>
 
-        {# Multi-step inquiry #}
-        <section class="mp-funnel-card" id="product-inquiry">
-            <h2>Tell us about your project</h2>
-            <p class="text-muted">{{ page.funnel_intro }}</p>
-
-            {% if form_success %}
-            <div class="alert alert-success">{{ form_success }}</div>
-            {% endif %}
-            {% if form_error %}
-            <div class="alert alert-danger">{{ form_error }}</div>
-            {% endif %}
-
-            <form method="post" id="productsFunnelForm" novalidate>
-                <div class="mp-funnel-progress" aria-hidden="true">
-                    <span class="is-active" data-step-dot="1"></span>
-                    <span data-step-dot="2"></span>
-                    <span data-step-dot="3"></span>
-                    <span data-step-dot="4"></span>
-                </div>
-
-                <div class="mp-funnel-step is-active" data-step="1">
-                    <h3>What best describes your business?</h3>
-                    <div class="mp-funnel-options">
-                        {% for option in page.business_types %}
-                        <label class="mp-funnel-option">
-                            <input type="radio" name="business_type" value="{{ option }}"
-                                   {% if form_values.business_type == option %}checked{% endif %} required>
-                            <span>{{ option }}</span>
-                        </label>
-                        {% endfor %}
-                    </div>
-                    <div class="mp-funnel-nav">
-                        <button type="button" class="btn btn-brand" data-next>Next</button>
-                    </div>
-                </div>
-
-                <div class="mp-funnel-step" data-step="2">
-                    <h3>What are you looking for?</h3>
-                    <div class="mp-funnel-options">
-                        {% for option in page.interests %}
-                        <label class="mp-funnel-option">
-                            <input type="radio" name="interest" value="{{ option }}"
-                                   {% if form_values.interest == option %}checked{% endif %} required>
-                            <span>{{ option }}</span>
-                        </label>
-                        {% endfor %}
-                    </div>
-                    <div class="mp-funnel-nav">
-                        <button type="button" class="btn btn-outline-light" data-prev>Back</button>
-                        <button type="button" class="btn btn-brand" data-next>Next</button>
-                    </div>
-                </div>
-
-                <div class="mp-funnel-step" data-step="3">
-                    <h3>When do you need this?</h3>
-                    <div class="mp-funnel-options">
-                        {% for option in page.timelines %}
-                        <label class="mp-funnel-option">
-                            <input type="radio" name="timeline" value="{{ option }}"
-                                   {% if form_values.timeline == option %}checked{% endif %} required>
-                            <span>{{ option }}</span>
-                        </label>
-                        {% endfor %}
-                    </div>
-                    {% if listings %}
-                    <div class="mt-3">
-                        <label class="form-label" for="listing_id">Optional: select a featured listing</label>
-                        <select class="form-select" id="listing_id" name="listing_id">
-                            <option value="">General products inquiry</option>
-                            {% for item in listings %}
-                            <option value="{{ item.listing_id }}" {% if form_values.listing_id == item.listing_id|string %}selected{% endif %}>
-                                {{ item.title }}{% if item.price_label %} — {{ item.price_label }}{% endif %}
-                            </option>
+        <div class="container mp-funnel-stage-inner">
+            <div class="mp-funnel-split">
+                <div class="mp-funnel-col mp-funnel-col-products">
+                    <header class="mp-funnel-intro">
+                        <p class="section-subtitle">Marketplace · Products</p>
+                        <h1>{{ page.hero_title }}</h1>
+                        <p class="mp-funnel-lead">{{ page.hero_lead }}</p>
+                        <ul class="mp-funnel-bullets">
+                            {% for item in page.hero_bullets %}
+                            <li><i class="bi bi-check2-circle" aria-hidden="true"></i> {{ item }}</li>
                             {% endfor %}
-                        </select>
-                    </div>
-                    {% endif %}
-                    <div class="mp-funnel-nav">
-                        <button type="button" class="btn btn-outline-light" data-prev>Back</button>
-                        <button type="button" class="btn btn-brand" data-next>Next</button>
-                    </div>
-                </div>
+                        </ul>
+                    </header>
 
-                <div class="mp-funnel-step" data-step="4">
-                    <h3>Contact details</h3>
-                    <p class="text-muted small">
-                        Once you submit, we’ll review your answers and reach out to confirm next steps.
-                    </p>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label" for="guest_name">Full name <span class="text-danger">*</span></label>
-                            <input class="form-control" id="guest_name" name="guest_name" required value="{{ form_values.guest_name }}">
+                    <div class="mp-funnel-panel" id="featured-products">
+                        <h2>Featured products</h2>
+                        <p class="mp-funnel-panel-lead">Browse published listings, then inquire on the right or open a product for details.</p>
+                        {% if listings %}
+                        <div class="mp-funnel-listing-stack">
+                            {% for item in listings %}
+                            <a href="{{ url_for('main_routes.marketplace_detail', category=category, listing_id=item.listing_id) }}"
+                               class="mp-funnel-listing-card">
+                                <div class="mp-funnel-listing-media">
+                                    {% if item.thumbnail_url %}
+                                    <img src="{{ item.thumbnail_url }}" alt="{{ item.title }}">
+                                    {% else %}
+                                    <div class="marketplace-card-placeholder" aria-hidden="true">
+                                        <i class="bi {{ category_meta.icon }}"></i>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="mp-funnel-listing-body">
+                                    <h3>{{ item.title }}</h3>
+                                    {% if item.price_label %}<p class="marketplace-card-price">{{ item.price_label }}</p>{% endif %}
+                                    {% if item.location %}<p class="marketplace-card-location">{{ item.location }}</p>{% endif %}
+                                    {% if item.summary %}<p class="marketplace-card-summary">{{ item.summary }}</p>{% endif %}
+                                </div>
+                            </a>
+                            {% endfor %}
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="guest_phone">Phone</label>
-                            <input class="form-control" id="guest_phone" name="guest_phone" value="{{ form_values.guest_phone }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="guest_email">Email</label>
-                            <input class="form-control" id="guest_email" name="guest_email" type="email" value="{{ form_values.guest_email }}">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label" for="notes">Anything else we should know?</label>
-                            <textarea class="form-control" id="notes" name="notes" rows="3">{{ form_values.notes }}</textarea>
-                        </div>
-                    </div>
-                    <div class="mp-funnel-nav">
-                        <button type="button" class="btn btn-outline-light" data-prev>Back</button>
-                        <button type="submit" class="btn btn-brand">Submit your request</button>
-                    </div>
-                </div>
-            </form>
-        </section>
-
-        {# Featured listings #}
-        <section class="mp-funnel-section" id="featured-products">
-            <h2>Featured products</h2>
-            <p class="text-muted">Browse published listings, then inquire above or open a product for details.</p>
-            {% if listings %}
-            <div class="marketplace-grid">
-                {% for item in listings %}
-                <a href="{{ url_for('main_routes.marketplace_detail', category=category, listing_id=item.listing_id) }}"
-                   class="marketplace-card">
-                    <div class="marketplace-card-media">
-                        {% if item.thumbnail_url %}
-                        <img src="{{ item.thumbnail_url }}" alt="{{ item.title }}">
                         {% else %}
-                        <div class="marketplace-card-placeholder" aria-hidden="true">
-                            <i class="bi {{ category_meta.icon }}"></i>
-                        </div>
+                        <p class="text-muted mb-0">No published product listings yet. You can still submit a general inquiry on the right.</p>
                         {% endif %}
                     </div>
-                    <div class="marketplace-card-body">
-                        <h3>{{ item.title }}</h3>
-                        {% if item.price_label %}<p class="marketplace-card-price">{{ item.price_label }}</p>{% endif %}
-                        {% if item.location %}<p class="marketplace-card-location">{{ item.location }}</p>{% endif %}
-                        {% if item.summary %}<p class="marketplace-card-summary">{{ item.summary }}</p>{% endif %}
-                    </div>
-                </a>
-                {% endfor %}
-            </div>
-            {% else %}
-            <p class="text-muted">No published product listings yet. You can still submit a general inquiry above.</p>
-            {% endif %}
-        </section>
+                </div>
 
+                <div class="mp-funnel-col mp-funnel-col-survey">
+                    <section class="mp-funnel-card" id="product-inquiry">
+                        <h2>Tell us about your project</h2>
+                        <p class="text-muted">{{ page.funnel_intro }}</p>
+
+                        {% if form_success %}
+                        <div class="alert alert-success">{{ form_success }}</div>
+                        {% endif %}
+                        {% if form_error %}
+                        <div class="alert alert-danger">{{ form_error }}</div>
+                        {% endif %}
+
+                        <form method="post" id="productsFunnelForm" novalidate>
+                            <div class="mp-funnel-progress" aria-hidden="true">
+                                <span class="is-active" data-step-dot="1"></span>
+                                <span data-step-dot="2"></span>
+                                <span data-step-dot="3"></span>
+                                <span data-step-dot="4"></span>
+                            </div>
+
+                            <div class="mp-funnel-step is-active" data-step="1">
+                                <h3>What best describes your business?</h3>
+                                <div class="mp-funnel-options">
+                                    {% for option in page.business_types %}
+                                    <label class="mp-funnel-option">
+                                        <input type="radio" name="business_type" value="{{ option }}"
+                                               {% if form_values.business_type == option %}checked{% endif %} required>
+                                        <span>{{ option }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                                <div class="mp-funnel-nav">
+                                    <button type="button" class="btn btn-brand" data-next>Next</button>
+                                </div>
+                            </div>
+
+                            <div class="mp-funnel-step" data-step="2">
+                                <h3>What are you looking for?</h3>
+                                <div class="mp-funnel-options">
+                                    {% for option in page.interests %}
+                                    <label class="mp-funnel-option">
+                                        <input type="radio" name="interest" value="{{ option }}"
+                                               {% if form_values.interest == option %}checked{% endif %} required>
+                                        <span>{{ option }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                                <div class="mp-funnel-nav">
+                                    <button type="button" class="btn btn-outline-light" data-prev>Back</button>
+                                    <button type="button" class="btn btn-brand" data-next>Next</button>
+                                </div>
+                            </div>
+
+                            <div class="mp-funnel-step" data-step="3">
+                                <h3>When do you need this?</h3>
+                                <div class="mp-funnel-options">
+                                    {% for option in page.timelines %}
+                                    <label class="mp-funnel-option">
+                                        <input type="radio" name="timeline" value="{{ option }}"
+                                               {% if form_values.timeline == option %}checked{% endif %} required>
+                                        <span>{{ option }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                                {% if listings %}
+                                <div class="mt-3">
+                                    <label class="form-label" for="listing_id">Optional: select a featured listing</label>
+                                    <select class="form-select" id="listing_id" name="listing_id">
+                                        <option value="">General products inquiry</option>
+                                        {% for item in listings %}
+                                        <option value="{{ item.listing_id }}" {% if form_values.listing_id == item.listing_id|string %}selected{% endif %}>
+                                            {{ item.title }}{% if item.price_label %} — {{ item.price_label }}{% endif %}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                {% endif %}
+                                <div class="mp-funnel-nav">
+                                    <button type="button" class="btn btn-outline-light" data-prev>Back</button>
+                                    <button type="button" class="btn btn-brand" data-next>Next</button>
+                                </div>
+                            </div>
+
+                            <div class="mp-funnel-step" data-step="4">
+                                <h3>Contact details</h3>
+                                <p class="text-muted small">
+                                    Once you submit, we’ll review your answers and reach out to confirm next steps.
+                                </p>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label" for="guest_name">Full name <span class="text-danger">*</span></label>
+                                        <input class="form-control" id="guest_name" name="guest_name" required value="{{ form_values.guest_name }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="guest_phone">Phone</label>
+                                        <input class="form-control" id="guest_phone" name="guest_phone" value="{{ form_values.guest_phone }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="guest_email">Email</label>
+                                        <input class="form-control" id="guest_email" name="guest_email" type="email" value="{{ form_values.guest_email }}">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label" for="notes">Anything else we should know?</label>
+                                        <textarea class="form-control" id="notes" name="notes" rows="3">{{ form_values.notes }}</textarea>
+                                    </div>
+                                </div>
+                                <div class="mp-funnel-nav">
+                                    <button type="button" class="btn btn-outline-light" data-prev>Back</button>
+                                    <button type="submit" class="btn btn-brand">Submit your request</button>
+                                </div>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container">
         {# Why it matters #}
         <section class="mp-funnel-section">
             <h2>{{ page.why_title }}</h2>
@@ -294,6 +300,7 @@
 (function () {
     const form = document.getElementById('productsFunnelForm');
     if (!form) return;
+    const card = document.getElementById('product-inquiry');
     const steps = Array.from(form.querySelectorAll('.mp-funnel-step'));
     const dots = Array.from(form.querySelectorAll('[data-step-dot]'));
     let index = 0;
@@ -302,7 +309,7 @@
         index = Math.max(0, Math.min(i, steps.length - 1));
         steps.forEach((step, idx) => step.classList.toggle('is-active', idx === index));
         dots.forEach((dot, idx) => dot.classList.toggle('is-active', idx <= index));
-        form.querySelector('.mp-funnel-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        card?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     function validateCurrent() {
