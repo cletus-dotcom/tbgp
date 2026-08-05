@@ -114,7 +114,11 @@
                     <span class="partner-image-status text-muted small"></span>
                 </div>
                 {% else %}
-                <p class="form-text text-muted mb-0 mt-1">Upload is unavailable until Supabase Storage is configured; you can still paste an image URL.</p>
+                <p class="form-text text-warning mb-0 mt-1">
+                    Upload is unavailable:
+                    {{ supabase_storage_config_error or 'configure SUPABASE_URL (https://…supabase.co) and SUPABASE_SERVICE_ROLE_KEY on the server.' }}
+                    You can still paste an image URL.
+                </p>
                 {% endif %}
             </div>
             <button type="submit" class="btn btn-primary btn-sm">

@@ -28,16 +28,29 @@ def _normalize_database_url(url):
 
 DATABASE_URL = _normalize_database_url(os.getenv("DATABASE_URL"))
 
-SUPABASE_URL = (os.getenv("SUPABASE_URL") or "").strip().rstrip("/")
+
+def _normalize_supabase_api_url(url):
+    """Accept only the HTTPS project API URL used by Storage (not DATABASE_URL)."""
+    value = (url or "").strip().rstrip("/")
+    if not value:
+        return ""
+    lower = value.lower()
+    if lower.startswith("postgres://") or lower.startswith("postgresql://"):
+        return ""
+    if not lower.startswith("https://"):
+        return ""
+    return value
+
+
+SUPABASE_URL = _normalize_supabase_api_url(os.getenv("SUPABASE_URL"))
 SUPABASE_SERVICE_ROLE_KEY = (
     os.getenv("SUPABASE_SERVICE_ROLE_KEY")
     or os.getenv("SUPABASE_SECRET_KEY")
     or ""
 ).strip()
-SUPABASE_PARTNER_IMAGES_BUCKET = os.getenv(
-    "SUPABASE_PARTNER_IMAGES_BUCKET",
-    "partner-images",
-)
+SUPABASE_PARTNER_IMAGES_BUCKET = (
+    os.getenv("SUPABASE_PARTNER_IMAGES_BUCKET") or "partner-images"
+).strip() or "partner-images"
 
 MEMBER_WHATSAPP_MEMBERSHIP = os.getenv("MEMBER_WHATSAPP_MEMBERSHIP", "")
 MEMBER_WHATSAPP_OTHER_MATTERS = os.getenv("MEMBER_WHATSAPP_OTHER_MATTERS", "")
@@ -45,6 +58,23 @@ MEMBER_WHATSAPP_OTHER_MATTERS = os.getenv("MEMBER_WHATSAPP_OTHER_MATTERS", "")
 
 def supabase_storage_configured():
     return bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
+
+
+def supabase_storage_config_error():
+    """Human-readable reason Storage uploads are unavailable."""
+    raw_url = (os.getenv("SUPABASE_URL") or "").strip()
+    if not raw_url:
+        return "Set SUPABASE_URL to https://YOUR_PROJECT_REF.supabase.co"
+    if raw_url.lower().startswith(("postgres://", "postgresql://")):
+        return (
+            "SUPABASE_URL is a database connection string. "
+            "Use the HTTPS API URL instead (https://YOUR_PROJECT_REF.supabase.co)."
+        )
+    if not SUPABASE_URL:
+        return "SUPABASE_URL must be an https://…supabase.co project URL."
+    if not SUPABASE_SERVICE_ROLE_KEY:
+        return "Set SUPABASE_SERVICE_ROLE_KEY (service_role secret from Supabase API settings)."
+    return None
 
 
 def database_uri():

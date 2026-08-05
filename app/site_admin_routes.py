@@ -7,6 +7,7 @@ from app.config import (
     is_portal_admin_role,
     is_site_admin_role,
     normalize_role,
+    supabase_storage_config_error,
     supabase_storage_configured,
 )
 from app.marketplace_service import (
@@ -249,7 +250,10 @@ def registry_suppliers():
 @site_admin_required
 def upload_partner_image():
     if not supabase_storage_configured():
-        return jsonify({"error": "Supabase Storage is not configured on this server."}), 503
+        return jsonify({
+            "error": supabase_storage_config_error()
+            or "Supabase Storage is not configured on this server."
+        }), 503
 
     file = request.files.get("file")
     kind = request.form.get("kind", "gallery")
@@ -259,8 +263,8 @@ def upload_partner_image():
         return jsonify(result)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
-    except Exception:
-        return jsonify({"error": "Image upload failed. Try again or paste an image URL."}), 500
+    except Exception as exc:
+        return jsonify({"error": str(exc) or "Image upload failed. Try again or paste an image URL."}), 500
 
 
 @site_admin_bp.route("/registry/<partner_type>/new", methods=["GET", "POST"])
@@ -388,6 +392,7 @@ def marketplace_list():
         products_page=get_marketplace_products_page(),
         partner_image_upload_enabled=supabase_storage_configured(),
         partner_image_upload_url=url_for("site_admin.upload_marketplace_image"),
+        supabase_storage_config_error=supabase_storage_config_error(),
     )
 
 
@@ -504,7 +509,10 @@ def marketplace_edit(listing_id):
 @site_admin_required
 def upload_marketplace_image():
     if not supabase_storage_configured():
-        return jsonify({"error": "Supabase Storage is not configured on this server."}), 503
+        return jsonify({
+            "error": supabase_storage_config_error()
+            or "Supabase Storage is not configured on this server."
+        }), 503
 
     file = request.files.get("file")
     kind = (request.form.get("kind") or "gallery").strip().lower()
@@ -516,5 +524,5 @@ def upload_marketplace_image():
         return jsonify(result)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
-    except Exception:
-        return jsonify({"error": "Image upload failed. Try again or paste an image URL."}), 500
+    except Exception as exc:
+        return jsonify({"error": str(exc) or "Image upload failed. Try again or paste an image URL."}), 500
