@@ -28,6 +28,7 @@
                         <option value="draft" {% if listing.status == 'draft' %}selected{% endif %}>Draft</option>
                         <option value="published" {% if listing.status == 'published' %}selected{% endif %}>Published</option>
                     </select>
+                    <div class="form-text">Only <strong>Published</strong> listings appear on the public marketplace (Featured products).</div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label" for="sort_order">Sort order</label>
@@ -87,15 +88,17 @@
 
             <div class="mt-3">
                 <label class="form-label">Gallery</label>
+                <p class="form-text text-muted">JPEG/PNG/WebP/GIF, max 5 MB per image. Upload fills the URL field.</p>
                 <div class="repeater-list" data-repeater="gallery" data-fields="url,alt">
-                    {% for item in (listing.gallery or []) %}
+                    {% set gallery_items = listing.gallery if listing.gallery else [{'url': '', 'alt': ''}] %}
+                    {% for item in gallery_items %}
                     <div class="repeater-item">
                         <div class="row g-2">
                             <div class="col-md-7">
                                 <label class="form-label">Image</label>
                                 <div class="partner-image-field partner-image-field-inline" data-image-kind="gallery">
                                     <input class="form-control partner-image-url" name="gallery_url_{{ loop.index0 }}"
-                                           value="{{ item.url }}" placeholder="https://... or upload below">
+                                           value="{{ item.url or '' }}" placeholder="https://... or upload below">
                                     {% if partner_image_upload_enabled %}
                                     <div class="partner-image-actions">
                                         <input type="file" class="partner-image-file" accept="image/jpeg,image/png,image/webp,image/gif" hidden>

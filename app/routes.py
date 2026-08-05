@@ -191,7 +191,6 @@ from app.product_commission_service import (
 )
 from app.marketplace_service import (
     create_lead,
-    create_products_funnel_lead,
     ensure_member_share_code,
     get_attributed_member,
     get_marketplace_category,
@@ -352,47 +351,6 @@ def marketplace_category(category):
 
     if category == "products":
         ctx["page"] = products_page_content()
-        ctx["form_error"] = None
-        ctx["form_success"] = None
-        ctx["form_values"] = {
-            "business_type": "",
-            "interest": "",
-            "timeline": "",
-            "listing_id": "",
-            "guest_name": "",
-            "guest_phone": "",
-            "guest_email": "",
-            "notes": "",
-        }
-        if request.method == "POST":
-            ctx["form_values"] = {
-                "business_type": request.form.get("business_type") or "",
-                "interest": request.form.get("interest") or "",
-                "timeline": request.form.get("timeline") or "",
-                "listing_id": request.form.get("listing_id") or "",
-                "guest_name": request.form.get("guest_name") or "",
-                "guest_phone": request.form.get("guest_phone") or "",
-                "guest_email": request.form.get("guest_email") or "",
-                "notes": request.form.get("notes") or "",
-            }
-            try:
-                create_products_funnel_lead(request.form, source_path=request.path)
-                ctx["form_success"] = (
-                    "Thank you. Your request was submitted. "
-                    "A TBGP representative will follow up within 1 business day."
-                )
-                ctx["form_values"] = {
-                    "business_type": "",
-                    "interest": "",
-                    "timeline": "",
-                    "listing_id": "",
-                    "guest_name": "",
-                    "guest_phone": "",
-                    "guest_email": "",
-                    "notes": "",
-                }
-            except ValueError as exc:
-                ctx["form_error"] = str(exc)
         return render_template("marketplace_products.html", **ctx)
 
     return render_template("marketplace_category.html", **ctx)

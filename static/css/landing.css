@@ -2418,13 +2418,63 @@ body.landing-body {
         background: #1a1f27;
         overflow: hidden;
     }
-    .marketplace-card-media img,
-    .marketplace-detail-hero img,
-    .marketplace-gallery img {
+    .marketplace-card-media img {
         width: 100%;
         height: 100%;
         object-fit: cover;
         display: block;
+    }
+    .marketplace-detail-hero {
+        aspect-ratio: auto;
+        min-height: 14rem;
+        max-height: min(70vh, 36rem);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .marketplace-detail-hero img {
+        width: 100%;
+        height: auto;
+        max-height: min(70vh, 36rem);
+        object-fit: contain;
+        object-position: center;
+        display: block;
+    }
+    .marketplace-gallery-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    .marketplace-detail-media {
+        margin-bottom: 1rem;
+    }
+    .marketplace-listing-carousel {
+        border-radius: 0.85rem;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: #1a1f27;
+    }
+    .marketplace-listing-carousel .carousel-indicators {
+        margin-bottom: 0.65rem;
+    }
+    .marketplace-listing-carousel .carousel-indicators [data-bs-target] {
+        width: 0.55rem;
+        height: 0.55rem;
+        border-radius: 999px;
+        background-color: rgba(255, 255, 255, 0.45);
+    }
+    .marketplace-listing-carousel .carousel-indicators .active {
+        background-color: var(--amber, #f0a500);
+    }
+    .marketplace-listing-carousel .carousel-control-prev,
+    .marketplace-listing-carousel .carousel-control-next {
+        width: 12%;
+        opacity: 0.85;
+    }
+    .marketplace-listing-carousel .carousel-control-prev-icon,
+    .marketplace-listing-carousel .carousel-control-next-icon {
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.65));
     }
     .marketplace-card-placeholder {
         width: 100%;
@@ -2477,13 +2527,28 @@ body.landing-body {
     }
     .marketplace-gallery {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 0.65rem;
-        margin: 1rem 0;
+        grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+        gap: 0.55rem;
+        margin: 0.75rem 0 0;
     }
-    .marketplace-gallery img {
+    .marketplace-gallery-thumb {
+        display: block;
+        padding: 0;
+        border: 2px solid rgba(255, 255, 255, 0.14);
+        border-radius: 0.55rem;
+        overflow: hidden;
+        background: #1a1f27;
         aspect-ratio: 1;
-        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+    .marketplace-gallery-thumb:hover {
+        border-color: rgba(240, 165, 0, 0.55);
+        transform: translateY(-1px);
+    }
+    .marketplace-gallery-thumb.is-active {
+        border-color: var(--amber, #f0a500);
+        box-shadow: 0 0 0 1px rgba(240, 165, 0, 0.35);
     }
     .marketplace-detail-contact {
         margin-top: 1.5rem;
@@ -2538,18 +2603,24 @@ body.landing-body {
         pointer-events: none;
         z-index: 0;
     }
-    .mp-funnel-stage.has-hero .mp-funnel-stage-bg {
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
+    .mp-funnel-stage-bg {
+        overflow: hidden;
+    }
+    .mp-funnel-stage-bg-img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
         transform: scale(1.04);
-        filter: saturate(0.85);
-        opacity: 0.38;
+        filter: saturate(0.9);
+        opacity: 0.55;
     }
     .mp-funnel-stage-fade {
         background:
-            linear-gradient(180deg, rgba(8, 12, 18, 0.55) 0%, rgba(8, 12, 18, 0.72) 45%, rgba(8, 12, 18, 0.92) 100%),
-            linear-gradient(90deg, rgba(8, 12, 18, 0.55) 0%, rgba(8, 12, 18, 0.28) 50%, rgba(8, 12, 18, 0.6) 100%);
+            linear-gradient(180deg, rgba(8, 12, 18, 0.28) 0%, rgba(8, 12, 18, 0.45) 50%, rgba(8, 12, 18, 0.78) 100%),
+            linear-gradient(90deg, rgba(8, 12, 18, 0.4) 0%, rgba(8, 12, 18, 0.18) 45%, rgba(8, 12, 18, 0.42) 100%);
+        z-index: 0;
     }
     .mp-funnel-stage:not(.has-hero) .mp-funnel-stage-fade {
         background:
@@ -2619,6 +2690,16 @@ body.landing-body {
         max-height: min(42rem, 70vh);
         overflow: auto;
         padding-right: 0.25rem;
+    }
+    .mp-funnel-listing-grid {
+        display: grid;
+        gap: 0.85rem;
+    }
+    .mp-funnel-stage-solo .mp-funnel-intro {
+        max-width: 46rem;
+    }
+    .mp-funnel-stage-solo .mp-funnel-panel {
+        max-width: 56rem;
     }
     .mp-funnel-listing-card {
         display: grid;
@@ -2805,11 +2886,17 @@ body.landing-body {
         .mp-funnel-steps-grid {
             grid-template-columns: repeat(3, minmax(0, 1fr));
         }
+        .mp-funnel-listing-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
     }
     @media (min-width: 992px) {
         .mp-funnel-stage {
             padding: 2rem 0 3rem;
             min-height: min(78vh, 52rem);
+        }
+        .mp-funnel-stage-solo {
+            min-height: auto;
         }
         .mp-funnel-split {
             grid-template-columns: minmax(0, 1.15fr) minmax(20rem, 0.9fr);
@@ -2833,7 +2920,7 @@ body.landing-body {
         .mp-funnel-listing-stack {
             max-height: none;
         }
-        .mp-funnel-stage.has-hero .mp-funnel-stage-bg {
-            opacity: 0.28;
+        .mp-funnel-stage-bg-img {
+            opacity: 0.42;
         }
     }

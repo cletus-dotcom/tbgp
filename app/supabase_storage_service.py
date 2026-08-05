@@ -36,9 +36,13 @@ def _get_supabase_client():
         raise RuntimeError(
             "Supabase Storage is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
         )
-    from supabase import create_client
+    from supabase import create_client, ClientOptions
 
-    return create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    return create_client(
+        SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY,
+        options=ClientOptions(storage_client_timeout=120),
+    )
 
 
 def _normalize_partner_slug(slug):
@@ -158,6 +162,8 @@ def _upload_bytes(object_name, payload, content_type, image_kind):
         raise RuntimeError(_storage_error_message(exc)) from exc
 
     public_url = storage.get_public_url(object_name)
+    if isinstance(public_url, str):
+        public_url = public_url.rstrip("?")
     return {
         "url": public_url,
         "path": object_name,

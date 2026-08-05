@@ -232,8 +232,9 @@ def get_marketplace_products_page():
     """CMS settings for the public Products marketplace funnel page."""
     row = CmsLandingSection.query.get(MARKETPLACE_PRODUCTS_PAGE_KEY)
     data = copy.deepcopy(row.data) if row and row.data else {}
+    hero = (data.get("hero_image_url") or "").strip().rstrip("?")
     return {
-        "hero_image_url": (data.get("hero_image_url") or "").strip(),
+        "hero_image_url": hero,
     }
 
 

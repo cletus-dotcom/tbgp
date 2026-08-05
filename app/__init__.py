@@ -75,6 +75,8 @@ def create_app():
     from app.config import SUPABASE_PARTNER_IMAGES_BUCKET
 
     app.config["SUPABASE_PARTNER_IMAGES_BUCKET"] = SUPABASE_PARTNER_IMAGES_BUCKET
+    # Partner/marketplace image uploads are capped at 5 MB; allow a little headroom for multipart wrappers.
+    app.config["MAX_CONTENT_LENGTH"] = 6 * 1024 * 1024
 
     db.init_app(app)
 
@@ -100,6 +102,16 @@ def create_app():
         if path == "/" or any(path.startswith(prefix) for prefix in allowed):
             return None
         return redirect(url_for("site_admin.home"))
+
+    @app.errorhandler(413)
+    def request_entity_too_large(_exc):
+        from flask import jsonify, request
+
+        if request.path.startswith("/site-admin/") and request.path.endswith("/image"):
+            return jsonify({"error": "Image is too large (max 5 MB)."}), 413
+        if request.path.startswith("/site-admin/") and "partner-image" in request.path:
+            return jsonify({"error": "Image is too large (max 5 MB)."}), 413
+        return ("File too large.", 413)
 
     @app.context_processor
     def inject_globals():

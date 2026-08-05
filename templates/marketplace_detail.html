@@ -30,25 +30,73 @@
 
         <div class="marketplace-detail-layout">
             <div class="marketplace-detail-main">
-                <div class="marketplace-detail-hero">
-                    {% if listing.thumbnail_url %}
-                    <img src="{{ listing.thumbnail_url }}" alt="{{ listing.title }}">
+                {% set ns = namespace(urls=[]) %}
+                {% if listing.thumbnail_url %}
+                    {% set _ = ns.urls.append({'url': listing.thumbnail_url, 'alt': listing.title}) %}
+                {% endif %}
+                {% for item in (listing.gallery or []) %}
+                    {% if item.url and item.url != listing.thumbnail_url %}
+                        {% set _ = ns.urls.append({'url': item.url, 'alt': item.alt or listing.title}) %}
+                    {% endif %}
+                {% endfor %}
+                {% set media = ns.urls %}
+
+                <div class="marketplace-detail-media">
+                    {% if media %}
+                    <div id="listingMediaCarousel" class="carousel slide marketplace-listing-carousel"
+                         {% if media|length > 1 %}data-bs-ride="carousel" data-bs-interval="6000"{% endif %}>
+                        {% if media|length > 1 %}
+                        <div class="carousel-indicators">
+                            {% for item in media %}
+                            <button type="button" data-bs-target="#listingMediaCarousel" data-bs-slide-to="{{ loop.index0 }}"
+                                    class="{% if loop.first %}active{% endif %}"
+                                    aria-current="{{ 'true' if loop.first else 'false' }}"
+                                    aria-label="Slide {{ loop.index }}"></button>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="carousel-inner">
+                            {% for item in media %}
+                            <div class="carousel-item {% if loop.first %}active{% endif %}">
+                                <div class="marketplace-detail-hero">
+                                    <img src="{{ item.url }}" alt="{{ item.alt }}" loading="{{ 'eager' if loop.first else 'lazy' }}">
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if media|length > 1 %}
+                        <button class="carousel-control-prev" type="button" data-bs-target="#listingMediaCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Previous</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#listingMediaCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Next</span>
+                        </button>
+                        {% endif %}
+                    </div>
+
+                    {% if media|length > 1 %}
+                    <div class="marketplace-gallery" role="tablist" aria-label="Listing images">
+                        {% for item in media %}
+                        <button type="button"
+                                class="marketplace-gallery-thumb {% if loop.first %}is-active{% endif %}"
+                                data-bs-target="#listingMediaCarousel"
+                                data-bs-slide-to="{{ loop.index0 }}"
+                                aria-label="Show image {{ loop.index }}">
+                            <img src="{{ item.url }}" alt="{{ item.alt }}">
+                        </button>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                     {% else %}
-                    <div class="marketplace-card-placeholder marketplace-detail-placeholder" aria-hidden="true">
-                        <i class="bi {{ category_meta.icon }}"></i>
+                    <div class="marketplace-detail-hero">
+                        <div class="marketplace-card-placeholder marketplace-detail-placeholder" aria-hidden="true">
+                            <i class="bi {{ category_meta.icon }}"></i>
+                        </div>
                     </div>
                     {% endif %}
                 </div>
-
-                {% if listing.gallery %}
-                <div class="marketplace-gallery">
-                    {% for item in listing.gallery %}
-                    {% if item.url %}
-                    <img src="{{ item.url }}" alt="{{ item.alt or listing.title }}">
-                    {% endif %}
-                    {% endfor %}
-                </div>
-                {% endif %}
 
                 <header class="marketplace-detail-header">
                     <p class="section-subtitle">{{ category_meta.label }}</p>
@@ -110,4 +158,25 @@
 </section>
 
 {% include 'partials/landing_footer.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const carouselEl = document.getElementById('listingMediaCarousel');
+    if (!carouselEl) return;
+    const thumbs = Array.from(document.querySelectorAll('.marketplace-gallery-thumb'));
+    if (!thumbs.length) return;
+
+    function setActive(index) {
+        thumbs.forEach(function (thumb, i) {
+            thumb.classList.toggle('is-active', i === index);
+        });
+    }
+
+    carouselEl.addEventListener('slid.bs.carousel', function (event) {
+        setActive(event.to);
+    });
+})();
+</script>
 {% endblock %}

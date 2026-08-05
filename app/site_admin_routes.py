@@ -526,3 +526,8 @@ def upload_marketplace_image():
         return jsonify({"error": str(exc)}), 400
     except Exception as exc:
         return jsonify({"error": str(exc) or "Image upload failed. Try again or paste an image URL."}), 500
+
+
+@site_admin_bp.errorhandler(413)
+def marketplace_upload_too_large(_exc):
+    return jsonify({"error": "Image is too large (max 5 MB)."}), 413

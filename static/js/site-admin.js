@@ -257,12 +257,30 @@
     }
 
     function uploadPartnerImage(field, file) {
-        const uploadUrl = partnerForm?.dataset.partnerImageUploadUrl;
+        const form = field.closest("form") || partnerForm;
+        const uploadUrl = form?.dataset.partnerImageUploadUrl;
         if (!uploadUrl || !file) {
+            setPartnerImageStatus(
+                field,
+                "Upload is not configured on this page. Paste an image URL instead.",
+                true
+            );
             return;
         }
 
-        const slugInput = document.getElementById("slug");
+        const maxBytes = 5 * 1024 * 1024;
+        if (file.size > maxBytes) {
+            setPartnerImageStatus(field, "Image must be 5 MB or smaller.", true);
+            return;
+        }
+
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+        if (file.type && allowedTypes.indexOf(file.type) === -1) {
+            setPartnerImageStatus(field, "Only JPEG, PNG, WebP, and GIF images are allowed.", true);
+            return;
+        }
+
+        const slugInput = (form && form.querySelector("#slug")) || document.getElementById("slug");
         const slug = (slugInput && slugInput.value.trim()) || "draft";
         const kind = field.dataset.imageKind || "gallery";
         const urlInput = field.querySelector(".partner-image-url");
@@ -282,9 +300,27 @@
             method: "POST",
             body: formData,
             credentials: "same-origin",
+            headers: {
+                Accept: "application/json",
+            },
         })
             .then(function (response) {
-                return response.json().then(function (payload) {
+                return response.text().then(function (text) {
+                    let payload = {};
+                    if (text) {
+                        try {
+                            payload = JSON.parse(text);
+                        } catch (parseError) {
+                            if (!response.ok) {
+                                throw new Error(
+                                    response.status === 413
+                                        ? "Image is too large (max 5 MB)."
+                                        : "Upload failed (HTTP " + response.status + ")."
+                                );
+                            }
+                            throw new Error("Upload returned an unexpected response.");
+                        }
+                    }
                     if (!response.ok) {
                         throw new Error(payload.error || "Upload failed.");
                     }
@@ -300,7 +336,12 @@
                 setPartnerImageStatus(field, "Uploaded.", false);
             })
             .catch(function (error) {
-                setPartnerImageStatus(field, error.message || "Upload failed.", true);
+                let message = (error && error.message) || "Upload failed.";
+                if (message === "Failed to fetch" || message === "NetworkError when attempting to fetch resource.") {
+                    message =
+                        "Could not reach the upload server. Use an image under 5 MB, keep this tab open, and try again.";
+                }
+                setPartnerImageStatus(field, message, true);
             })
             .finally(function () {
                 if (uploadBtn) {
@@ -323,7 +364,9 @@
 
         if (uploadBtn && fileInput && !uploadBtn.dataset.uploadWired) {
             uploadBtn.dataset.uploadWired = "true";
-            uploadBtn.addEventListener("click", function () {
+            uploadBtn.addEventListener("click", function (event) {
+                event.preventDefault();
+                event.stopPropagation();
                 fileInput.click();
             });
             fileInput.addEventListener("change", function () {

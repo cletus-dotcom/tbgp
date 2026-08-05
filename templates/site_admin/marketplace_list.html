@@ -7,6 +7,7 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <p class="site-admin-lead mb-0">
             Publish real property and products listings for the public marketplace.
+            Draft listings stay in Site Admin only; set status to <strong>Published</strong> to show them under Featured products.
         </p>
         <a href="{{ url_for('site_admin.marketplace_new', category=filter_category) }}" class="btn btn-primary btn-sm">
             <i class="bi bi-plus-lg"></i> New listing
