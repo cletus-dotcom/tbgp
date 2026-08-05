@@ -218,8 +218,11 @@
                             {{ categories[lead.listing.category].label if lead.listing.category in categories else lead.listing.category }}
                             · #{{ lead.listing_id }}
                         </div>
+                        {% elif lead.interest_category %}
+                        <div>General {{ categories[lead.interest_category].label if lead.interest_category in categories else lead.interest_category }} inquiry</div>
+                        <div class="text-muted small">No specific listing</div>
                         {% else %}
-                        #{{ lead.listing_id }}
+                        <span class="text-muted">—</span>
                         {% endif %}
                     </td>
                     <td>{{ lead.guest_name }}</td>

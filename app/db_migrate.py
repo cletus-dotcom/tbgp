@@ -620,8 +620,9 @@ def migrate_marketplace_tables():
         db.session.execute(text("""
             CREATE TABLE marketplace_leads (
                 lead_id SERIAL PRIMARY KEY,
-                listing_id INTEGER NOT NULL
+                listing_id INTEGER
                     REFERENCES marketplace_listings(listing_id) ON DELETE CASCADE,
+                interest_category VARCHAR(40),
                 attributed_member_id INTEGER REFERENCES members(member_id),
                 guest_name VARCHAR(120) NOT NULL,
                 guest_phone VARCHAR(40),
@@ -634,8 +635,34 @@ def migrate_marketplace_tables():
         db.session.execute(text(
             "CREATE INDEX ix_marketplace_leads_member ON marketplace_leads (attributed_member_id)"
         ))
+        db.session.execute(text(
+            "CREATE INDEX ix_marketplace_leads_interest_category "
+            "ON marketplace_leads (interest_category)"
+        ))
         logger.info("Created marketplace_leads table")
         db.session.commit()
+    else:
+        lead_cols = {col["name"] for col in inspector.get_columns("marketplace_leads")}
+        listing_col = next(
+            (col for col in inspector.get_columns("marketplace_leads") if col["name"] == "listing_id"),
+            None,
+        )
+        if listing_col is not None and not listing_col.get("nullable", True):
+            db.session.execute(text(
+                "ALTER TABLE marketplace_leads ALTER COLUMN listing_id DROP NOT NULL"
+            ))
+            logger.info("Made marketplace_leads.listing_id nullable")
+            db.session.commit()
+        if "interest_category" not in lead_cols:
+            db.session.execute(text(
+                "ALTER TABLE marketplace_leads ADD COLUMN interest_category VARCHAR(40)"
+            ))
+            db.session.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_marketplace_leads_interest_category "
+                "ON marketplace_leads (interest_category)"
+            ))
+            logger.info("Added marketplace_leads.interest_category")
+            db.session.commit()
 
     # Unique index for member share codes when column exists.
     member_cols = {col["name"] for col in inspector.get_columns("members")}

@@ -12,6 +12,7 @@ from app.partners_registry import ALL_PARTNERS, CONTRACTORS, SUPPLIERS
 LANDING_ECOSYSTEM_KEY = "ecosystem_pillars"
 SERVICES_CONTACT_CTA_KEY = "services_contact_cta"
 MARKETPLACE_SUMMARIES_KEY = "marketplace_summaries"
+MARKETPLACE_PRODUCTS_PAGE_KEY = "marketplace_products_page"
 
 DEFAULT_LANDING_ECOSYSTEM = {
     "subtitle": "The Cooperative Ecosystem",
@@ -36,13 +37,15 @@ DEFAULT_MARKETPLACE_SUMMARIES = {
     "products": {
         "title": "Products Executive Summary",
         "body": (
-            "Explore featured products available through the TBGP network. "
-            "Listings are informational with inquiry-only contact—no online checkout. "
-            "Purchases closed offline can be credited through the portal commission workflows."
+            "Explore curated TBGP product opportunities, submit a short project inquiry, "
+            "and get matched with relevant listings through network follow-up—no online checkout."
         ),
     },
 }
 
+DEFAULT_MARKETPLACE_PRODUCTS_PAGE = {
+    "hero_image_url": "",
+}
 
 def _deepcopy_defaults():
     return copy.deepcopy(ECOSYSTEM_PAGES)
@@ -71,6 +74,14 @@ def seed_cms_content():
             CmsLandingSection(
                 section_key=MARKETPLACE_SUMMARIES_KEY,
                 data=copy.deepcopy(DEFAULT_MARKETPLACE_SUMMARIES),
+            )
+        )
+
+    if CmsLandingSection.query.get(MARKETPLACE_PRODUCTS_PAGE_KEY) is None:
+        db.session.add(
+            CmsLandingSection(
+                section_key=MARKETPLACE_PRODUCTS_PAGE_KEY,
+                data=copy.deepcopy(DEFAULT_MARKETPLACE_PRODUCTS_PAGE),
             )
         )
 
@@ -210,6 +221,38 @@ def save_marketplace_summaries(form_or_data):
     row = CmsLandingSection.query.get(MARKETPLACE_SUMMARIES_KEY)
     if row is None:
         row = CmsLandingSection(section_key=MARKETPLACE_SUMMARIES_KEY)
+    row.data = payload
+    row.updated_at = datetime.utcnow()
+    db.session.add(row)
+    db.session.commit()
+    return payload
+
+
+def get_marketplace_products_page():
+    """CMS settings for the public Products marketplace funnel page."""
+    row = CmsLandingSection.query.get(MARKETPLACE_PRODUCTS_PAGE_KEY)
+    data = copy.deepcopy(row.data) if row and row.data else {}
+    return {
+        "hero_image_url": (data.get("hero_image_url") or "").strip(),
+    }
+
+
+def save_marketplace_products_page(form_or_data):
+    """Save Products marketplace page settings (hero image URL)."""
+    current = get_marketplace_products_page()
+    hero_image_url = None
+    if hasattr(form_or_data, "get"):
+        if "hero_image_url" in form_or_data:
+            hero_image_url = form_or_data.get("hero_image_url")
+    payload = {
+        "hero_image_url": (
+            (hero_image_url if hero_image_url is not None else current["hero_image_url"])
+            or ""
+        ).strip(),
+    }
+    row = CmsLandingSection.query.get(MARKETPLACE_PRODUCTS_PAGE_KEY)
+    if row is None:
+        row = CmsLandingSection(section_key=MARKETPLACE_PRODUCTS_PAGE_KEY)
     row.data = payload
     row.updated_at = datetime.utcnow()
     db.session.add(row)

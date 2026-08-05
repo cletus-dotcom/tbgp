@@ -101,9 +101,9 @@ def upload_partner_image(file_storage, partner_slug, image_kind):
 
 
 def upload_marketplace_image(file_storage, listing_key, image_kind):
-    """Upload marketplace thumb/gallery image into the partner images bucket under marketplace/."""
+    """Upload marketplace thumb/gallery/hero image into the partner images bucket under marketplace/."""
     image_kind = (image_kind or "gallery").strip().lower()
-    if image_kind not in {"thumb", "gallery"}:
+    if image_kind not in {"thumb", "gallery", "hero"}:
         raise ValueError("Invalid image type.")
 
     payload, content_type = _validate_image_upload(file_storage)

@@ -749,8 +749,9 @@ class MarketplaceLead(db.Model):
 
     lead_id = db.Column(db.Integer, primary_key=True)
     listing_id = db.Column(
-        db.Integer, db.ForeignKey("marketplace_listings.listing_id"), nullable=False
+        db.Integer, db.ForeignKey("marketplace_listings.listing_id"), nullable=True
     )
+    interest_category = db.Column(db.String(40), nullable=True, index=True)
     attributed_member_id = db.Column(
         db.Integer, db.ForeignKey("members.member_id"), nullable=True, index=True
     )
@@ -770,7 +771,10 @@ class MarketplaceLead(db.Model):
             "lead_id": self.lead_id,
             "listing_id": self.listing_id,
             "listing_title": listing.title if listing else None,
-            "listing_category": listing.category if listing else None,
+            "listing_category": (
+                listing.category if listing else (self.interest_category or None)
+            ),
+            "interest_category": self.interest_category or "",
             "attributed_member_id": self.attributed_member_id,
             "attributed_member_name": member.full_name if member else None,
             "guest_name": self.guest_name,

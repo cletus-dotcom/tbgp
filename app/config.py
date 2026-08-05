@@ -163,14 +163,14 @@ MARKETPLACE_CATEGORIES = {
         "label": "Real Property",
         "short_label": "Property",
         "icon": "bi-house-door",
-        "tagline": "Homes, lots, and investment properties for sale.",
+        "tagline": "Lots: FOR SALE, LEASE OR JOINT VENTURE.",
     },
     MARKETPLACE_CATEGORY_PRODUCTS: {
         "slug": MARKETPLACE_CATEGORY_PRODUCTS,
         "label": "Products",
         "short_label": "Products",
         "icon": "bi-box-seam",
-        "tagline": "Featured products available through the TBGP network.",
+        "tagline": "Curated products from the TBGP network—inquire and get matched with the right offer.",
     },
 }
 MARKETPLACE_CATEGORY_SLUGS = tuple(MARKETPLACE_CATEGORIES.keys())

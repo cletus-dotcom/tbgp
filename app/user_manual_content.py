@@ -500,6 +500,7 @@ MARKETPLACE_CRM_GUIDE = {
             "items": [
                 "Path: Site Content → Marketplace, or Administration → Marketplace Listings.",
                 "Create, edit, publish, or delete listings (draft/published, price label, location, summary, body, images, contacts).",
+                "Edit the Products page hero image (URL or upload) shown on /marketplace/products.",
                 "Edit executive summaries (title and body) shown on each public category page.",
             ],
         },

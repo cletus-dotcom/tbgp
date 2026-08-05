@@ -22,6 +22,7 @@ from app.site_content_service import (
     get_ecosystem_page,
     get_ecosystem_slugs,
     get_landing_ecosystem_section,
+    get_marketplace_products_page,
     get_marketplace_summaries,
     get_services_contact_cta,
     save_services_contact_cta,
@@ -35,6 +36,7 @@ from app.site_content_service import (
     apply_portal_partner_profile,
     save_ecosystem_page,
     save_landing_ecosystem_section,
+    save_marketplace_products_page,
     save_marketplace_summaries,
     save_registry_partner,
 )
@@ -383,6 +385,9 @@ def marketplace_list():
         category_slugs=MARKETPLACE_CATEGORY_SLUGS,
         filter_category=category,
         marketplace_summaries=get_marketplace_summaries(),
+        products_page=get_marketplace_products_page(),
+        partner_image_upload_enabled=supabase_storage_configured(),
+        partner_image_upload_url=url_for("site_admin.upload_marketplace_image"),
     )
 
 
@@ -396,6 +401,18 @@ def marketplace_summaries_save():
     except ValueError as exc:
         flash(str(exc), "danger")
     return redirect(url_for("site_admin.marketplace_list") + "#executive-summaries")
+
+
+@site_admin_bp.route("/marketplace/products-page", methods=["POST"])
+@login_required
+@site_admin_required
+def marketplace_products_page_save():
+    try:
+        save_marketplace_products_page(request.form)
+        flash("Products marketplace page settings saved.", "success")
+    except ValueError as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("site_admin.marketplace_list") + "#products-page")
 
 
 @site_admin_bp.route("/marketplace/new", methods=["GET", "POST"])
@@ -490,10 +507,8 @@ def upload_marketplace_image():
         return jsonify({"error": "Supabase Storage is not configured on this server."}), 503
 
     file = request.files.get("file")
-    kind = request.form.get("kind", "gallery")
-    if kind == "thumb":
-        kind = "thumb"
-    elif kind != "gallery":
+    kind = (request.form.get("kind") or "gallery").strip().lower()
+    if kind not in {"thumb", "gallery", "hero"}:
         kind = "gallery"
     slug = request.form.get("slug", "draft")
     try:

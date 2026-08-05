@@ -14,6 +14,7 @@ from app.config import (
     MARKETPLACE_ATTRIBUTION_COOKIE,
     MARKETPLACE_ATTRIBUTION_DAYS,
     MARKETPLACE_CATEGORIES,
+    MARKETPLACE_CATEGORY_PRODUCTS,
     MARKETPLACE_CATEGORY_SLUGS,
     MARKETPLACE_STATUS_DRAFT,
     MARKETPLACE_STATUS_PUBLISHED,
@@ -197,7 +198,10 @@ def set_attribution_cookie(response, member):
 
 
 def get_attributed_member_id():
-    raw = request.cookies.get(MARKETPLACE_ATTRIBUTION_COOKIE)
+    try:
+        raw = request.cookies.get(MARKETPLACE_ATTRIBUTION_COOKIE)
+    except RuntimeError:
+        return None
     if not raw:
         return None
     try:
@@ -217,7 +221,15 @@ def get_attributed_member():
     return db.session.get(Member, member_id)
 
 
-def create_lead(listing, guest_name, guest_phone=None, guest_email=None, message=None, source_path=None):
+def create_lead(
+    listing=None,
+    guest_name=None,
+    guest_phone=None,
+    guest_email=None,
+    message=None,
+    source_path=None,
+    interest_category=None,
+):
     name = (guest_name or "").strip()
     if not name:
         raise ValueError("Your name is required.")
@@ -226,9 +238,16 @@ def create_lead(listing, guest_name, guest_phone=None, guest_email=None, message
     if not phone and not email:
         raise ValueError("Provide a phone number or email so we can contact you.")
     note = (message or "").strip() or None
+    category = (interest_category or "").strip() or None
+    if category:
+        require_marketplace_category(category)
+    listing_id = listing.listing_id if listing is not None else None
+    if listing is not None and not category:
+        category = listing.category
 
     lead = MarketplaceLead(
-        listing_id=listing.listing_id,
+        listing_id=listing_id,
+        interest_category=category,
         attributed_member_id=get_attributed_member_id(),
         guest_name=name,
         guest_phone=phone,
@@ -240,6 +259,198 @@ def create_lead(listing, guest_name, guest_phone=None, guest_email=None, message
     db.session.add(lead)
     db.session.commit()
     return lead
+
+
+def create_products_funnel_lead(form, source_path=None):
+    """Create a Products marketplace lead from the multi-step funnel form."""
+    business_type = (form.get("business_type") or "").strip()
+    interest = (form.get("interest") or "").strip()
+    timeline = (form.get("timeline") or "").strip()
+    listing_id_raw = (form.get("listing_id") or "").strip()
+    notes = (form.get("notes") or "").strip()
+
+    listing = None
+    if listing_id_raw.isdigit():
+        listing = get_published_listing(MARKETPLACE_CATEGORY_PRODUCTS, int(listing_id_raw))
+
+    parts = []
+    if business_type:
+        parts.append(f"Business type: {business_type}")
+    if interest:
+        parts.append(f"Looking for: {interest}")
+    if timeline:
+        parts.append(f"Timeline: {timeline}")
+    if listing:
+        parts.append(f"Selected listing: #{listing.listing_id} — {listing.title}")
+    if notes:
+        parts.append(f"Notes: {notes}")
+    message = "\n".join(parts) if parts else None
+
+    return create_lead(
+        listing=listing,
+        guest_name=form.get("guest_name"),
+        guest_phone=form.get("guest_phone"),
+        guest_email=form.get("guest_email"),
+        message=message,
+        source_path=source_path,
+        interest_category=MARKETPLACE_CATEGORY_PRODUCTS,
+    )
+
+
+def products_page_content():
+    """Copy + CMS settings for the Products marketplace funnel page."""
+    from app.site_content_service import get_marketplace_products_page
+
+    cms = get_marketplace_products_page()
+    return {
+        "hero_image_url": cms.get("hero_image_url") or "",
+        "hero_title": "TBGP Products Marketplace",
+        "hero_lead": (
+            "We help members and guests connect with curated product opportunities "
+            "from the TBGP network—browse listings, tell us what you need, and get a follow-up."
+        ),
+        "hero_bullets": [
+            "Save time browsing vetted product opportunities",
+            "Reduce risk with network-backed inquiry follow-up",
+            "Get matched based on what you are looking for",
+        ],
+        "funnel_intro": (
+            "This takes about 2 minutes and helps us understand your needs "
+            "so we can follow up with relevant product options—not a generic pitch."
+        ),
+        "business_types": [
+            "Member / individual buyer",
+            "Reseller / reseller",
+            "Contractor / project buyer",
+            "Organization / institutional buyer",
+            "Other",
+        ],
+        "interests": [
+            "Consumer / household products",
+            "Business / wholesale supply",
+            "Project or construction-related products",
+            "Reselling under our own brand",
+            "Still exploring options",
+            "Other",
+        ],
+        "timelines": [
+            "Ready now",
+            "Within 30 days",
+            "1–3 months",
+            "Just researching",
+        ],
+        "why_title": "Why Choosing the Right Product Partner Matters",
+        "why_items": [
+            {
+                "title": "Quality and reliability",
+                "body": (
+                    "Poor product fit wastes time and budget. We focus on clear listings "
+                    "and inquiry follow-up so you can evaluate options with confidence."
+                ),
+            },
+            {
+                "title": "Network accountability",
+                "body": (
+                    "Inquiries through TBGP can be attributed to referring members, "
+                    "keeping referral trails clear for CRM and later commission encoding."
+                ),
+            },
+            {
+                "title": "Communication and fit",
+                "body": (
+                    "A product may look good on paper but still be the wrong fit. "
+                    "Telling us your needs helps the team prepare a useful response."
+                ),
+            },
+            {
+                "title": "Faster shortlisting",
+                "body": (
+                    "Avoid spending weeks sorting incomplete options. "
+                    "Browse published listings and submit one structured inquiry."
+                ),
+            },
+        ],
+        "how_steps": [
+            {
+                "title": "Submit your requirements",
+                "body": "Tell us about your buyer type, product interest, timeline, and contact details.",
+            },
+            {
+                "title": "We review your inquiry",
+                "body": "The TBGP team reviews fit against published products and your stated needs.",
+            },
+            {
+                "title": "Get matched and follow up",
+                "body": "You receive a follow-up with suitable product options from the marketplace.",
+            },
+        ],
+        "benefits": [
+            {
+                "title": "Better-fit product options",
+                "body": "We match inquiries to listings and categories that fit your stated needs.",
+            },
+            {
+                "title": "Faster shortlisting",
+                "body": "Skip weeks of unstructured supplier hunting with a guided inquiry flow.",
+            },
+            {
+                "title": "Lower sourcing risk",
+                "body": "Stay inside the TBGP network with clear inquiry records for follow-up.",
+            },
+            {
+                "title": "Member referral CRM",
+                "body": "Shared member links attribute guest inquiries for transparent referral tracking.",
+            },
+        ],
+        "testimonials": [
+            {
+                "quote_title": "Clear and practical",
+                "quote": (
+                    "We needed product options without a long sourcing cycle. "
+                    "The inquiry process made it easy to describe what we wanted."
+                ),
+                "author": "Network partner",
+            },
+            {
+                "quote_title": "Helpful follow-up",
+                "quote": (
+                    "Our concern was getting a relevant response. "
+                    "Being able to browse listings and send one structured request helped."
+                ),
+                "author": "Member referral guest",
+            },
+            {
+                "quote_title": "Worth recommending",
+                "quote": (
+                    "We compared a few product paths and needed a clearer next step. "
+                    "The marketplace flow gave us a shortlist conversation faster."
+                ),
+                "author": "Project buyer",
+            },
+        ],
+        "faqs": [
+            {
+                "q": "What kinds of products are listed?",
+                "a": "Published Products marketplace listings curated by TBGP Site Admin / Admin. Browse the featured grid below for current options.",
+            },
+            {
+                "q": "Is there online checkout?",
+                "a": "Not in this version. You submit an inquiry and the team follows up. Closed deals can later be encoded through portal commission workflows.",
+            },
+            {
+                "q": "How do member referral links work?",
+                "a": "If you open a member’s /m/<code>/marketplace link, TBGP remembers that member for about 30 days and attributes your inquiry to their CRM log.",
+            },
+            {
+                "q": "How soon will someone follow up?",
+                "a": "After you submit, the team reviews your answers and reaches out using the phone or email you provided.",
+            },
+            {
+                "q": "What should I include in my request?",
+                "a": "Share your buyer type, what you are looking for, timeline, and optionally select a specific listing from the catalog.",
+            },
+        ],
+    }
 
 
 def member_leads(member_id, limit=100):
@@ -309,11 +520,10 @@ def marketplace_crm_overview():
                 MarketplaceListing.listing_id
             )
         ]
-        lead_count = 0
+        lead_filters = [MarketplaceLead.interest_category == slug]
         if listing_ids:
-            lead_count = MarketplaceLead.query.filter(
-                MarketplaceLead.listing_id.in_(listing_ids)
-            ).count()
+            lead_filters.append(MarketplaceLead.listing_id.in_(listing_ids))
+        lead_count = MarketplaceLead.query.filter(or_(*lead_filters)).count()
         by_category.append({
             "category": slug,
             "label": MARKETPLACE_CATEGORIES[slug]["label"],
@@ -452,12 +662,17 @@ def search_marketplace_leads(
             joinedload(MarketplaceLead.listing),
             joinedload(MarketplaceLead.attributed_member),
         )
-        .join(MarketplaceListing, MarketplaceLead.listing_id == MarketplaceListing.listing_id)
+        .outerjoin(MarketplaceListing, MarketplaceLead.listing_id == MarketplaceListing.listing_id)
     )
 
     if category:
         require_marketplace_category(category)
-        query = query.filter(MarketplaceListing.category == category)
+        query = query.filter(
+            or_(
+                MarketplaceListing.category == category,
+                MarketplaceLead.interest_category == category,
+            )
+        )
 
     if listing_id:
         query = query.filter(MarketplaceLead.listing_id == int(listing_id))
