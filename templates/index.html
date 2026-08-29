@@ -31,7 +31,7 @@
     <div class="loader-progress"><div class="loader-progress-bar"></div></div>
 </div>
 
-<nav class="navbar navbar-expand-lg landing-nav">
+<nav class="navbar navbar-expand-lg landing-nav" data-landing-nav>
     <div class="container">
         <div class="landing-nav-bar">
             <div class="landing-nav-top">
@@ -60,6 +60,18 @@
                 <li class="nav-item">
                     <a class="nav-link active" href="{{ url_for('main_routes.index') }}">Home</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#marketplace">Marketplace</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#mission">Mission</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#vision">Vision</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#values">Values</a>
+                </li>
             </ul>
             <div class="landing-nav-actions d-flex align-items-center flex-wrap gap-2">
                 {% with placement='nav' %}
@@ -72,152 +84,365 @@
     </div>
 </nav>
 
-<section class="hero-banner">
-    <div class="container hero-top">
-        <div class="hero-content">
-            <h1>Building the Nation.<span class="accent">Powering the People.</span></h1>
-            <a href="#portals" class="btn-hero">Get Started</a>
-        </div>
-
-        <div id="noticeCarousel" class="carousel slide notice-carousel" data-bs-ride="carousel" data-bs-interval="6000">
-            <div class="carousel-inner">
-                <div class="carousel-item active">
-                    <h5>Members Management System</h5>
-                    <p>
-                        Track members, referrals, and hierarchy across every batch.
-                        <a href="#" data-bs-toggle="modal" data-bs-target="#featuresModal">Learn more</a>
-                    </p>
-                </div>
-                <div class="carousel-item">
-                    <h5>Lowbed Hub</h5>
-                    <p>
-                        Coordinate lowbed fleet operations and logistics in one hub.
-                        <a href="#" data-coming-soon>Learn more</a>
-                    </p>
-                </div>
-                <div class="carousel-item">
-                    <h5>Success Showcase</h5>
-                    <p>
-                        Spotlight achievements and growth across the network.
-                        <a href="#" data-coming-soon>Learn more</a>
-                    </p>
-                </div>
-                <div class="carousel-item">
-                    <h5>Information Pool Management System</h5>
-                    <p>
-                        Centralize shared knowledge, updates, and operational resources.
-                        <a href="#" data-coming-soon>Learn more</a>
-                    </p>
-                </div>
+<div class="hero-stage">
+    <div class="hero-overlay" data-parallax-overlay>
+        <div class="container hero-inner">
+            <div class="hero-content">
+                <h1>Building the Nation.<span class="accent">Powering the People.</span></h1>
+                <a href="#portals" class="btn-hero">Get Started</a>
             </div>
-            <button class="carousel-control-prev" type="button" data-bs-target="#noticeCarousel" data-bs-slide="prev">
-                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                <span class="visually-hidden">Previous</span>
-            </button>
-            <button class="carousel-control-next" type="button" data-bs-target="#noticeCarousel" data-bs-slide="next">
-                <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                <span class="visually-hidden">Next</span>
-            </button>
-            <div class="carousel-indicators">
-                <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Notice 1"></button>
-                <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="1" aria-label="Notice 2"></button>
-                <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="2" aria-label="Notice 3"></button>
-                <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="3" aria-label="Notice 4"></button>
+
+            <div id="noticeCarousel" class="carousel slide notice-carousel" data-bs-ride="carousel" data-bs-interval="6000">
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <h5>Members Management System</h5>
+                        <p>
+                            Track members, referrals, and hierarchy across every batch.
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#featuresModal">Learn more</a>
+                        </p>
+                    </div>
+                    <div class="carousel-item">
+                        <h5>Lowbed Hub</h5>
+                        <p>
+                            Coordinate lowbed fleet operations and logistics in one hub.
+                            <a href="#" data-coming-soon>Learn more</a>
+                        </p>
+                    </div>
+                    <div class="carousel-item">
+                        <h5>Success Showcase</h5>
+                        <p>
+                            Spotlight achievements and growth across the network.
+                            <a href="#" data-coming-soon>Learn more</a>
+                        </p>
+                    </div>
+                    <div class="carousel-item">
+                        <h5>Information Pool Management System</h5>
+                        <p>
+                            Centralize shared knowledge, updates, and operational resources.
+                            <a href="#" data-coming-soon>Learn more</a>
+                        </p>
+                    </div>
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#noticeCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#noticeCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+                <div class="carousel-indicators">
+                    <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Notice 1"></button>
+                    <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="1" aria-label="Notice 2"></button>
+                    <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="2" aria-label="Notice 3"></button>
+                    <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="3" aria-label="Notice 4"></button>
+                </div>
             </div>
         </div>
     </div>
-</section>
 
-<section class="marketplace-showcase" id="marketplace">
-    <div class="container">
-        <header class="marketplace-showcase-header">
-            <p class="section-subtitle">Marketplace</p>
-            <h2 class="section-title">Products, services, and real property</h2>
-            <p class="marketplace-showcase-lead">
-                Browse featured opportunities in order: Products, Services, then Real Property.
-                Members can share their marketplace link so guest inquiries are logged to their CRM.
-            </p>
-        </header>
+    <section class="hero" data-parallax-hero aria-label="Hero">
+        <div class="hero-media-clip">
+            <div class="hero-media" data-parallax-media>
+                <img class="hero-bg"
+                     src="https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=1600&q=80"
+                     alt=""
+                     decoding="async"
+                     fetchpriority="high">
+                <div class="hero-scrim" aria-hidden="true"></div>
+            </div>
+        </div>
+    </section>
 
-        <div id="marketplaceCarousel" class="carousel slide marketplace-carousel" data-bs-ride="carousel" data-bs-interval="7000">
-            <div class="carousel-inner">
+    <div class="hero-land" data-parallax-land aria-hidden="true"></div>
+</div>
+
+<div class="marketplace-stage" id="marketplace">
+    <div class="marketplace-overlay" data-mp-parallax-overlay>
+        <div class="container marketplace-overlay-inner">
+            <header class="marketplace-showcase-header">
+                <p class="section-subtitle">Marketplace</p>
+                <h2 class="section-title">Products, services, and real property</h2>
+                <p class="marketplace-showcase-lead">
+                    Browse featured opportunities in order: Products, Services, then Real Property.
+                    Members can share their marketplace link so guest inquiries are logged to their CRM.
+                </p>
+            </header>
+
+            <div id="marketplaceCarousel" class="carousel slide marketplace-carousel" data-bs-ride="carousel" data-bs-interval="7000">
+                <div class="carousel-inner">
+                    {% for slug in marketplace_category_slugs %}
+                    {% set meta = marketplace_categories[slug] %}
+                    <div class="carousel-item {% if loop.first %}active{% endif %}">
+                        <a href="{{ url_for('main_routes.marketplace_category', category=slug) }}" class="marketplace-carousel-card">
+                            <div class="marketplace-carousel-icon" aria-hidden="true">
+                                <i class="bi {{ meta.icon }}"></i>
+                            </div>
+                            <div class="marketplace-carousel-copy">
+                                <p class="marketplace-carousel-label">{{ meta.label }}</p>
+                                <h3>{{ meta.tagline }}</h3>
+                                <p class="marketplace-carousel-meta">
+                                    {{ marketplace_counts.get(slug, 0) }} published listing{{ 's' if marketplace_counts.get(slug, 0) != 1 else '' }}
+                                </p>
+                                <span class="marketplace-carousel-cta">Open marketplace <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+                            </div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#marketplaceCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#marketplaceCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+                <div class="carousel-indicators">
+                    {% for slug in marketplace_category_slugs %}
+                    <button type="button" data-bs-target="#marketplaceCarousel" data-bs-slide-to="{{ loop.index0 }}"
+                            {% if loop.first %}class="active" aria-current="true"{% endif %}
+                            aria-label="{{ marketplace_categories[slug].label }}"></button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="marketplace-showcase-grid">
                 {% for slug in marketplace_category_slugs %}
                 {% set meta = marketplace_categories[slug] %}
-                <div class="carousel-item {% if loop.first %}active{% endif %}">
-                    <a href="{{ url_for('main_routes.marketplace_category', category=slug) }}" class="marketplace-carousel-card">
-                        <div class="marketplace-carousel-icon" aria-hidden="true">
-                            <i class="bi {{ meta.icon }}"></i>
-                        </div>
-                        <div class="marketplace-carousel-copy">
-                            <p class="marketplace-carousel-label">{{ meta.label }}</p>
-                            <h3>{{ meta.tagline }}</h3>
-                            <p class="marketplace-carousel-meta">
-                                {{ marketplace_counts.get(slug, 0) }} published listing{{ 's' if marketplace_counts.get(slug, 0) != 1 else '' }}
-                            </p>
-                            <span class="marketplace-carousel-cta">Open marketplace <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
-                        </div>
-                    </a>
-                </div>
-                {% endfor %}
-            </div>
-            <button class="carousel-control-prev" type="button" data-bs-target="#marketplaceCarousel" data-bs-slide="prev">
-                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                <span class="visually-hidden">Previous</span>
-            </button>
-            <button class="carousel-control-next" type="button" data-bs-target="#marketplaceCarousel" data-bs-slide="next">
-                <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                <span class="visually-hidden">Next</span>
-            </button>
-            <div class="carousel-indicators">
-                {% for slug in marketplace_category_slugs %}
-                <button type="button" data-bs-target="#marketplaceCarousel" data-bs-slide-to="{{ loop.index0 }}"
-                        {% if loop.first %}class="active" aria-current="true"{% endif %}
-                        aria-label="{{ marketplace_categories[slug].label }}"></button>
+                <a href="{{ url_for('main_routes.marketplace_category', category=slug) }}" class="marketplace-pillar-link">
+                    <i class="bi {{ meta.icon }}" aria-hidden="true"></i>
+                    <span>{{ meta.label }}</span>
+                </a>
                 {% endfor %}
             </div>
         </div>
+    </div>
 
-        <div class="marketplace-showcase-grid">
-            {% for slug in marketplace_category_slugs %}
-            {% set meta = marketplace_categories[slug] %}
-            <a href="{{ url_for('main_routes.marketplace_category', category=slug) }}" class="marketplace-pillar-link">
-                <i class="bi {{ meta.icon }}" aria-hidden="true"></i>
-                <span>{{ meta.label }}</span>
-            </a>
-            {% endfor %}
+    <section class="marketplace-media-shell" data-mp-parallax-hero aria-hidden="true">
+        <div class="marketplace-media-clip">
+            <div class="marketplace-media" data-mp-parallax-media>
+                <img class="marketplace-bg"
+                     src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=1600&q=80"
+                     alt=""
+                     decoding="async"
+                     loading="lazy">
+                <div class="marketplace-scrim"></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="marketplace-land" data-mp-parallax-land aria-hidden="true"></div>
+</div>
+
+<section class="mission-section" id="mission" aria-labelledby="missionHeading">
+    <div class="container">
+        <div class="mission-layout">
+            <figure class="mission-visual">
+                <img src="{{ url_for('static', filename='img/mission-compass.png') }}"
+                     alt="TBGP mission compass graphic"
+                     width="1024"
+                     height="1024"
+                     loading="lazy"
+                     decoding="async">
+            </figure>
+            <div class="mission-copy">
+                <p class="mission-brand">TBGP</p>
+                <h2 class="mission-title" id="missionHeading">Mission Statement</h2>
+                <div class="mission-body">
+                    <p>
+                        To get the attention of every stakeholder in the Philippine Construction Industry—bringing together
+                        Project Owners, Developers, Contractors, Service Providers, Suppliers, Investors, Project Funders,
+                        and Ordinary Filipinos nationwide to work together and call for UNITY through INTEGRITY, COOPERATION,
+                        and BUSINESS COLLABORATION.
+                    </p>
+                    <p>
+                        To make every Client’s life and project easier through “ISA NA LANG ANG KAUSAP”—providing one trusted
+                        point of coordination while TBGP manages the necessary coordination with Contractors, Suppliers,
+                        Service Providers, and other project partners, giving Clients a simpler, more convenient, and more
+                        comfortable project experience.
+                    </p>
+                    <p>
+                        To help STOP and prevent the perennial problem faced by Clients including the REAL ESTATE DEVELOPERS’
+                        dealing with erring Contractors who fail to complete their works, abandon their obligations, or leave
+                        projects unfinished after receiving payments, while promoting the TBGP COMMITMENT to building a
+                        HIGH-INTEGRITY CONSTRUCTION PROGRAM where every project is managed with TRANSPARENCY, ACCOUNTABILITY,
+                        and RESPONSIBILITY—protecting the TRUST, INVESTMENT, and INTERESTS of every Client through the
+                        <strong class="mission-highlight">newly formulated and first-ever TBGP SECURED PROJECT IMPLEMENTATION SYSTEM</strong>,
+                        specifically designed to protect the project, the Client, and the successful completion of every undertaking.
+                    </p>
+                    <p>
+                        At the same time, to promote at the highest level of awareness to all construction industry stakeholders
+                        the BUSINESS OPPORTUNITIES that the TBGP PROGRAM has established for every FILIPINO, and to SHARE the
+                        truth and reality behind TBGP’s National Campaign:
+                    </p>
+                </div>
+                <blockquote class="mission-quote">
+                    “SAMA-SAMA TAYO UPANG IANGAT ANG BUHAY NG BAWAT ISANG NAGHIHIRAP NA PILIPINO.”
+                </blockquote>
+            </div>
+        </div>
+    </div>
+    <div class="mission-band">
+        <div class="container mission-band-inner">
+            <div class="mission-puzzle" aria-hidden="true">
+                <span class="mission-puzzle-piece is-mission"></span>
+                <span class="mission-puzzle-piece is-vision"></span>
+                <span class="mission-puzzle-piece is-values"></span>
+            </div>
+            <p class="mission-band-label">Our Mission</p>
         </div>
     </div>
 </section>
 
-<section class="ecosystem-pillars" id="ecosystem-pillars">
+<section class="mission-section vision-section" id="vision" aria-labelledby="visionHeading">
     <div class="container">
-        <header class="ecosystem-pillars-header">
-            <p class="section-subtitle">{{ landing_section.subtitle }}</p>
-            <h2 class="section-title">{{ landing_section.title }}</h2>
-        </header>
-
-        <div class="cards-grid">
-            {% for slug in ecosystem_slugs %}
-            {% set page = ecosystem_pages[slug] %}
-            {% set card = page.landing_card or {} %}
-            <a href="{{ url_for('main_routes.ecosystem_page', slug=slug) }}" class="pillar-card pillar-card-link">
-                <p class="pillar-card-label">{{ page.label }}</p>
-                <p class="pillar-card-subtitle">{{ page.subtitle }}</p>
-                <h3 class="pillar-card-title">{{ page.title }}</h3>
-                <p class="pillar-card-desc">{{ card.desc or page.hero_lead }}</p>
-                <ul class="pillar-card-list">
-                    {% for bullet in card.bullets or [] %}
-                    <li>
-                        <span class="pillar-list-icon" aria-hidden="true">{{ bullet.icon }}</span>
-                        <span>{{ bullet.text }}</span>
-                    </li>
-                    {% endfor %}
-                </ul>
-                <span class="pillar-card-cta">{{ card.cta or ('Explore ' ~ slug) }} <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
-            </a>
-            {% endfor %}
+        <div class="mission-layout">
+            <figure class="mission-visual vision-visual">
+                <img src="{{ url_for('static', filename='img/vision-graphic.png') }}"
+                     alt="TBGP Our Vision — hand holding a golden key"
+                     width="1080"
+                     height="1350"
+                     loading="lazy"
+                     decoding="async">
+            </figure>
+            <div class="mission-copy">
+                <p class="mission-brand">TBGP</p>
+                <h2 class="mission-title" id="visionHeading">Vision Statement</h2>
+                <div class="mission-body">
+                    <p>
+                        Imagine a Philippines where the entire Construction Industry, Government, Business Sector,
+                        and Ordinary Filipinos work together through the TBGP Program—united by Integrity, Transparency,
+                        Accountability, Cooperation, and Responsibility.
+                    </p>
+                    <p>
+                        Imagine when Municipal, Provincial, and National Leaders, together with the Private and Government
+                        Sectors, support this concept, and its principles become part of the laws and policies of the land.
+                    </p>
+                    <p>
+                        This is the Philippines TBGP envisions—a more beautiful, more balanced, and more prosperous nation,
+                        where projects are properly implemented, opportunities are shared, communities are uplifted, and the
+                        benefits of development reach Ordinary Filipinos and the Poorest of the Poor.
+                    </p>
+                    <p class="vision-highlight">
+                        Making this vision possible is TBGP’s existing Business Profit-Sharing Scheme, where
+                        <strong>35% to 45%</strong> of the profit from TBGP projects is dedicated to benefiting Ordinary Filipinos
+                        and the Poorest of the Poor.
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
+    <div class="mission-band vision-band">
+        <div class="container mission-band-inner">
+            <div class="mission-puzzle" aria-hidden="true">
+                <span class="mission-puzzle-piece is-mission"></span>
+                <span class="mission-puzzle-piece is-vision"></span>
+                <span class="mission-puzzle-piece is-values"></span>
+            </div>
+            <p class="mission-band-label vision-band-label">
+                Turning business success into shared opportunity, community development, and a better future for the Philippines.
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="mission-section values-section" id="values" aria-labelledby="valuesHeading">
+    <div class="container">
+        <div class="mission-layout">
+            <figure class="mission-visual values-visual">
+                <img src="{{ url_for('static', filename='img/values-graphic.png') }}"
+                     alt="TBGP Our Values — Mission, Vision, and Values puzzle"
+                     width="1080"
+                     height="1350"
+                     loading="lazy"
+                     decoding="async">
+            </figure>
+            <div class="mission-copy">
+                <p class="mission-brand">TBGP</p>
+                <h2 class="mission-title" id="valuesHeading">Values Statement</h2>
+                <div class="mission-body">
+                    <p>
+                        TBGP believes that <strong class="values-emphasis">HOW WE DO BUSINESS IS AS IMPORTANT AS THE BUSINESS ITSELF.</strong>
+                    </p>
+                    <p>
+                        We are committed to <strong class="values-emphasis">INTEGRITY, HONESTY, FAIRNESS, RESPECT, HUMILITY,
+                        GOOD ATTITUDE, UNITY,</strong> and <strong class="values-emphasis">ACCOUNTABILITY</strong> in every relationship
+                        and transaction.
+                    </p>
+                    <p>
+                        We are <strong class="values-emphasis">NON-DISCRIMINATORY, NON-POLITICAL,</strong> and
+                        <strong class="values-emphasis">NON-RELIGIOUS</strong>, respecting every person regardless of status, background,
+                        or beliefs. <strong class="values-emphasis">NO LYING. NO ARROGANCE.</strong>
+                    </p>
+                    <p>
+                        <strong class="values-emphasis">NO DISCRIMINATION.</strong>
+                        We believe in treating everyone fairly, working together, and doing what is right.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mission-band values-band">
+        <div class="container mission-band-inner">
+            <div class="mission-puzzle" aria-hidden="true">
+                <span class="mission-puzzle-piece is-mission"></span>
+                <span class="mission-puzzle-piece is-vision"></span>
+                <span class="mission-puzzle-piece is-values"></span>
+            </div>
+            <p class="mission-band-label values-band-label">
+                Integrity is our standard. Unity is our strength. Respect is for everyone.
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="ecosystem-stage" id="ecosystem-pillars">
+    <div class="ecosystem-overlay" data-eco-parallax-overlay>
+        <div class="container ecosystem-overlay-inner">
+            <header class="ecosystem-pillars-header">
+                <p class="section-subtitle">{{ landing_section.subtitle }}</p>
+                <h2 class="section-title">{{ landing_section.title }}</h2>
+            </header>
+
+            <div class="cards-grid">
+                {% for slug in ecosystem_slugs %}
+                {% set page = ecosystem_pages[slug] %}
+                {% set card = page.landing_card or {} %}
+                <a href="{{ url_for('main_routes.ecosystem_page', slug=slug) }}" class="pillar-card pillar-card-link">
+                    <p class="pillar-card-label">{{ page.label }}</p>
+                    <p class="pillar-card-subtitle">{{ page.subtitle }}</p>
+                    <h3 class="pillar-card-title">{{ page.title }}</h3>
+                    <p class="pillar-card-desc">{{ card.desc or page.hero_lead }}</p>
+                    <ul class="pillar-card-list">
+                        {% for bullet in card.bullets or [] %}
+                        <li>
+                            <span class="pillar-list-icon" aria-hidden="true">{{ bullet.icon }}</span>
+                            <span>{{ bullet.text }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <span class="pillar-card-cta">{{ card.cta or ('Explore ' ~ slug) }} <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <section class="ecosystem-media-shell" data-eco-parallax-hero aria-hidden="true">
+        <div class="ecosystem-media-clip">
+            <div class="ecosystem-media" data-eco-parallax-media>
+                <img class="ecosystem-bg"
+                     src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1600&q=80"
+                     alt=""
+                     decoding="async"
+                     loading="lazy">
+                <div class="ecosystem-scrim"></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="ecosystem-land" data-eco-parallax-land aria-hidden="true"></div>
 </section>
 
 <section class="portal-section" id="portals">
@@ -372,6 +597,7 @@
             if (!loader || loader.classList.contains("done")) return;
             loader.classList.add("done");
             document.body.classList.remove("landing-loading");
+            window.dispatchEvent(new Event("resize"));
         }
 
         var minDisplay = 2400;
@@ -410,6 +636,128 @@
                 window.scrollTo({ top: 0, behavior: "smooth" });
             });
         }
+
+        function initParallaxStage(config) {
+            var hero = document.querySelector(config.hero);
+            var media = document.querySelector(config.media);
+            var overlay = document.querySelector(config.overlay);
+            var stage = document.querySelector(config.stage);
+            if (!hero || !overlay) return;
+
+            var heightVar = config.heightVar || "--overlay-height";
+            var landMode = config.landMode || "default";
+
+            function measure() {
+                var height = overlay.offsetHeight + "px";
+                if (stage) stage.style.setProperty(heightVar, height);
+                document.documentElement.style.setProperty(heightVar, height);
+            }
+
+            function headerOffset() {
+                var raw = getComputedStyle(document.documentElement).getPropertyValue("--landing-header").trim();
+                var parsed = parseFloat(raw);
+                return Number.isFinite(parsed) ? parsed : 72;
+            }
+
+            function isLanded() {
+                var heroBottom = hero.getBoundingClientRect().bottom;
+                if (landMode === "strict") {
+                    // Only land after the parallax media has fully cleared under the sticky nav.
+                    return heroBottom <= headerOffset() + 12;
+                }
+                var overlayBox = overlay.getBoundingClientRect();
+                return heroBottom < overlayBox.bottom - 28;
+            }
+
+            measure();
+            window.addEventListener("load", measure);
+            window.addEventListener("resize", measure);
+            if (typeof ResizeObserver !== "undefined") {
+                new ResizeObserver(measure).observe(overlay);
+            }
+
+            if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+                function toggleReduced() {
+                    overlay.classList.toggle("is-landed", isLanded());
+                }
+                toggleReduced();
+                window.addEventListener("scroll", toggleReduced, { passive: true });
+                window.addEventListener("resize", toggleReduced);
+                return;
+            }
+            if (!media) return;
+
+            var target = 0;
+            var mediaY = 0;
+            var ticking = false;
+
+            function readScroll() {
+                var top = hero.getBoundingClientRect().top;
+                target = Math.max(0, -top);
+            }
+
+            function frame() {
+                mediaY += (target - mediaY) * 0.22;
+                media.style.transform = "translate3d(0, " + (-mediaY * 0.38) + "px, 0)";
+                overlay.classList.toggle("is-landed", isLanded());
+                if (Math.abs(target - mediaY) > 0.4) {
+                    requestAnimationFrame(frame);
+                } else {
+                    ticking = false;
+                }
+            }
+
+            function onScroll() {
+                readScroll();
+                if (!ticking) {
+                    ticking = true;
+                    requestAnimationFrame(frame);
+                }
+            }
+
+            readScroll();
+            onScroll();
+            window.addEventListener("scroll", onScroll, { passive: true });
+            window.addEventListener("resize", onScroll);
+        }
+
+        function initLandingHeader() {
+            var nav = document.querySelector("[data-landing-nav]");
+            function syncHeader() {
+                var headerH = nav ? nav.offsetHeight : 72;
+                document.documentElement.style.setProperty("--landing-header", headerH + "px");
+                document.body.style.paddingTop = headerH + "px";
+            }
+            syncHeader();
+            window.addEventListener("resize", syncHeader);
+            if (nav && typeof ResizeObserver !== "undefined") {
+                new ResizeObserver(syncHeader).observe(nav);
+            }
+        }
+
+        initLandingHeader();
+        initParallaxStage({
+            stage: ".hero-stage",
+            hero: "[data-parallax-hero]",
+            media: "[data-parallax-media]",
+            overlay: "[data-parallax-overlay]",
+            heightVar: "--overlay-height",
+        });
+        initParallaxStage({
+            stage: ".marketplace-stage",
+            hero: "[data-mp-parallax-hero]",
+            media: "[data-mp-parallax-media]",
+            overlay: "[data-mp-parallax-overlay]",
+            heightVar: "--mp-overlay-height",
+        });
+        initParallaxStage({
+            stage: ".ecosystem-stage",
+            hero: "[data-eco-parallax-hero]",
+            media: "[data-eco-parallax-media]",
+            overlay: "[data-eco-parallax-overlay]",
+            heightVar: "--eco-overlay-height",
+            landMode: "strict",
+        });
     })();
 </script>
 {% endblock %}
