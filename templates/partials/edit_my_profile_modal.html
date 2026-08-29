@@ -71,18 +71,39 @@
                     </div>
 
                     <p class="text-muted small fw-semibold text-uppercase mb-2">Beneficiary</p>
-                    <div class="row g-3">
-                        <div class="col-md-6">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
                             <label for="selfEditBeneficiaryName" class="form-label">Beneficiary Name</label>
                             <input type="text" id="selfEditBeneficiaryName" name="beneficiary_name" class="form-control">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
+                            <label for="selfEditBeneficiaryRelationship" class="form-label">Relationship</label>
+                            <input type="text" id="selfEditBeneficiaryRelationship" name="beneficiary_relationship" class="form-control"
+                                   placeholder="Spouse, Child, Sibling, etc.">
+                        </div>
+                        <div class="col-md-4">
                             <label for="selfEditBeneficiaryPhone" class="form-label">Beneficiary Phone</label>
                             <input type="text" id="selfEditBeneficiaryPhone" name="beneficiary_phone" class="form-control">
                         </div>
                         <div class="col-md-12">
                             <label for="selfEditBeneficiaryAddress" class="form-label">Beneficiary Address</label>
                             <textarea id="selfEditBeneficiaryAddress" name="beneficiary_address" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+
+                    <p class="text-muted small fw-semibold text-uppercase mb-2">Payment Details</p>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="selfEditGcashNumber" class="form-label">GCash Number</label>
+                            <input type="text" id="selfEditGcashNumber" name="gcash_number" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="selfEditBankName" class="form-label">Bank Name</label>
+                            <input type="text" id="selfEditBankName" name="bank_name" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="selfEditBankAccountNumber" class="form-label">Bank Account Number</label>
+                            <input type="text" id="selfEditBankAccountNumber" name="bank_account_number" class="form-control">
                         </div>
                     </div>
                 </div>

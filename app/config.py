@@ -185,25 +185,40 @@ PRODUCT_AD_CHARGE_PLATFORM = "platform"
 PRODUCT_AD_CHARGE_AD_FUND = "ad_fund"
 PRODUCT_AD_CHARGE_SOURCES = (PRODUCT_AD_CHARGE_PLATFORM, PRODUCT_AD_CHARGE_AD_FUND)
 
-MARKETPLACE_CATEGORY_REAL_PROPERTY = "real_property"
 MARKETPLACE_CATEGORY_PRODUCTS = "products"
+MARKETPLACE_CATEGORY_SERVICES = "services"
+MARKETPLACE_CATEGORY_REAL_PROPERTY = "real_property"
+# Landing carousel / tabs / CRM filters follow this order.
 MARKETPLACE_CATEGORIES = {
-    MARKETPLACE_CATEGORY_REAL_PROPERTY: {
-        "slug": MARKETPLACE_CATEGORY_REAL_PROPERTY,
-        "label": "Real Property",
-        "short_label": "Property",
-        "icon": "bi-house-door",
-        "tagline": "Lots: FOR SALE, LEASE OR JOINT VENTURE.",
-    },
     MARKETPLACE_CATEGORY_PRODUCTS: {
         "slug": MARKETPLACE_CATEGORY_PRODUCTS,
         "label": "Products",
         "short_label": "Products",
         "icon": "bi-box-seam",
         "tagline": "Curated products from the TBGP network—inquire and get matched with the right offer.",
+        "funnel": True,
+    },
+    MARKETPLACE_CATEGORY_SERVICES: {
+        "slug": MARKETPLACE_CATEGORY_SERVICES,
+        "label": "Services",
+        "short_label": "Services",
+        "icon": "bi-tools",
+        "tagline": "Project, logistics, and professional services from the TBGP network—inquire and get matched.",
+        "funnel": True,
+    },
+    MARKETPLACE_CATEGORY_REAL_PROPERTY: {
+        "slug": MARKETPLACE_CATEGORY_REAL_PROPERTY,
+        "label": "Real Property",
+        "short_label": "Property",
+        "icon": "bi-house-door",
+        "tagline": "Lots: FOR SALE, LEASE OR JOINT VENTURE.",
+        "funnel": False,
     },
 }
 MARKETPLACE_CATEGORY_SLUGS = tuple(MARKETPLACE_CATEGORIES.keys())
+MARKETPLACE_FUNNEL_CATEGORY_SLUGS = tuple(
+    slug for slug, meta in MARKETPLACE_CATEGORIES.items() if meta.get("funnel")
+)
 MARKETPLACE_STATUS_DRAFT = "draft"
 MARKETPLACE_STATUS_PUBLISHED = "published"
 MARKETPLACE_STATUSES = (MARKETPLACE_STATUS_DRAFT, MARKETPLACE_STATUS_PUBLISHED)

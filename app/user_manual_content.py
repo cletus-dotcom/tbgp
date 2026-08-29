@@ -106,7 +106,7 @@ USER_MANUALS = {
             {
                 "heading": "Marketplace Listings",
                 "items": [
-                    "Use Marketplace in the sidebar to add, edit, publish, or delete real property and products listings.",
+                    "Use Marketplace in the sidebar to add, edit, publish, or delete products, services, and real property listings.",
                     "Set title, summary, details, price label, location, thumbnail, gallery images, and inquiry contact defaults.",
                     "Only Published listings appear on the public marketplace and landing carousel.",
                     "Edit Executive summaries on the Marketplace page to set the intro copy shown on each public category page.",
@@ -154,7 +154,7 @@ USER_MANUALS = {
             {
                 "heading": "Marketplace Listings",
                 "items": [
-                    "Use Administration → Marketplace Listings to create, edit, publish, or delete real property and products listings.",
+                    "Use Administration → Marketplace Listings to create, edit, publish, or delete products, services, and real property listings.",
                     "Published listings appear on the public marketplace pages and landing carousel.",
                     "Edit Executive summaries on the same page to control the intro copy on each marketplace category page.",
                     "Use Administration → Marketplace CRM to view inquiry statistics, search/filter leads, and see who inquired and which member referred them.",
@@ -455,12 +455,12 @@ APP_PROCESS_FLOW = [
 MARKETPLACE_CRM_GUIDE = {
     "title": "Marketplace & CRM Guide",
     "summary": (
-        "Public inquiry marketplace for Real Property and Products, member share-link attribution, "
+        "Public inquiry marketplace for Products, Services, and Real Property, member share-link attribution, "
         "and Admin Marketplace CRM for tracing inquiries and referrers. No online checkout in this version."
     ),
     "overview": [
         "TBGP Marketplace is a public inquiry marketplace (interest only—no payment or cart).",
-        "Categories: Real Property and Products.",
+        "Categories: Products, Services, and Real Property (in that order on the landing page).",
         "Site Admin / Admin / PortalAdmin publish listings and category executive summaries.",
         "Members share personal marketplace links; guests who inquire via those links are attributed to the member.",
         "Marketplace CRM lets Admin and Site Content editors search, filter, and review inquiry statistics.",
@@ -481,7 +481,7 @@ MARKETPLACE_CRM_GUIDE = {
         {
             "title": "Public Marketplace",
             "items": [
-                "Landing page carousel links to Real Property and Products.",
+                "Landing page carousel links to Products, Services, then Real Property.",
                 "Each category page shows an executive summary plus a thumbnail grid of published listings.",
                 "Listing detail shows basic information, gallery, and an inquiry form (name plus phone or email, and optional message).",
             ],

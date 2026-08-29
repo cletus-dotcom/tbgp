@@ -36,6 +36,10 @@
         <span>{{ m.birth_date.strftime('%B %d, %Y') if m.birth_date else '—' }}</span>
     </div>
     <div class="detail-item">
+        <label>Age</label>
+        <span>{{ m.age if m.age is not none else '—' }}</span>
+    </div>
+    <div class="detail-item">
         <label>Gender</label>
         <span>{{ m.gender or '—' }}</span>
     </div>
@@ -76,12 +80,38 @@
         <span>{{ m.beneficiary_name or '—' }}</span>
     </div>
     <div class="detail-item">
+        <label>Beneficiary Relationship</label>
+        <span>{{ m.beneficiary_relationship or '—' }}</span>
+    </div>
+    <div class="detail-item">
         <label>Beneficiary Phone</label>
         <span>{{ m.beneficiary_phone or '—' }}</span>
     </div>
     <div class="detail-item" style="grid-column: 1 / -1;">
         <label>Beneficiary Address</label>
         <span>{{ m.beneficiary_address or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>GCash Number</label>
+        <span>{{ m.gcash_number or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Bank Name</label>
+        <span>{{ m.bank_name or '—' }}</span>
+    </div>
+    <div class="detail-item">
+        <label>Bank Account Number</label>
+        <span>{{ m.bank_account_number or '—' }}</span>
+    </div>
+    <div class="detail-item" style="grid-column: 1 / -1;">
+        <label>ID Picture Location</label>
+        <span>
+            {% if m.id_picture_location and m.id_picture_location.startswith('http') %}
+            <a href="{{ m.id_picture_location }}" target="_blank" rel="noopener noreferrer">{{ m.id_picture_location }}</a>
+            {% else %}
+            {{ m.id_picture_location or '—' }}
+            {% endif %}
+        </span>
     </div>
     <div class="detail-item">
         <label>Separation Date</label>

@@ -4,6 +4,7 @@ from app.auth import login_required, site_admin_required
 from app.config import (
     MARKETPLACE_CATEGORIES,
     MARKETPLACE_CATEGORY_SLUGS,
+    MARKETPLACE_FUNNEL_CATEGORY_SLUGS,
     is_portal_admin_role,
     is_site_admin_role,
     normalize_role,
@@ -24,6 +25,7 @@ from app.site_content_service import (
     get_ecosystem_slugs,
     get_landing_ecosystem_section,
     get_marketplace_products_page,
+    get_marketplace_services_page,
     get_marketplace_summaries,
     get_services_contact_cta,
     save_services_contact_cta,
@@ -38,6 +40,7 @@ from app.site_content_service import (
     save_ecosystem_page,
     save_landing_ecosystem_section,
     save_marketplace_products_page,
+    save_marketplace_services_page,
     save_marketplace_summaries,
     save_registry_partner,
 )
@@ -390,6 +393,8 @@ def marketplace_list():
         filter_category=category,
         marketplace_summaries=get_marketplace_summaries(),
         products_page=get_marketplace_products_page(),
+        services_page=get_marketplace_services_page(),
+        funnel_category_slugs=MARKETPLACE_FUNNEL_CATEGORY_SLUGS,
         partner_image_upload_enabled=supabase_storage_configured(),
         partner_image_upload_url=url_for("site_admin.upload_marketplace_image"),
         supabase_storage_config_error=supabase_storage_config_error(),
@@ -420,6 +425,18 @@ def marketplace_products_page_save():
     return redirect(url_for("site_admin.marketplace_list") + "#products-page")
 
 
+@site_admin_bp.route("/marketplace/services-page", methods=["POST"])
+@login_required
+@site_admin_required
+def marketplace_services_page_save():
+    try:
+        save_marketplace_services_page(request.form)
+        flash("Services marketplace page settings saved.", "success")
+    except ValueError as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("site_admin.marketplace_list") + "#services-page")
+
+
 @site_admin_bp.route("/marketplace/new", methods=["GET", "POST"])
 @login_required
 @site_admin_required
@@ -433,7 +450,7 @@ def marketplace_new():
         except ValueError as exc:
             flash(str(exc), "danger")
             draft = {
-                "category": request.form.get("category") or "real_property",
+                "category": request.form.get("category") or "products",
                 "title": request.form.get("title") or "",
                 "summary": request.form.get("summary") or "",
                 "body": request.form.get("body") or "",
@@ -452,9 +469,9 @@ def marketplace_new():
                 **_listing_edit_context(draft, is_new=True),
             )
 
-    default_category = request.args.get("category") or "real_property"
+    default_category = request.args.get("category") or "products"
     if default_category not in MARKETPLACE_CATEGORIES:
-        default_category = "real_property"
+        default_category = "products"
     blank = {
         "category": default_category,
         "title": "",

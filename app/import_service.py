@@ -1,8 +1,7 @@
 from datetime import datetime
 from io import BytesIO
+from math import isnan
 from pathlib import Path
-
-import pandas as pd
 
 from app import db
 from app.config import (
@@ -42,9 +41,53 @@ REQUIRED_COLUMNS = {
     "termination_type",
 }
 
+OPTIONAL_COLUMNS = {
+    "membership_type",
+    "lifetime_cap_enabled",
+    "lifetime_cap_amount",
+    "gcash_number",
+    "bank_account_number",
+    "bank_name",
+    "age",
+    "id_picture_location",
+    "beneficiary_relationship",
+}
+
+
+class SheetRows:
+    """Lightweight tabular sheet data without building a pandas DataFrame."""
+
+    def __init__(self, rows):
+        self._rows = rows
+
+    @property
+    def columns(self):
+        if not self._rows:
+            return []
+        return list(self._rows[0].keys())
+
+    @property
+    def empty(self):
+        return not self._rows
+
+    def to_dict(self, orient="records"):
+        if orient != "records":
+            raise ValueError("Only orient='records' is supported.")
+        return list(self._rows)
+
+
+def _is_blank(value):
+    if value is None:
+        return True
+    if isinstance(value, float) and isnan(value):
+        return True
+    if isinstance(value, str) and not value.strip():
+        return True
+    return False
+
 
 def _parse_date(value):
-    if value is None or (isinstance(value, float) and pd.isna(value)):
+    if _is_blank(value):
         return None
     if isinstance(value, datetime):
         return value.date()
@@ -67,23 +110,52 @@ def _parse_date(value):
 
 
 def _clean_str(value):
-    if value is None or (isinstance(value, float) and pd.isna(value)):
+    if _is_blank(value):
         return None
     text = str(value).strip()
     return text or None
 
 
 def _parse_int(value):
-    if value is None or (isinstance(value, float) and pd.isna(value)):
+    if _is_blank(value):
         return None
     text = str(value).strip()
     if not text:
         return None
-    return int(float(text))
+    try:
+        return int(float(text))
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_dependents(value):
+    parsed = _parse_int(value)
+    if parsed is None:
+        return None
+    if parsed < 0 or parsed > 50:
+        return None
+    return parsed
+
+
+def _parse_age(value):
+    if _is_blank(value):
+        return None
+    parsed = _parse_int(value)
+    if parsed is not None:
+        return parsed if 0 <= parsed <= 130 else None
+    text = str(value).strip()
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if not digits:
+        return None
+    try:
+        age = int(digits)
+    except ValueError:
+        return None
+    return age if 0 <= age <= 130 else None
 
 
 def _parse_bool(value, default=True):
-    if value is None or (isinstance(value, float) and pd.isna(value)):
+    if _is_blank(value):
         return default
     text = str(value).strip().lower()
     if not text:
@@ -92,7 +164,7 @@ def _parse_bool(value, default=True):
 
 
 def _parse_decimal(value, default):
-    if value is None or (isinstance(value, float) and pd.isna(value)):
+    if _is_blank(value):
         return default
     text = str(value).strip().replace(",", "")
     if not text:
@@ -100,31 +172,114 @@ def _parse_decimal(value, default):
     return float(text)
 
 
-def _read_excel(source, sheet_name=None):
+def _read_excel_openpyxl(source, sheet_name=None):
+    import openpyxl
+
     if isinstance(source, (str, Path)):
-        return pd.read_excel(source, sheet_name=sheet_name) if sheet_name else pd.read_excel(source)
-    if hasattr(source, "read"):
+        workbook = openpyxl.load_workbook(source, read_only=True, data_only=True)
+    else:
         content = source.read()
         if hasattr(source, "seek"):
             source.seek(0)
-        source = BytesIO(content)
-    return pd.read_excel(source, sheet_name=sheet_name) if sheet_name else pd.read_excel(source)
+        workbook = openpyxl.load_workbook(BytesIO(content), read_only=True, data_only=True)
+
+    if sheet_name and sheet_name not in workbook.sheetnames:
+        workbook.close()
+        raise ValueError(f'Sheet "{sheet_name}" was not found.')
+
+    target_sheet = sheet_name if sheet_name in workbook.sheetnames else workbook.sheetnames[0]
+    worksheet = workbook[target_sheet]
+    rows = list(worksheet.iter_rows(values_only=True))
+    workbook.close()
+    if not rows:
+        return SheetRows([])
+
+    headers = [str(col).strip() if col is not None else "" for col in rows[0]]
+    records = []
+    for row in rows[1:]:
+        if row is None or all(_is_blank(cell) for cell in row):
+            continue
+        record = {}
+        for index, header in enumerate(headers):
+            if not header:
+                continue
+            record[header] = row[index] if index < len(row) else None
+        if _is_blank(record.get("member_id")) and _is_blank(record.get("contractor_id")) and _is_blank(record.get("supplier_id")):
+            first_value = next((record[key] for key in record if not _is_blank(record.get(key))), None)
+            if first_value is None:
+                continue
+        records.append(record)
+    return SheetRows(records)
+
+
+def _read_excel(source, sheet_name=None):
+    """Read spreadsheet rows via openpyxl (avoids pandas Excel engine crashes)."""
+    return _read_excel_openpyxl(source, sheet_name=sheet_name)
 
 
 def load_members_dataframe(source):
     try:
-        df = _read_excel(source, sheet_name=MEMBERS_SHEET)
+        sheet = _read_excel(source, sheet_name=MEMBERS_SHEET)
     except ValueError:
-        df = _read_excel(source)
+        sheet = _read_excel(source)
 
-    missing = REQUIRED_COLUMNS - set(df.columns)
+    missing = REQUIRED_COLUMNS - set(sheet.columns)
     if missing:
         raise ValueError(f"Missing columns in spreadsheet: {', '.join(sorted(missing))}")
 
-    if df.empty:
+    if sheet.empty:
         raise ValueError("The spreadsheet has no data rows.")
 
-    return df
+    return sheet
+
+
+def _clear_members_for_replace():
+    """Remove member rows and dependent records that block a full replace import."""
+    from app.models import (
+        AdSplitMember,
+        Contractor,
+        MarketplaceLead,
+        MemberLedger,
+        OmpdFundEntry,
+        PayoutNotification,
+        PayoutRequest,
+        ProductCommission,
+        ProductCommissionAdAllocation,
+        ProductCommissionShare,
+        ProjectBilling,
+        ProjectCommission,
+        SharingBatch,
+        SharingEntry,
+        Supplier,
+        User,
+    )
+
+    User.query.filter(User.member_id.isnot(None)).update(
+        {User.member_id: None},
+        synchronize_session=False,
+    )
+    Member.query.update({Member.referrer_id: None}, synchronize_session=False)
+    MarketplaceLead.query.filter(MarketplaceLead.attributed_member_id.isnot(None)).update(
+        {MarketplaceLead.attributed_member_id: None},
+        synchronize_session=False,
+    )
+
+    ProductCommissionAdAllocation.query.delete(synchronize_session=False)
+    ProductCommissionShare.query.delete(synchronize_session=False)
+    ProductCommission.query.delete(synchronize_session=False)
+    AdSplitMember.query.delete(synchronize_session=False)
+    MemberLedger.query.delete(synchronize_session=False)
+    PayoutNotification.query.delete(synchronize_session=False)
+    OmpdFundEntry.query.delete(synchronize_session=False)
+    PayoutRequest.query.delete(synchronize_session=False)
+    SharingEntry.query.delete(synchronize_session=False)
+    SharingBatch.query.delete(synchronize_session=False)
+    ProjectBilling.query.delete(synchronize_session=False)
+    ProjectCommission.query.delete(synchronize_session=False)
+    Contractor.query.delete(synchronize_session=False)
+    Supplier.query.delete(synchronize_session=False)
+    Member.query.delete(synchronize_session=False)
+    db.session.commit()
 
 
 def _validate_choice(value, allowed, field_name):
@@ -138,16 +293,16 @@ def _validate_choice(value, allowed, field_name):
 def _row_payload(row, include_lifetime_cap=False):
     member_id = int(row["member_id"])
     referrer_id = None
-    if not pd.isna(row["referrer_id"]):
+    if not _is_blank(row.get("referrer_id")):
         referrer_id = int(row["referrer_id"])
 
     status = _validate_choice(
-        _clean_str(row["status"]) or "Active",
+        _clean_str(row.get("status")) or "Active",
         MEMBER_STATUSES,
         "status",
     )
     separation_type = _validate_choice(
-        _clean_str(row["termination_type"]),
+        _clean_str(row.get("termination_type")),
         MEMBER_SEPARATION_TYPES,
         "termination_type",
     )
@@ -156,26 +311,32 @@ def _row_payload(row, include_lifetime_cap=False):
         "batch": int(row["batch"]),
         "referrer_id": referrer_id,
         "membership_type": _clean_str(row.get("membership_type")),
-        "date_joined": _parse_date(row["date_joined"]),
-        "last_name": _clean_str(row["last_name"]) or "",
-        "first_name": _clean_str(row["first_name"]) or "",
-        "middle_name": _clean_str(row["middle_name"]),
-        "suffix": _clean_str(row["suffix"]),
-        "address": _clean_str(row["address"]),
-        "phone": _clean_str(row["phone"]),
-        "email": _clean_str(row["email"]),
-        "birth_date": _parse_date(row["birth_date"]),
-        "gender": _clean_str(row["gender"]),
-        "civil_status": _clean_str(row["civil_status"]),
-        "highest_education": _clean_str(row["highest_education"]),
-        "occupation_income_source": _clean_str(row["occupation_income_source"]),
-        "monthly_income": _clean_str(row["monthly_income"]),
-        "number_of_dependents": _parse_int(row["number_of_dependents"]),
-        "beneficiary_name": _clean_str(row["beneficiary_name"]),
-        "beneficiary_address": _clean_str(row["beneficiary_address"]),
-        "beneficiary_phone": _clean_str(row["beneficiary_phone"]),
+        "date_joined": _parse_date(row.get("date_joined")),
+        "last_name": _clean_str(row.get("last_name")) or "",
+        "first_name": _clean_str(row.get("first_name")) or _clean_str(row.get("last_name")) or "N/A",
+        "middle_name": _clean_str(row.get("middle_name")),
+        "suffix": _clean_str(row.get("suffix")),
+        "address": _clean_str(row.get("address")),
+        "phone": _clean_str(row.get("phone")),
+        "email": _clean_str(row.get("email")),
+        "birth_date": _parse_date(row.get("birth_date")),
+        "gender": _clean_str(row.get("gender")),
+        "civil_status": _clean_str(row.get("civil_status")),
+        "highest_education": _clean_str(row.get("highest_education")),
+        "occupation_income_source": _clean_str(row.get("occupation_income_source")),
+        "monthly_income": _clean_str(row.get("monthly_income")),
+        "number_of_dependents": _parse_dependents(row.get("number_of_dependents")),
+        "beneficiary_name": _clean_str(row.get("beneficiary_name")),
+        "beneficiary_address": _clean_str(row.get("beneficiary_address")),
+        "beneficiary_phone": _clean_str(row.get("beneficiary_phone")),
+        "beneficiary_relationship": _clean_str(row.get("beneficiary_relationship")),
+        "gcash_number": _clean_str(row.get("gcash_number")),
+        "bank_account_number": _clean_str(row.get("bank_account_number")),
+        "bank_name": _clean_str(row.get("bank_name")),
+        "age": _parse_age(row.get("age")),
+        "id_picture_location": _clean_str(row.get("id_picture_location")),
         "status": status,
-        "termination_date": _parse_date(row["termination_date"]),
+        "termination_date": _parse_date(row.get("termination_date")),
         "termination_type": separation_type,
     }
     if include_lifetime_cap:
@@ -214,30 +375,40 @@ def preview_members_dataframe(df, limit=5):
 
 def import_members_dataframe(df, replace=False, actor_role=None):
     if replace:
-        Member.query.delete()
-        db.session.commit()
+        _clear_members_for_replace()
 
     imported = 0
     updated = 0
+    skipped_referrers = []
     rows = sorted(df.to_dict("records"), key=lambda r: (int(r["batch"]), int(r["member_id"])))
+    member_ids = {int(row["member_id"]) for row in rows}
     include_lifetime_cap = is_admin_role(actor_role)
 
-    for row in rows:
-        member_id, payload = _row_payload(row, include_lifetime_cap=include_lifetime_cap)
-        if not payload["last_name"] or not payload["first_name"]:
-            raise ValueError(f"Row with member_id {member_id} is missing first or last name.")
+    with db.session.no_autoflush:
+        for row in rows:
+            member_id, payload = _row_payload(row, include_lifetime_cap=include_lifetime_cap)
+            referrer_id = payload["referrer_id"]
+            if referrer_id is not None and referrer_id not in member_ids:
+                skipped_referrers.append({"member_id": member_id, "referrer_id": referrer_id})
+                payload["referrer_id"] = None
 
-        member = db.session.get(Member, member_id)
-        if member:
-            for key, value in payload.items():
-                setattr(member, key, value)
-            updated += 1
-        else:
-            db.session.add(Member(member_id=member_id, **payload))
-            imported += 1
+            if not payload["last_name"]:
+                raise ValueError(f"Row with member_id {member_id} is missing last name.")
+
+            member = db.session.get(Member, member_id)
+            if member:
+                for key, value in payload.items():
+                    setattr(member, key, value)
+                updated += 1
+            else:
+                db.session.add(Member(member_id=member_id, **payload))
+                imported += 1
 
     db.session.commit()
-    return {"imported": imported, "updated": updated, "total": Member.query.count()}
+    result = {"imported": imported, "updated": updated, "total": Member.query.count()}
+    if skipped_referrers:
+        result["skipped_referrers"] = skipped_referrers
+    return result
 
 
 def import_members_from_upload(file_storage, replace=False, actor_role=None):

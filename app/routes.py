@@ -67,6 +67,7 @@ from app.config import (
     PRODUCT_REF_SELLER_PERCENT,
     MARKETPLACE_CATEGORIES,
     MARKETPLACE_CATEGORY_SLUGS,
+    MARKETPLACE_FUNNEL_CATEGORY_SLUGS,
     USER_ROLE_ADMIN,
     USER_ROLE_MEMBER,
     USER_ROLE_PORTAL_ADMIN,
@@ -204,6 +205,7 @@ from app.marketplace_service import (
     member_lead_count,
     member_leads,
     products_page_content,
+    funnel_page_content,
     search_marketplace_leads,
     set_attribution_cookie,
 )
@@ -238,6 +240,12 @@ MEMBER_TEMPLATE_COLUMNS = [
     "termination_type",
     "lifetime_cap_enabled",
     "lifetime_cap_amount",
+    "gcash_number",
+    "bank_account_number",
+    "bank_name",
+    "age",
+    "id_picture_location",
+    "beneficiary_relationship",
 ]
 
 CONTRACTOR_TEMPLATE_COLUMNS = [
@@ -349,9 +357,9 @@ def marketplace_category(category):
     ctx = _marketplace_page_context(category)
     ctx["listings"] = list_published_by_category(category)
 
-    if category == "products":
-        ctx["page"] = products_page_content()
-        return render_template("marketplace_products.html", **ctx)
+    if category in MARKETPLACE_FUNNEL_CATEGORY_SLUGS:
+        ctx["page"] = funnel_page_content(category)
+        return render_template("marketplace_funnel.html", **ctx)
 
     return render_template("marketplace_category.html", **ctx)
 
@@ -1436,6 +1444,10 @@ def _apply_member_self_form(member, data):
     member.beneficiary_name = (data.get("beneficiary_name") or "").strip() or None
     member.beneficiary_phone = (data.get("beneficiary_phone") or "").strip() or None
     member.beneficiary_address = (data.get("beneficiary_address") or "").strip() or None
+    member.beneficiary_relationship = (data.get("beneficiary_relationship") or "").strip() or None
+    member.gcash_number = (data.get("gcash_number") or "").strip() or None
+    member.bank_account_number = (data.get("bank_account_number") or "").strip() or None
+    member.bank_name = (data.get("bank_name") or "").strip() or None
 
 
 def _apply_member_form(member, data, actor_role=None):
@@ -1481,6 +1493,12 @@ def _apply_member_form(member, data, actor_role=None):
     member.beneficiary_name = (data.get("beneficiary_name") or "").strip() or None
     member.beneficiary_address = (data.get("beneficiary_address") or "").strip() or None
     member.beneficiary_phone = (data.get("beneficiary_phone") or "").strip() or None
+    member.beneficiary_relationship = (data.get("beneficiary_relationship") or "").strip() or None
+    member.gcash_number = (data.get("gcash_number") or "").strip() or None
+    member.bank_account_number = (data.get("bank_account_number") or "").strip() or None
+    member.bank_name = (data.get("bank_name") or "").strip() or None
+    member.age = _parse_form_int(data.get("age"), "age")
+    member.id_picture_location = (data.get("id_picture_location") or "").strip() or None
     member.status = status
     member.termination_date = _parse_form_date(data.get("termination_date"), "termination_date")
     separation_type = (data.get("termination_type") or "").strip() or None

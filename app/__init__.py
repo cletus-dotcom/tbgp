@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 
 from flask import Flask, session
@@ -228,9 +229,10 @@ def create_app():
         from app.site_content_service import seed_cms_content
 
         seed_cms_content()
-        _seed_members()
-        _seed_contractors()
-        _seed_suppliers()
+        if not os.environ.get("TBGP_SKIP_DATA_SEED"):
+            _seed_members()
+            _seed_contractors()
+            _seed_suppliers()
         _seed_commission_levels()
 
     log = logging.getLogger("werkzeug")

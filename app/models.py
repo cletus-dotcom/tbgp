@@ -56,15 +56,21 @@ class Member(db.Model):
     occupation_income_source = db.Column(db.String(120))
     monthly_income = db.Column(db.String(40))
     number_of_dependents = db.Column(db.Integer)
-    beneficiary_name = db.Column(db.String(120))
+    beneficiary_name = db.Column(db.String(255))
     beneficiary_address = db.Column(db.String(255))
-    beneficiary_phone = db.Column(db.String(30))
+    beneficiary_phone = db.Column(db.String(120))
     status = db.Column(db.String(20), default="Active")
     termination_date = db.Column(db.Date)
     termination_type = db.Column(db.String(60))
     lifetime_cap_enabled = db.Column(db.Boolean, default=True)
     lifetime_cap_amount = db.Column(db.Numeric(14, 2), default=50000000)
     marketplace_share_code = db.Column(db.String(40), unique=True, nullable=True)
+    gcash_number = db.Column(db.String(40))
+    bank_account_number = db.Column(db.String(60))
+    bank_name = db.Column(db.String(120))
+    age = db.Column(db.Integer)
+    id_picture_location = db.Column(db.String(500))
+    beneficiary_relationship = db.Column(db.String(80))
 
     referrer = db.relationship("Member", remote_side=[member_id], backref="referrals")
 
@@ -93,6 +99,10 @@ class Member(db.Model):
             "beneficiary_name": self.beneficiary_name or "",
             "beneficiary_phone": self.beneficiary_phone or "",
             "beneficiary_address": self.beneficiary_address or "",
+            "beneficiary_relationship": self.beneficiary_relationship or "",
+            "gcash_number": self.gcash_number or "",
+            "bank_account_number": self.bank_account_number or "",
+            "bank_name": self.bank_name or "",
         }
 
     def edit_payload(self):
@@ -124,6 +134,12 @@ class Member(db.Model):
             "termination_type": self.termination_type,
             "lifetime_cap_enabled": bool(self.lifetime_cap_enabled),
             "lifetime_cap_amount": _money(self.lifetime_cap_amount),
+            "gcash_number": self.gcash_number,
+            "bank_account_number": self.bank_account_number,
+            "bank_name": self.bank_name,
+            "age": self.age,
+            "id_picture_location": self.id_picture_location,
+            "beneficiary_relationship": self.beneficiary_relationship,
         }
 
     def to_dict(self):

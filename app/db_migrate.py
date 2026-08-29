@@ -19,9 +19,9 @@ MEMBER_COLUMN_DEFS = {
     "occupation_income_source": "VARCHAR(120)",
     "monthly_income": "VARCHAR(40)",
     "number_of_dependents": "INTEGER",
-    "beneficiary_name": "VARCHAR(120)",
+    "beneficiary_name": "VARCHAR(255)",
     "beneficiary_address": "VARCHAR(255)",
-    "beneficiary_phone": "VARCHAR(30)",
+    "beneficiary_phone": "VARCHAR(120)",
     "status": "VARCHAR(20) DEFAULT 'Active'",
     "termination_date": "DATE",
     "termination_type": "VARCHAR(60)",
@@ -29,6 +29,12 @@ MEMBER_COLUMN_DEFS = {
     "lifetime_cap_enabled": "BOOLEAN DEFAULT TRUE",
     "lifetime_cap_amount": "NUMERIC(14, 2) DEFAULT 50000000",
     "marketplace_share_code": "VARCHAR(40)",
+    "gcash_number": "VARCHAR(40)",
+    "bank_account_number": "VARCHAR(60)",
+    "bank_name": "VARCHAR(120)",
+    "age": "INTEGER",
+    "id_picture_location": "VARCHAR(500)",
+    "beneficiary_relationship": "VARCHAR(80)",
 }
 
 
@@ -67,6 +73,17 @@ def migrate_members_table():
         db.session.execute(
             text("UPDATE members SET lifetime_cap_amount = 50000000 WHERE lifetime_cap_amount IS NULL")
         )
+
+    widen_columns = {
+        "beneficiary_phone": "VARCHAR(120)",
+        "beneficiary_name": "VARCHAR(255)",
+    }
+    for col_name, col_type in widen_columns.items():
+        if col_name in columns:
+            db.session.execute(text(
+                f"ALTER TABLE members ALTER COLUMN {col_name} TYPE {col_type}"
+            ))
+            logger.info("Widened members.%s to %s", col_name, col_type)
 
     db.session.commit()
 

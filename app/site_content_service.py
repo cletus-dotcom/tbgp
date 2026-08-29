@@ -13,6 +13,7 @@ LANDING_ECOSYSTEM_KEY = "ecosystem_pillars"
 SERVICES_CONTACT_CTA_KEY = "services_contact_cta"
 MARKETPLACE_SUMMARIES_KEY = "marketplace_summaries"
 MARKETPLACE_PRODUCTS_PAGE_KEY = "marketplace_products_page"
+MARKETPLACE_SERVICES_PAGE_KEY = "marketplace_services_page"
 
 DEFAULT_LANDING_ECOSYSTEM = {
     "subtitle": "The Cooperative Ecosystem",
@@ -26,6 +27,20 @@ DEFAULT_SERVICES_CONTACT_CTA = {
 }
 
 DEFAULT_MARKETPLACE_SUMMARIES = {
+    "products": {
+        "title": "Products Executive Summary",
+        "body": (
+            "Explore curated TBGP product opportunities, submit a short project inquiry, "
+            "and get matched with relevant listings through network follow-up—no online checkout."
+        ),
+    },
+    "services": {
+        "title": "Services Executive Summary",
+        "body": (
+            "Browse TBGP network services—from project support to logistics and professional "
+            "engagements—then inquire so a representative can match you with the right partner."
+        ),
+    },
     "real_property": {
         "title": "Real Property Executive Summary",
         "body": (
@@ -34,16 +49,13 @@ DEFAULT_MARKETPLACE_SUMMARIES = {
             "Members who share their marketplace link receive attributed guest inquiries in My Marketplace."
         ),
     },
-    "products": {
-        "title": "Products Executive Summary",
-        "body": (
-            "Explore curated TBGP product opportunities, submit a short project inquiry, "
-            "and get matched with relevant listings through network follow-up—no online checkout."
-        ),
-    },
 }
 
 DEFAULT_MARKETPLACE_PRODUCTS_PAGE = {
+    "hero_image_url": "",
+}
+
+DEFAULT_MARKETPLACE_SERVICES_PAGE = {
     "hero_image_url": "",
 }
 
@@ -82,6 +94,14 @@ def seed_cms_content():
             CmsLandingSection(
                 section_key=MARKETPLACE_PRODUCTS_PAGE_KEY,
                 data=copy.deepcopy(DEFAULT_MARKETPLACE_PRODUCTS_PAGE),
+            )
+        )
+
+    if CmsLandingSection.query.get(MARKETPLACE_SERVICES_PAGE_KEY) is None:
+        db.session.add(
+            CmsLandingSection(
+                section_key=MARKETPLACE_SERVICES_PAGE_KEY,
+                data=copy.deepcopy(DEFAULT_MARKETPLACE_SERVICES_PAGE),
             )
         )
 
@@ -259,6 +279,46 @@ def save_marketplace_products_page(form_or_data):
     db.session.add(row)
     db.session.commit()
     return payload
+
+
+def get_marketplace_services_page():
+    """CMS settings for the public Services marketplace funnel page."""
+    row = CmsLandingSection.query.get(MARKETPLACE_SERVICES_PAGE_KEY)
+    data = copy.deepcopy(row.data) if row and row.data else {}
+    hero = (data.get("hero_image_url") or "").strip().rstrip("?")
+    return {
+        "hero_image_url": hero,
+    }
+
+
+def save_marketplace_services_page(form_or_data):
+    """Save Services marketplace page settings (hero image URL)."""
+    current = get_marketplace_services_page()
+    hero_image_url = None
+    if hasattr(form_or_data, "get"):
+        if "hero_image_url" in form_or_data:
+            hero_image_url = form_or_data.get("hero_image_url")
+    payload = {
+        "hero_image_url": (
+            (hero_image_url if hero_image_url is not None else current["hero_image_url"])
+            or ""
+        ).strip(),
+    }
+    row = CmsLandingSection.query.get(MARKETPLACE_SERVICES_PAGE_KEY)
+    if row is None:
+        row = CmsLandingSection(section_key=MARKETPLACE_SERVICES_PAGE_KEY)
+    row.data = payload
+    row.updated_at = datetime.utcnow()
+    db.session.add(row)
+    db.session.commit()
+    return payload
+
+
+def get_marketplace_funnel_page(category):
+    """Return CMS funnel page settings for products or services."""
+    if category == "services":
+        return get_marketplace_services_page()
+    return get_marketplace_products_page()
 
 
 def get_ecosystem_page(slug):

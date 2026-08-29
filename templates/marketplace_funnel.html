@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{{ category_meta.label }} — TBGP Marketplace{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+{% endblock %}
+
+{% block body_class %}landing-body{% endblock %}
+
+{% block body %}
+{% set landing_nav_active = 'marketplace' %}
+{% include 'partials/landing_nav.html' %}
+
+<section class="mp-funnel">
+    <div class="container">
+        <nav class="ecosystem-breadcrumb" aria-label="Breadcrumb">
+            <a href="{{ url_for('main_routes.index') }}">Home</a>
+            <span aria-hidden="true">/</span>
+            <a href="{{ url_for('main_routes.index') }}#marketplace">Marketplace</a>
+            <span aria-hidden="true">/</span>
+            <span>{{ category_meta.label }}</span>
+        </nav>
+
+        {% if attributed_member %}
+        <div class="marketplace-referral-banner" role="status">
+            Referred by <strong>#{{ attributed_member.member_id }} — {{ attributed_member.full_name }}</strong>.
+            {{ page.referral_note }}
+        </div>
+        {% endif %}
+
+        <div class="marketplace-category-tabs mb-4">
+            {% for slug in category_slugs %}
+            <a href="{{ url_for('main_routes.marketplace_category', category=slug) }}"
+               class="marketplace-category-tab {% if slug == category %}is-active{% endif %}">
+                <i class="bi {{ categories[slug].icon }}" aria-hidden="true"></i>
+                {{ categories[slug].label }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <section class="mp-funnel-stage mp-funnel-stage-solo{% if page.hero_image_url %} has-hero{% endif %}">
+        <div class="mp-funnel-stage-bg" aria-hidden="true">
+            {% if page.hero_image_url %}
+            <img class="mp-funnel-stage-bg-img" src="{{ page.hero_image_url }}" alt="" loading="eager" decoding="async">
+            {% endif %}
+        </div>
+        <div class="mp-funnel-stage-fade" aria-hidden="true"></div>
+
+        <div class="container mp-funnel-stage-inner">
+            <header class="mp-funnel-intro">
+                <p class="section-subtitle">Marketplace · {{ page.subtitle_label or category_meta.label }}</p>
+                <h1>{{ page.hero_title }}</h1>
+                <p class="mp-funnel-lead">{{ page.hero_lead }}</p>
+                <ul class="mp-funnel-bullets">
+                    {% for item in page.hero_bullets %}
+                    <li><i class="bi bi-check2-circle" aria-hidden="true"></i> {{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </header>
+
+            <div class="mp-funnel-panel" id="featured-listings">
+                <h2>{{ page.featured_heading }}</h2>
+                <p class="mp-funnel-panel-lead">{{ page.featured_lead }}</p>
+                {% if listings %}
+                <div class="mp-funnel-listing-grid">
+                    {% for item in listings %}
+                    <a href="{{ url_for('main_routes.marketplace_detail', category=category, listing_id=item.listing_id) }}"
+                       class="mp-funnel-listing-card">
+                        <div class="mp-funnel-listing-media">
+                            {% if item.thumbnail_url %}
+                            <img src="{{ item.thumbnail_url }}" alt="{{ item.title }}">
+                            {% else %}
+                            <div class="marketplace-card-placeholder" aria-hidden="true">
+                                <i class="bi {{ category_meta.icon }}"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="mp-funnel-listing-body">
+                            <h3>{{ item.title }}</h3>
+                            {% if item.price_label %}<p class="marketplace-card-price">{{ item.price_label }}</p>{% endif %}
+                            {% if item.location %}<p class="marketplace-card-location">{{ item.location }}</p>{% endif %}
+                            {% if item.summary %}<p class="marketplace-card-summary">{{ item.summary }}</p>{% endif %}
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">{{ page.empty_listings }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+</section>
+
+{% include 'partials/landing_footer.html' %}
+{% endblock %}

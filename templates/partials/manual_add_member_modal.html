@@ -67,6 +67,10 @@
                             <input type="date" id="manualBirthDate" name="birth_date" class="form-control">
                         </div>
                         <div class="col-md-3">
+                            <label for="manualAge" class="form-label">Age</label>
+                            <input type="number" id="manualAge" name="age" class="form-control" min="0" max="130" step="1">
+                        </div>
+                        <div class="col-md-3">
                             <label for="manualGender" class="form-label">Gender</label>
                             <input type="text" id="manualGender" name="gender" class="form-control">
                         </div>
@@ -134,12 +138,38 @@
                             <input type="text" id="manualBeneficiaryName" name="beneficiary_name" class="form-control">
                         </div>
                         <div class="col-md-4">
+                            <label for="manualBeneficiaryRelationship" class="form-label">Relationship</label>
+                            <input type="text" id="manualBeneficiaryRelationship" name="beneficiary_relationship" class="form-control"
+                                   placeholder="Spouse, Child, Sibling, etc.">
+                        </div>
+                        <div class="col-md-4">
                             <label for="manualBeneficiaryPhone" class="form-label">Beneficiary Phone</label>
                             <input type="text" id="manualBeneficiaryPhone" name="beneficiary_phone" class="form-control">
                         </div>
                         <div class="col-md-12">
                             <label for="manualBeneficiaryAddress" class="form-label">Beneficiary Address</label>
                             <textarea id="manualBeneficiaryAddress" name="beneficiary_address" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+
+                    <p class="text-muted small fw-semibold text-uppercase mb-2">Payment Details</p>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="manualGcashNumber" class="form-label">GCash Number</label>
+                            <input type="text" id="manualGcashNumber" name="gcash_number" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="manualBankName" class="form-label">Bank Name</label>
+                            <input type="text" id="manualBankName" name="bank_name" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="manualBankAccountNumber" class="form-label">Bank Account Number</label>
+                            <input type="text" id="manualBankAccountNumber" name="bank_account_number" class="form-control">
+                        </div>
+                        <div class="col-md-12">
+                            <label for="manualIdPictureLocation" class="form-label">ID Picture Location</label>
+                            <input type="text" id="manualIdPictureLocation" name="id_picture_location" class="form-control"
+                                   placeholder="Drive link or file path">
                         </div>
                     </div>
 
