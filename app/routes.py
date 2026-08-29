@@ -121,7 +121,12 @@ from app.accessibility_service import (
     get_user_accessibility_prefs,
     save_user_accessibility_prefs,
 )
-from app.import_service import import_members_from_upload, import_members_from_xlsx, preview_members_upload
+from app.import_service import (
+    clear_members_and_dependents,
+    import_members_from_upload,
+    import_members_from_xlsx,
+    preview_members_upload,
+)
 from app.models import (
     AdSplitMember,
     CommissionLevel,
@@ -1719,27 +1724,16 @@ def _delete_all_members_and_dependents():
         "sharing_batches": SharingBatch.query.count(),
         "project_billings": ProjectBilling.query.count(),
         "project_commissions": ProjectCommission.query.count(),
+        "product_commissions": ProductCommission.query.count(),
+        "ad_split_members": AdSplitMember.query.count(),
         "contractors": Contractor.query.count(),
         "suppliers": Supplier.query.count(),
         "members": Member.query.count(),
         "unlinked_users": User.query.filter(User.member_id.isnot(None)).count(),
     }
 
-    User.query.filter(User.member_id.isnot(None)).update(
-        {User.member_id: None},
-        synchronize_session=False,
-    )
-    MemberLedger.query.delete(synchronize_session=False)
-    PayoutNotification.query.delete(synchronize_session=False)
-    OmpdFundEntry.query.delete(synchronize_session=False)
-    PayoutRequest.query.delete(synchronize_session=False)
-    SharingEntry.query.delete(synchronize_session=False)
-    SharingBatch.query.delete(synchronize_session=False)
-    ProjectBilling.query.delete(synchronize_session=False)
-    ProjectCommission.query.delete(synchronize_session=False)
-    Contractor.query.delete(synchronize_session=False)
-    Supplier.query.delete(synchronize_session=False)
-    Member.query.delete(synchronize_session=False)
+    # Shared with replace-import so purge cannot miss FK dependents (e.g. ad_split_members).
+    clear_members_and_dependents(commit=False)
     for table_name, column_name in (
         ("members", "member_id"),
         ("contractors", "contractor_id"),

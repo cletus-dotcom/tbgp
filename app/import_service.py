@@ -233,8 +233,12 @@ def load_members_dataframe(source):
     return sheet
 
 
-def _clear_members_for_replace():
-    """Remove member rows and dependent records that block a full replace import."""
+def clear_members_and_dependents(*, commit=True):
+    """Remove member rows and dependent records that block member deletes/replace imports.
+
+    Preserves user accounts but unlinks them from members. Caller may set commit=False
+    to continue the same transaction (e.g. sequence resets after purge).
+    """
     from app.models import (
         AdSplitMember,
         Contractor,
@@ -279,7 +283,13 @@ def _clear_members_for_replace():
     Contractor.query.delete(synchronize_session=False)
     Supplier.query.delete(synchronize_session=False)
     Member.query.delete(synchronize_session=False)
-    db.session.commit()
+    if commit:
+        db.session.commit()
+
+
+def _clear_members_for_replace():
+    """Remove member rows and dependent records that block a full replace import."""
+    clear_members_and_dependents(commit=True)
 
 
 def _validate_choice(value, allowed, field_name):
