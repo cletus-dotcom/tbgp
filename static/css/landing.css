@@ -3365,12 +3365,14 @@ body.landing-body {
         align-items: center;
         justify-content: center;
     }
-    .mp-funnel-listing-body h3 {
+    .mp-funnel-listing-body h3,
+    .mp-funnel-listing-title {
         font-family: "Barlow Condensed", sans-serif;
         font-weight: 800;
-        font-size: 1.45rem;
-        letter-spacing: 0.04em;
-        line-height: 1.15;
+        font-size: 1.45rem !important;
+        letter-spacing: 0.06em;
+        line-height: 1;
+        text-transform: uppercase;
         margin: 0 0 0.3rem;
         color: var(--text-white, #fff);
     }
