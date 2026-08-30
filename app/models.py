@@ -776,9 +776,27 @@ class MarketplaceLead(db.Model):
     guest_email = db.Column(db.String(120))
     message = db.Column(db.Text)
     source_path = db.Column(db.String(255))
+    status = db.Column(db.String(20), nullable=False, default="new", index=True)
+    action_required = db.Column(db.String(60), nullable=True)
+    final_result = db.Column(db.String(40), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     attributed_member = db.relationship("Member", foreign_keys=[attributed_member_id])
+    history_entries = db.relationship(
+        "MarketplaceLeadHistory",
+        backref="lead",
+        cascade="all, delete-orphan",
+        order_by="MarketplaceLeadHistory.created_at.asc()",
+    )
+
+    @property
+    def aging_days(self):
+        if not self.created_at:
+            return 0
+        created = self.created_at
+        now = datetime.utcnow()
+        delta = now - created
+        return max(0, delta.days)
 
     def to_dict(self):
         listing = self.listing
@@ -798,5 +816,46 @@ class MarketplaceLead(db.Model):
             "guest_email": self.guest_email or "",
             "message": self.message or "",
             "source_path": self.source_path or "",
+            "status": self.status or "new",
+            "action_required": self.action_required or "",
+            "final_result": self.final_result or "",
+            "aging_days": self.aging_days,
+            "created_at": self.created_at.isoformat() if self.created_at else "",
+        }
+
+
+class MarketplaceLeadHistory(db.Model):
+    """Ledger of marketplace inquiry status / action / result changes."""
+
+    __tablename__ = "marketplace_lead_history"
+
+    history_id = db.Column(db.Integer, primary_key=True)
+    lead_id = db.Column(
+        db.Integer,
+        db.ForeignKey("marketplace_leads.lead_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    event_type = db.Column(db.String(40), nullable=False, default="update")
+    status = db.Column(db.String(20))
+    action_required = db.Column(db.String(60))
+    final_result = db.Column(db.String(40))
+    note = db.Column(db.String(500))
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    created_by = db.relationship("User", foreign_keys=[created_by_user_id])
+
+    def to_dict(self):
+        return {
+            "history_id": self.history_id,
+            "lead_id": self.lead_id,
+            "event_type": self.event_type,
+            "status": self.status or "",
+            "action_required": self.action_required or "",
+            "final_result": self.final_result or "",
+            "note": self.note or "",
+            "created_by_user_id": self.created_by_user_id,
+            "created_by_name": self.created_by.full_name if self.created_by else "",
             "created_at": self.created_at.isoformat() if self.created_at else "",
         }

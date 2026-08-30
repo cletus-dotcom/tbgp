@@ -216,6 +216,7 @@ USER_MANUALS = {
                 "heading": "Portal Navigation",
                 "items": [
                     "Use the sidebar for Members, Member Ledger, Contractors, Suppliers, Hierarchy Tree, and My Marketplace.",
+                    "Open Administration → Marketplace CRM to review all guest inquiries and update follow-up status.",
                     "Open Payouts for payout scheme reference, payout queue work, and fund release reports.",
                     "Open Income Management for project commissions and generate project commission.",
                     "Open Help for this manual, Features & Process Flow, and About the Platform.",
@@ -230,12 +231,24 @@ USER_MANUALS = {
                 ],
             },
             {
+                "heading": "Marketplace CRM",
+                "items": [
+                    "Open Administration → Marketplace CRM to filter inquiries by category, listing, status, referrer, and date.",
+                    "Update each inquiry status to New, Contacted, In progress, or Closed as you follow up.",
+                    "When status is In progress, set Action Required: Quotation for Approval, Quote for Client Submission, or Ordered.",
+                    "When status is Closed, set Final Result: Bought or Inquired Only.",
+                    "Use Aging (days since inquiry) and History to track how long each inquiry has been open and what changed.",
+                    "Export filtered inquiries to CSV when you need an offline working list.",
+                    "Staff can update inquiry status but cannot publish marketplace listings; ask Admin or SiteAdmin for listing changes.",
+                ],
+            },
+            {
                 "heading": "My Marketplace",
                 "items": [
                     "Open My Marketplace to copy your personal marketplace hub link and category links.",
                     "Your Staff account must be linked to a Member ID (set by Admin under Users) so share links attribute inquiries to you.",
                     "When a guest opens your /m/<code>/marketplace link, TBGP remembers you for about 30 days and credits inquiries to your CRM log.",
-                    "Review attributed guest name, contact details, listing, and message in the Inquiry CRM log.",
+                    "Review attributed guest name, contact details, listing, follow-up status, and message in the Inquiry CRM log.",
                 ],
             },
             {
@@ -479,11 +492,11 @@ MARKETPLACE_CRM_GUIDE = {
         {"role": "Member", "access": "Copy share links and review attributed inquiries in My Marketplace."},
         {
             "role": "Staff",
-            "access": "Use My Marketplace (when linked to a Member ID) for share links and attributed leads; listing publish and full Marketplace CRM remain with Admin / Site Content editors.",
+            "access": "Open Marketplace CRM to review inquiries and update follow-up status; use My Marketplace when linked to a Member ID. Listing publish remains with Admin / Site Content editors.",
         },
         {
             "role": "Admin / PortalAdmin / SiteAdmin",
-            "access": "Create and publish listings, edit executive summaries, use Marketplace CRM.",
+            "access": "Create and publish listings, edit executive summaries, use Marketplace CRM (including status updates).",
         },
     ],
     "modules": [
@@ -500,6 +513,10 @@ MARKETPLACE_CRM_GUIDE = {
             "items": [
                 "Each member (and Staff linked to a Member ID) receives a marketplace share code on first visit to My Marketplace.",
                 "Share URLs use the form /m/<code>/marketplace/…",
+                "Each inquiry starts as New. Staff and Admin update follow-up status in Marketplace CRM (New, Contacted, In progress, Closed).",
+                "In progress requires Action Required (Quotation for Approval, Quote for Client Submission, or Ordered).",
+                "Closed requires Final Result (Bought or Inquired Only).",
+                "Aging shows days since the inquiry; History is a ledger of status and follow-up changes.",
                 "Opening a share link sets a ~30-day attribution cookie (last share link visited wins).",
                 "An inquiry is stored against the listing and credited to the attributed member when the cookie is present.",
             ],

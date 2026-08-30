@@ -22,9 +22,11 @@
             <a href="{{ url_for('main_routes.marketplace_crm') }}" class="btn btn-outline-light btn-sm">
                 <i class="bi bi-arrow-left"></i> All CRM
             </a>
+            {% if can_edit_listings %}
             <a href="{{ url_for('site_admin.marketplace_edit', listing_id=listing.listing_id) }}" class="btn btn-outline-light btn-sm">
                 Edit listing
             </a>
+            {% endif %}
             {% if listing.status == 'published' %}
             <a href="{{ url_for('main_routes.marketplace_detail', category=listing.category, listing_id=listing.listing_id) }}"
                class="btn btn-brand btn-sm" target="_blank" rel="noopener">View public</a>
@@ -105,23 +107,33 @@
         </div>
     </div>
 
+    <div id="crmLeadStatusAlert" class="alert alert-danger d-none py-2 small" role="alert"></div>
+
     {% if stats.leads %}
     <div class="section-table-wrap">
         <table class="table table-hover section-table mb-0">
             <thead>
                 <tr>
                     <th>Date</th>
+                    <th>Aging</th>
                     <th>Who inquired</th>
                     <th>Contact</th>
                     <th>Referred by</th>
+                    <th>Status / follow-up</th>
                     <th>Message</th>
-                    <th>Source</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
                 {% for lead in stats.leads %}
-                <tr>
+                <tr class="crm-lead-row"
+                    data-lead-id="{{ lead.lead_id }}"
+                    data-guest-name="{{ lead.guest_name }}">
                     <td class="text-nowrap">{{ lead.created_at.strftime('%Y-%m-%d %H:%M') if lead.created_at else '—' }}</td>
+                    <td class="text-nowrap">
+                        <span class="lead-aging-days">{{ lead.aging_days }}</span>
+                        <span class="text-muted small">d</span>
+                    </td>
                     <td>{{ lead.guest_name }}</td>
                     <td>
                         {% if lead.guest_phone %}<div>{{ lead.guest_phone }}</div>{% endif %}
@@ -135,8 +147,46 @@
                         <span class="text-muted">Direct / none</span>
                         {% endif %}
                     </td>
+                    <td style="min-width: 12rem;">
+                        <select class="form-select form-select-sm lead-status-select mb-1"
+                                aria-label="Inquiry status for #{{ lead.lead_id }}">
+                            {% for value in lead_statuses %}
+                            <option value="{{ value }}" {% if (lead.status or 'new') == value %}selected{% endif %}>
+                                {{ lead_status_labels[value] }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="lead-action-wrap {% if (lead.status or 'new') != 'in_progress' %}d-none{% endif %}">
+                            <label class="form-label small mb-0">Action Required</label>
+                            <select class="form-select form-select-sm lead-action-select"
+                                    aria-label="Action required for #{{ lead.lead_id }}">
+                                <option value="">Select…</option>
+                                {% for value in lead_actions %}
+                                <option value="{{ value }}" {% if lead.action_required == value %}selected{% endif %}>
+                                    {{ lead_action_labels[value] }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="lead-result-wrap {% if (lead.status or 'new') != 'closed' %}d-none{% endif %}">
+                            <label class="form-label small mb-0">Final Result</label>
+                            <select class="form-select form-select-sm lead-result-select"
+                                    aria-label="Final result for #{{ lead.lead_id }}">
+                                <option value="">Select…</option>
+                                {% for value in lead_results %}
+                                <option value="{{ value }}" {% if lead.final_result == value %}selected{% endif %}>
+                                    {{ lead_result_labels[value] }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </td>
                     <td class="small">{{ lead.message or '—' }}</td>
-                    <td class="small text-muted">{{ lead.source_path or '—' }}</td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-outline-light btn-sm lead-history-btn" title="History">
+                            <i class="bi bi-clock-history"></i>
+                        </button>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -146,4 +196,13 @@
     <p class="text-muted mb-0">No inquiries for this listing yet.</p>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% include 'partials/marketplace_crm_lead_scripts.html' %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    window.TBGP_CRM_LEAD?.bind(document);
+});
+</script>
 {% endblock %}

@@ -1,0 +1,198 @@
+{# Shared CRM lead follow-up controls: status, action/result, aging, history #}
+<script>
+window.TBGP_CRM_LEAD = (function () {
+    const STATUS_IN_PROGRESS = 'in_progress';
+    const STATUS_CLOSED = 'closed';
+
+    function showAlert(alertEl, message) {
+        if (!alertEl) {
+            alert(message);
+            return;
+        }
+        alertEl.textContent = message;
+        alertEl.classList.remove('d-none');
+    }
+
+    function hideAlert(alertEl) {
+        if (!alertEl) return;
+        alertEl.classList.add('d-none');
+        alertEl.textContent = '';
+    }
+
+    function syncConditionalFields(row) {
+        const status = row.querySelector('.lead-status-select')?.value || 'new';
+        const actionWrap = row.querySelector('.lead-action-wrap');
+        const resultWrap = row.querySelector('.lead-result-wrap');
+        if (actionWrap) actionWrap.classList.toggle('d-none', status !== STATUS_IN_PROGRESS);
+        if (resultWrap) resultWrap.classList.toggle('d-none', status !== STATUS_CLOSED);
+    }
+
+    async function saveLead(row, alertEl) {
+        hideAlert(alertEl);
+        const leadId = row.dataset.leadId;
+        const statusSelect = row.querySelector('.lead-status-select');
+        const actionSelect = row.querySelector('.lead-action-select');
+        const resultSelect = row.querySelector('.lead-result-select');
+        const status = statusSelect?.value || 'new';
+        const payload = { status };
+
+        if (status === STATUS_IN_PROGRESS) {
+            const action = actionSelect?.value || '';
+            if (!action) {
+                showAlert(alertEl, 'Select Action Required for In progress inquiries.');
+                statusSelect.value = statusSelect.dataset.previousStatus || 'new';
+                syncConditionalFields(row);
+                return false;
+            }
+            payload.action_required = action;
+        } else if (status === STATUS_CLOSED) {
+            const result = resultSelect?.value || '';
+            if (!result) {
+                showAlert(alertEl, 'Select Final Result for Closed inquiries.');
+                statusSelect.value = statusSelect.dataset.previousStatus || 'new';
+                syncConditionalFields(row);
+                return false;
+            }
+            payload.final_result = result;
+        } else {
+            payload.action_required = '';
+            payload.final_result = '';
+        }
+
+        const controls = row.querySelectorAll('select, button');
+        controls.forEach((el) => { el.disabled = true; });
+        try {
+            const res = await fetch(`/admin/marketplace-crm/leads/${leadId}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (data.status !== 'success') {
+                statusSelect.value = statusSelect.dataset.previousStatus || 'new';
+                if (actionSelect) actionSelect.value = actionSelect.dataset.previousAction || '';
+                if (resultSelect) resultSelect.value = resultSelect.dataset.previousResult || '';
+                syncConditionalFields(row);
+                showAlert(alertEl, data.msg || 'Could not update inquiry.');
+                return false;
+            }
+            statusSelect.dataset.previousStatus = data.lead_status || status;
+            if (actionSelect) {
+                actionSelect.value = data.action_required || '';
+                actionSelect.dataset.previousAction = data.action_required || '';
+            }
+            if (resultSelect) {
+                resultSelect.value = data.final_result || '';
+                resultSelect.dataset.previousResult = data.final_result || '';
+            }
+            const agingEl = row.querySelector('.lead-aging-days');
+            if (agingEl && typeof data.aging_days === 'number') {
+                agingEl.textContent = data.aging_days;
+            }
+            syncConditionalFields(row);
+            return true;
+        } catch (err) {
+            statusSelect.value = statusSelect.dataset.previousStatus || 'new';
+            syncConditionalFields(row);
+            showAlert(alertEl, err.message || 'Could not update inquiry.');
+            return false;
+        } finally {
+            controls.forEach((el) => { el.disabled = false; });
+        }
+    }
+
+    async function openHistory(leadId, guestName, alertEl) {
+        hideAlert(alertEl);
+        const modalEl = document.getElementById('leadHistoryModal');
+        const bodyEl = document.getElementById('leadHistoryBody');
+        const titleEl = document.getElementById('leadHistoryModalLabel');
+        if (!modalEl || !bodyEl) return;
+        if (titleEl) titleEl.textContent = `Inquiry #${leadId} history${guestName ? ` — ${guestName}` : ''}`;
+        bodyEl.innerHTML = '<p class="text-muted small mb-0">Loading…</p>';
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        try {
+            const res = await fetch(`/admin/marketplace-crm/leads/${leadId}/history`);
+            const data = await res.json();
+            if (data.status !== 'success') {
+                bodyEl.innerHTML = `<p class="text-danger small mb-0">${data.msg || 'Could not load history.'}</p>`;
+                return;
+            }
+            if (!data.history?.length) {
+                bodyEl.innerHTML = '<p class="text-muted small mb-0">No history entries yet.</p>';
+                return;
+            }
+            let html = `<p class="small text-muted mb-2">Aging: <strong>${data.aging_days}</strong> day(s)</p>`;
+            html += '<div class="table-responsive"><table class="table table-sm section-table mb-0"><thead><tr>';
+            html += '<th>When</th><th>By</th><th>Status</th><th>Action / Result</th><th>Note</th></tr></thead><tbody>';
+            data.history.forEach((row) => {
+                const actionResult = [
+                    row.action_required_label,
+                    row.final_result_label,
+                ].filter(Boolean).join(' · ') || '—';
+                html += `<tr>
+                    <td class="text-nowrap">${row.created_at || '—'}</td>
+                    <td>${row.created_by_name || 'System'}</td>
+                    <td>${row.status_label || '—'}</td>
+                    <td>${actionResult}</td>
+                    <td class="small">${row.note || '—'}</td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+            bodyEl.innerHTML = html;
+        } catch (err) {
+            bodyEl.innerHTML = `<p class="text-danger small mb-0">${err.message || 'Could not load history.'}</p>`;
+        }
+    }
+
+    function bind(root) {
+        const scope = root || document;
+        const alertEl = document.getElementById('crmLeadStatusAlert');
+
+        scope.querySelectorAll('.crm-lead-row').forEach((row) => {
+            const statusSelect = row.querySelector('.lead-status-select');
+            const actionSelect = row.querySelector('.lead-action-select');
+            const resultSelect = row.querySelector('.lead-result-select');
+            if (statusSelect) statusSelect.dataset.previousStatus = statusSelect.value;
+            if (actionSelect) actionSelect.dataset.previousAction = actionSelect.value;
+            if (resultSelect) resultSelect.dataset.previousResult = resultSelect.value;
+            syncConditionalFields(row);
+
+            statusSelect?.addEventListener('change', () => {
+                syncConditionalFields(row);
+                const status = statusSelect.value;
+                if (status === STATUS_IN_PROGRESS && !(actionSelect?.value)) {
+                    // Wait for action selection before saving.
+                    return;
+                }
+                if (status === STATUS_CLOSED && !(resultSelect?.value)) {
+                    return;
+                }
+                saveLead(row, alertEl);
+            });
+            actionSelect?.addEventListener('change', () => saveLead(row, alertEl));
+            resultSelect?.addEventListener('change', () => saveLead(row, alertEl));
+
+            row.querySelector('.lead-history-btn')?.addEventListener('click', () => {
+                openHistory(row.dataset.leadId, row.dataset.guestName || '', alertEl);
+            });
+        });
+    }
+
+    return { bind, syncConditionalFields, saveLead, openHistory };
+})();
+</script>
+
+<div class="modal fade" id="leadHistoryModal" tabindex="-1" aria-labelledby="leadHistoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-brand text-white">
+                <h5 class="modal-title" id="leadHistoryModalLabel">Inquiry history</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="leadHistoryBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

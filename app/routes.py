@@ -69,6 +69,12 @@ from app.config import (
     MARKETPLACE_CATEGORY_SLUGS,
     MARKETPLACE_CATEGORY_PRODUCTS,
     MARKETPLACE_FUNNEL_CATEGORY_SLUGS,
+    MARKETPLACE_LEAD_STATUS_LABELS,
+    MARKETPLACE_LEAD_STATUSES,
+    MARKETPLACE_LEAD_ACTION_LABELS,
+    MARKETPLACE_LEAD_ACTIONS,
+    MARKETPLACE_LEAD_RESULT_LABELS,
+    MARKETPLACE_LEAD_RESULTS,
     USER_ROLE_ADMIN,
     USER_ROLE_MEMBER,
     USER_ROLE_PORTAL_ADMIN,
@@ -84,6 +90,7 @@ from app.config import (
     can_manage_site_content,
     can_view_marketplace_help,
     can_view_features_process_flow,
+    can_access_marketplace_crm,
     payout_scheme_summary,
     is_admin_role,
     is_member_role,
@@ -133,6 +140,7 @@ from app.models import (
     AdSplitMember,
     CommissionLevel,
     Contractor,
+    MarketplaceLead,
     Member,
     MemberLedger,
     OmpdFundEntry,
@@ -215,8 +223,12 @@ from app.marketplace_service import (
     products_page_content,
     funnel_page_content,
     search_marketplace_leads,
+    serialize_lead_history,
     set_attribution_cookie,
     clear_attribution_cookie,
+    update_marketplace_lead,
+    update_marketplace_lead_status,
+    get_marketplace_lead_history,
 )
 
 main_routes = Blueprint("main_routes", __name__)
@@ -483,6 +495,9 @@ def my_marketplace():
         category_slugs=MARKETPLACE_CATEGORY_SLUGS,
         leads=leads,
         lead_count=member_lead_count(linked_id),
+        lead_status_labels=MARKETPLACE_LEAD_STATUS_LABELS,
+        lead_action_labels=MARKETPLACE_LEAD_ACTION_LABELS,
+        lead_result_labels=MARKETPLACE_LEAD_RESULT_LABELS,
     )
 
 
@@ -501,6 +516,7 @@ def _marketplace_crm_filters_from_request():
         "listing_id": listing_id,
         "referrer_id": referrer_id,
         "attribution": (request.args.get("attribution") or "").strip() or None,
+        "status": (request.args.get("status") or "").strip() or None,
         "date_from": (request.args.get("date_from") or "").strip() or None,
         "date_to": (request.args.get("date_to") or "").strip() or None,
     }
@@ -510,12 +526,16 @@ def _marketplace_crm_filters_from_request():
 @login_required
 def marketplace_crm():
     user = _dashboard_user()
-    if not can_manage_site_content(user.role):
-        return access_denied_response("Marketplace CRM is available to Admin and Site Content editors.")
+    if not can_access_marketplace_crm(user.role):
+        return access_denied_response(
+            "Marketplace CRM is available to Admin, SiteAdmin, and Staff roles."
+        )
 
     filters = _marketplace_crm_filters_from_request()
     if filters["category"] and filters["category"] not in MARKETPLACE_CATEGORIES:
         filters["category"] = None
+    if filters["status"] and filters["status"] not in MARKETPLACE_LEAD_STATUSES:
+        filters["status"] = None
 
     overview = marketplace_crm_overview()
     leads = search_marketplace_leads(**filters)
@@ -532,6 +552,13 @@ def marketplace_crm():
         categories=MARKETPLACE_CATEGORIES,
         category_slugs=MARKETPLACE_CATEGORY_SLUGS,
         listing_options=listing_options,
+        lead_statuses=MARKETPLACE_LEAD_STATUSES,
+        lead_status_labels=MARKETPLACE_LEAD_STATUS_LABELS,
+        lead_actions=MARKETPLACE_LEAD_ACTIONS,
+        lead_action_labels=MARKETPLACE_LEAD_ACTION_LABELS,
+        lead_results=MARKETPLACE_LEAD_RESULTS,
+        lead_result_labels=MARKETPLACE_LEAD_RESULT_LABELS,
+        can_edit_listings=can_manage_site_content(user.role),
     )
 
 
@@ -539,8 +566,10 @@ def marketplace_crm():
 @login_required
 def marketplace_crm_listing(listing_id):
     user = _dashboard_user()
-    if not can_manage_site_content(user.role):
-        return access_denied_response("Marketplace CRM is available to Admin and Site Content editors.")
+    if not can_access_marketplace_crm(user.role):
+        return access_denied_response(
+            "Marketplace CRM is available to Admin, SiteAdmin, and Staff roles."
+        )
 
     stats = listing_crm_stats(listing_id)
     if not stats:
@@ -555,38 +584,118 @@ def marketplace_crm_listing(listing_id):
         listing=stats["listing"],
         categories=MARKETPLACE_CATEGORIES,
         category_slugs=MARKETPLACE_CATEGORY_SLUGS,
+        lead_statuses=MARKETPLACE_LEAD_STATUSES,
+        lead_status_labels=MARKETPLACE_LEAD_STATUS_LABELS,
+        lead_actions=MARKETPLACE_LEAD_ACTIONS,
+        lead_action_labels=MARKETPLACE_LEAD_ACTION_LABELS,
+        lead_results=MARKETPLACE_LEAD_RESULTS,
+        lead_result_labels=MARKETPLACE_LEAD_RESULT_LABELS,
+        can_edit_listings=can_manage_site_content(user.role),
     )
+
+
+@main_routes.route("/admin/marketplace-crm/leads/<int:lead_id>/status", methods=["POST"])
+@login_required
+def marketplace_crm_lead_status(lead_id):
+    user = _dashboard_user()
+    if not can_access_marketplace_crm(user.role):
+        return access_denied_response(
+            "Marketplace CRM is available to Admin, SiteAdmin, and Staff roles."
+        )
+
+    data = request.get_json(silent=True) if request.is_json else request.form
+    data = data or {}
+    status = data.get("status")
+    action_required = data.get("action_required")
+    final_result = data.get("final_result")
+    note = data.get("note")
+    try:
+        lead = update_marketplace_lead(
+            lead_id,
+            status=status if status is not None else None,
+            action_required=action_required if "action_required" in data else None,
+            final_result=final_result if "final_result" in data else None,
+            note=note,
+            created_by_user_id=user.user_id,
+        )
+        return jsonify({
+            "status": "success",
+            "msg": f"Inquiry #{lead.lead_id} updated.",
+            "lead_id": lead.lead_id,
+            "lead_status": lead.status,
+            "lead_status_label": MARKETPLACE_LEAD_STATUS_LABELS.get(lead.status, lead.status),
+            "action_required": lead.action_required or "",
+            "action_required_label": MARKETPLACE_LEAD_ACTION_LABELS.get(lead.action_required or "", ""),
+            "final_result": lead.final_result or "",
+            "final_result_label": MARKETPLACE_LEAD_RESULT_LABELS.get(lead.final_result or "", ""),
+            "aging_days": lead.aging_days,
+        })
+    except ValueError as exc:
+        return jsonify({"status": "error", "msg": str(exc)}), 400
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": f"Could not update inquiry: {exc}"}), 500
+
+
+@main_routes.route("/admin/marketplace-crm/leads/<int:lead_id>/history")
+@login_required
+def marketplace_crm_lead_history(lead_id):
+    user = _dashboard_user()
+    if not can_access_marketplace_crm(user.role):
+        return access_denied_response(
+            "Marketplace CRM is available to Admin, SiteAdmin, and Staff roles."
+        )
+
+    lead = db.session.get(MarketplaceLead, lead_id)
+    if not lead:
+        return jsonify({"status": "error", "msg": "Inquiry not found."}), 404
+
+    entries = get_marketplace_lead_history(lead_id)
+    return jsonify({
+        "status": "success",
+        "lead_id": lead_id,
+        "aging_days": lead.aging_days,
+        "history": serialize_lead_history(entries),
+    })
 
 
 @main_routes.route("/admin/marketplace-crm/export.csv")
 @login_required
 def marketplace_crm_export():
     user = _dashboard_user()
-    if not can_manage_site_content(user.role):
-        return access_denied_response("Marketplace CRM is available to Admin and Site Content editors.")
+    if not can_access_marketplace_crm(user.role):
+        return access_denied_response(
+            "Marketplace CRM is available to Admin, SiteAdmin, and Staff roles."
+        )
 
     filters = _marketplace_crm_filters_from_request()
     if filters["category"] and filters["category"] not in MARKETPLACE_CATEGORIES:
         filters["category"] = None
+    if filters["status"] and filters["status"] not in MARKETPLACE_LEAD_STATUSES:
+        filters["status"] = None
     leads = search_marketplace_leads(**filters, limit=5000)
 
     output = BytesIO()
     # UTF-8 BOM for Excel
     output.write("\ufeff".encode("utf-8"))
     writer_lines = [
-        "lead_id,created_at,category,listing_id,listing_title,guest_name,guest_phone,guest_email,"
-        "message,referred_by_id,referred_by_name,source_path\n"
+        "lead_id,created_at,aging_days,status,action_required,final_result,category,listing_id,listing_title,"
+        "guest_name,guest_phone,guest_email,message,referred_by_id,referred_by_name,source_path\n"
     ]
     for lead in leads:
         listing = lead.listing
         member = lead.attributed_member
-        category = listing.category if listing else ""
+        category = listing.category if listing else (lead.interest_category or "")
         category_label = MARKETPLACE_CATEGORIES.get(category, {}).get("label", category)
         cells = [
             lead.lead_id,
             lead.created_at.isoformat(sep=" ", timespec="minutes") if lead.created_at else "",
+            lead.aging_days,
+            MARKETPLACE_LEAD_STATUS_LABELS.get(lead.status or "new", lead.status or "new"),
+            MARKETPLACE_LEAD_ACTION_LABELS.get(lead.action_required or "", lead.action_required or ""),
+            MARKETPLACE_LEAD_RESULT_LABELS.get(lead.final_result or "", lead.final_result or ""),
             category_label,
-            lead.listing_id,
+            lead.listing_id or "",
             (listing.title if listing else "").replace('"', '""'),
             (lead.guest_name or "").replace('"', '""'),
             lead.guest_phone or "",

@@ -646,6 +646,9 @@ def migrate_marketplace_tables():
                 guest_email VARCHAR(120),
                 message TEXT,
                 source_path VARCHAR(255),
+                status VARCHAR(20) NOT NULL DEFAULT 'new',
+                action_required VARCHAR(60),
+                final_result VARCHAR(40),
                 created_at TIMESTAMP NOT NULL
             )
         """))
@@ -655,6 +658,9 @@ def migrate_marketplace_tables():
         db.session.execute(text(
             "CREATE INDEX ix_marketplace_leads_interest_category "
             "ON marketplace_leads (interest_category)"
+        ))
+        db.session.execute(text(
+            "CREATE INDEX ix_marketplace_leads_status ON marketplace_leads (status)"
         ))
         logger.info("Created marketplace_leads table")
         db.session.commit()
@@ -680,6 +686,52 @@ def migrate_marketplace_tables():
             ))
             logger.info("Added marketplace_leads.interest_category")
             db.session.commit()
+        if "status" not in lead_cols:
+            db.session.execute(text(
+                "ALTER TABLE marketplace_leads "
+                "ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'new'"
+            ))
+            db.session.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_marketplace_leads_status "
+                "ON marketplace_leads (status)"
+            ))
+            logger.info("Added marketplace_leads.status")
+            db.session.commit()
+            lead_cols.add("status")
+        if "action_required" not in lead_cols:
+            db.session.execute(text(
+                "ALTER TABLE marketplace_leads ADD COLUMN action_required VARCHAR(60)"
+            ))
+            logger.info("Added marketplace_leads.action_required")
+            db.session.commit()
+        if "final_result" not in lead_cols:
+            db.session.execute(text(
+                "ALTER TABLE marketplace_leads ADD COLUMN final_result VARCHAR(40)"
+            ))
+            logger.info("Added marketplace_leads.final_result")
+            db.session.commit()
+
+    if "marketplace_lead_history" not in inspector.get_table_names():
+        db.session.execute(text("""
+            CREATE TABLE marketplace_lead_history (
+                history_id SERIAL PRIMARY KEY,
+                lead_id INTEGER NOT NULL
+                    REFERENCES marketplace_leads(lead_id) ON DELETE CASCADE,
+                event_type VARCHAR(40) NOT NULL DEFAULT 'update',
+                status VARCHAR(20),
+                action_required VARCHAR(60),
+                final_result VARCHAR(40),
+                note VARCHAR(500),
+                created_by_user_id INTEGER REFERENCES users(user_id),
+                created_at TIMESTAMP NOT NULL
+            )
+        """))
+        db.session.execute(text(
+            "CREATE INDEX ix_marketplace_lead_history_lead "
+            "ON marketplace_lead_history (lead_id)"
+        ))
+        logger.info("Created marketplace_lead_history table")
+        db.session.commit()
 
     # Unique index for member share codes when column exists.
     member_cols = {col["name"] for col in inspector.get_columns("members")}

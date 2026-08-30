@@ -18,11 +18,20 @@ from app.config import (
     MARKETPLACE_CATEGORY_SERVICES,
     MARKETPLACE_CATEGORY_SLUGS,
     MARKETPLACE_FUNNEL_CATEGORY_SLUGS,
+    MARKETPLACE_LEAD_ACTION_LABELS,
+    MARKETPLACE_LEAD_ACTIONS,
+    MARKETPLACE_LEAD_RESULT_LABELS,
+    MARKETPLACE_LEAD_RESULTS,
+    MARKETPLACE_LEAD_STATUS_CLOSED,
+    MARKETPLACE_LEAD_STATUS_IN_PROGRESS,
+    MARKETPLACE_LEAD_STATUS_LABELS,
+    MARKETPLACE_LEAD_STATUS_NEW,
+    MARKETPLACE_LEAD_STATUSES,
     MARKETPLACE_STATUS_DRAFT,
     MARKETPLACE_STATUS_PUBLISHED,
     MARKETPLACE_STATUSES,
 )
-from app.models import MarketplaceLead, MarketplaceListing, Member
+from app.models import MarketplaceLead, MarketplaceLeadHistory, MarketplaceListing, Member
 
 
 def get_marketplace_category(slug):
@@ -267,11 +276,216 @@ def create_lead(
         guest_email=email,
         message=note,
         source_path=(source_path or "")[:255] or None,
+        status=MARKETPLACE_LEAD_STATUS_NEW,
         created_at=datetime.utcnow(),
     )
     db.session.add(lead)
+    db.session.flush()
+    db.session.add(MarketplaceLeadHistory(
+        lead_id=lead.lead_id,
+        event_type="created",
+        status=MARKETPLACE_LEAD_STATUS_NEW,
+        note="Inquiry received",
+        created_at=datetime.utcnow(),
+    ))
     db.session.commit()
     return lead
+
+
+def marketplace_lead_status_label(status):
+    return MARKETPLACE_LEAD_STATUS_LABELS.get(status or MARKETPLACE_LEAD_STATUS_NEW, status or "New")
+
+
+def marketplace_lead_action_label(action):
+    if not action:
+        return ""
+    return MARKETPLACE_LEAD_ACTION_LABELS.get(action, action)
+
+
+def marketplace_lead_result_label(result):
+    if not result:
+        return ""
+    return MARKETPLACE_LEAD_RESULT_LABELS.get(result, result)
+
+
+def lead_aging_days(lead):
+    if hasattr(lead, "aging_days"):
+        return lead.aging_days
+    if not lead or not lead.created_at:
+        return 0
+    return max(0, (datetime.utcnow() - lead.created_at).days)
+
+
+def _append_lead_history(
+    lead,
+    *,
+    event_type="update",
+    note=None,
+    created_by_user_id=None,
+):
+    entry = MarketplaceLeadHistory(
+        lead_id=lead.lead_id,
+        event_type=event_type,
+        status=lead.status,
+        action_required=lead.action_required,
+        final_result=lead.final_result,
+        note=(note or "").strip()[:500] or None,
+        created_by_user_id=created_by_user_id,
+        created_at=datetime.utcnow(),
+    )
+    db.session.add(entry)
+    return entry
+
+
+def update_marketplace_lead(
+    lead_id,
+    *,
+    status=None,
+    action_required=None,
+    final_result=None,
+    note=None,
+    created_by_user_id=None,
+):
+    """Update inquiry status / action / result and append a history ledger row."""
+    lead = db.session.get(MarketplaceLead, int(lead_id))
+    if not lead:
+        raise ValueError("Inquiry not found.")
+
+    previous = {
+        "status": lead.status or MARKETPLACE_LEAD_STATUS_NEW,
+        "action_required": lead.action_required or None,
+        "final_result": lead.final_result or None,
+    }
+
+    if status is not None:
+        value = (status or "").strip().lower()
+        if value not in MARKETPLACE_LEAD_STATUSES:
+            allowed = ", ".join(MARKETPLACE_LEAD_STATUSES)
+            raise ValueError(f"Invalid inquiry status. Allowed: {allowed}.")
+        lead.status = value
+
+    current_status = lead.status or MARKETPLACE_LEAD_STATUS_NEW
+
+    if current_status == MARKETPLACE_LEAD_STATUS_IN_PROGRESS:
+        if action_required is not None:
+            action_value = (action_required or "").strip().lower()
+            if not action_value:
+                raise ValueError("Action Required is needed when status is In progress.")
+            if action_value not in MARKETPLACE_LEAD_ACTIONS:
+                raise ValueError("Invalid Action Required value.")
+            lead.action_required = action_value
+        elif not lead.action_required:
+            raise ValueError(
+                "Action Required is needed when status is In progress "
+                "(Quotation for Approval, Quote for Client Submission, or Ordered)."
+            )
+        lead.final_result = None
+    elif current_status == MARKETPLACE_LEAD_STATUS_CLOSED:
+        if final_result is not None:
+            result_value = (final_result or "").strip().lower()
+            if not result_value:
+                raise ValueError("Final Result is needed when status is Closed.")
+            if result_value not in MARKETPLACE_LEAD_RESULTS:
+                raise ValueError("Invalid Final Result value.")
+            lead.final_result = result_value
+        elif not lead.final_result:
+            raise ValueError(
+                "Final Result is needed when status is Closed (Bought or Inquired Only)."
+            )
+        lead.action_required = None
+    else:
+        # New / Contacted — clear conditional fields.
+        if action_required is not None or final_result is not None or status is not None:
+            lead.action_required = None
+            lead.final_result = None
+
+    changed = (
+        previous["status"] != (lead.status or MARKETPLACE_LEAD_STATUS_NEW)
+        or previous["action_required"] != (lead.action_required or None)
+        or previous["final_result"] != (lead.final_result or None)
+        or bool((note or "").strip())
+    )
+    if not changed:
+        return lead
+
+    summary_parts = []
+    if previous["status"] != (lead.status or MARKETPLACE_LEAD_STATUS_NEW):
+        summary_parts.append(
+            f"Status -> {marketplace_lead_status_label(lead.status)}"
+        )
+    if previous["action_required"] != (lead.action_required or None):
+        if lead.action_required:
+            summary_parts.append(
+                f"Action Required -> {marketplace_lead_action_label(lead.action_required)}"
+            )
+        else:
+            summary_parts.append("Action Required cleared")
+    if previous["final_result"] != (lead.final_result or None):
+        if lead.final_result:
+            summary_parts.append(
+                f"Final Result -> {marketplace_lead_result_label(lead.final_result)}"
+            )
+        else:
+            summary_parts.append("Final Result cleared")
+    history_note = (note or "").strip()
+    if summary_parts and history_note:
+        history_note = f"{'; '.join(summary_parts)}. {history_note}"
+    elif summary_parts:
+        history_note = "; ".join(summary_parts)
+
+    _append_lead_history(
+        lead,
+        event_type="update",
+        note=history_note,
+        created_by_user_id=created_by_user_id,
+    )
+    db.session.commit()
+    return lead
+
+
+def update_marketplace_lead_status(lead_id, status, created_by_user_id=None):
+    """Backward-compatible status-only update."""
+    return update_marketplace_lead(
+        lead_id,
+        status=status,
+        created_by_user_id=created_by_user_id,
+    )
+
+
+def get_marketplace_lead_history(lead_id):
+    return (
+        MarketplaceLeadHistory.query
+        .options(joinedload(MarketplaceLeadHistory.created_by))
+        .filter_by(lead_id=int(lead_id))
+        .order_by(
+            MarketplaceLeadHistory.created_at.asc(),
+            MarketplaceLeadHistory.history_id.asc(),
+        )
+        .all()
+    )
+
+
+def serialize_lead_history(entries):
+    rows = []
+    for entry in entries:
+        rows.append({
+            "history_id": entry.history_id,
+            "event_type": entry.event_type,
+            "status": entry.status or "",
+            "status_label": marketplace_lead_status_label(entry.status) if entry.status else "",
+            "action_required": entry.action_required or "",
+            "action_required_label": marketplace_lead_action_label(entry.action_required),
+            "final_result": entry.final_result or "",
+            "final_result_label": marketplace_lead_result_label(entry.final_result),
+            "note": entry.note or "",
+            "created_by_name": (
+                entry.created_by.full_name
+                if entry.created_by and entry.created_by.full_name
+                else (entry.created_by.username if entry.created_by else "System")
+            ),
+            "created_at": entry.created_at.strftime("%Y-%m-%d %H:%M") if entry.created_at else "",
+        })
+    return rows
 
 
 def create_products_funnel_lead(form, source_path=None):
@@ -561,6 +775,7 @@ def search_marketplace_leads(
     listing_id=None,
     referrer_id=None,
     attribution=None,
+    status=None,
     date_from=None,
     date_to=None,
     limit=500,
@@ -569,6 +784,7 @@ def search_marketplace_leads(
     Filter marketplace inquiry CRM rows.
 
     attribution: 'attributed' | 'unattributed' | None/all
+    status: lead follow-up status or None/all
     """
     query = (
         MarketplaceLead.query
@@ -599,6 +815,12 @@ def search_marketplace_leads(
         query = query.filter(MarketplaceLead.attributed_member_id.isnot(None))
     elif attribution == "unattributed":
         query = query.filter(MarketplaceLead.attributed_member_id.is_(None))
+
+    status_value = (status or "").strip().lower()
+    if status_value:
+        if status_value not in MARKETPLACE_LEAD_STATUSES:
+            raise ValueError("Invalid inquiry status filter.")
+        query = query.filter(MarketplaceLead.status == status_value)
 
     start = _parse_optional_date(date_from, end_of_day=False)
     end = _parse_optional_date(date_to, end_of_day=True)

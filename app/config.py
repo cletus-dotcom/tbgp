@@ -225,6 +225,49 @@ MARKETPLACE_STATUSES = (MARKETPLACE_STATUS_DRAFT, MARKETPLACE_STATUS_PUBLISHED)
 MARKETPLACE_ATTRIBUTION_COOKIE = "tbgp_mp_ref"
 MARKETPLACE_ATTRIBUTION_DAYS = 30
 
+# Marketplace inquiry CRM follow-up statuses.
+MARKETPLACE_LEAD_STATUS_NEW = "new"
+MARKETPLACE_LEAD_STATUS_CONTACTED = "contacted"
+MARKETPLACE_LEAD_STATUS_IN_PROGRESS = "in_progress"
+MARKETPLACE_LEAD_STATUS_CLOSED = "closed"
+MARKETPLACE_LEAD_STATUSES = (
+    MARKETPLACE_LEAD_STATUS_NEW,
+    MARKETPLACE_LEAD_STATUS_CONTACTED,
+    MARKETPLACE_LEAD_STATUS_IN_PROGRESS,
+    MARKETPLACE_LEAD_STATUS_CLOSED,
+)
+MARKETPLACE_LEAD_STATUS_LABELS = {
+    MARKETPLACE_LEAD_STATUS_NEW: "New",
+    MARKETPLACE_LEAD_STATUS_CONTACTED: "Contacted",
+    MARKETPLACE_LEAD_STATUS_IN_PROGRESS: "In progress",
+    MARKETPLACE_LEAD_STATUS_CLOSED: "Closed",
+}
+
+MARKETPLACE_LEAD_ACTION_QUOTATION_APPROVAL = "quotation_for_approval"
+MARKETPLACE_LEAD_ACTION_QUOTE_CLIENT = "quote_for_client_submission"
+MARKETPLACE_LEAD_ACTION_ORDERED = "ordered"
+MARKETPLACE_LEAD_ACTIONS = (
+    MARKETPLACE_LEAD_ACTION_QUOTATION_APPROVAL,
+    MARKETPLACE_LEAD_ACTION_QUOTE_CLIENT,
+    MARKETPLACE_LEAD_ACTION_ORDERED,
+)
+MARKETPLACE_LEAD_ACTION_LABELS = {
+    MARKETPLACE_LEAD_ACTION_QUOTATION_APPROVAL: "Quotation for Approval",
+    MARKETPLACE_LEAD_ACTION_QUOTE_CLIENT: "Quote for Client Submission",
+    MARKETPLACE_LEAD_ACTION_ORDERED: "Ordered",
+}
+
+MARKETPLACE_LEAD_RESULT_BOUGHT = "bought"
+MARKETPLACE_LEAD_RESULT_INQUIRED_ONLY = "inquired_only"
+MARKETPLACE_LEAD_RESULTS = (
+    MARKETPLACE_LEAD_RESULT_BOUGHT,
+    MARKETPLACE_LEAD_RESULT_INQUIRED_ONLY,
+)
+MARKETPLACE_LEAD_RESULT_LABELS = {
+    MARKETPLACE_LEAD_RESULT_BOUGHT: "Bought",
+    MARKETPLACE_LEAD_RESULT_INQUIRED_ONLY: "Inquired Only",
+}
+
 # Ref-Seller / Ref-Buyer pool level table (levels 1–6 upline, level 7 Mandate).
 DEFAULT_PRODUCT_POOL_LEVELS = [
     (1, Decimal("50.00"), "Product seller/buyer referrer"),
@@ -323,6 +366,16 @@ def can_manage_site_content(role=None):
 
 def can_view_marketplace_help(role=None):
     """Marketplace & CRM help guide for operational roles (not Members)."""
+    return normalize_role(role) in (
+        USER_ROLE_PORTAL_ADMIN,
+        USER_ROLE_ADMIN,
+        USER_ROLE_SITE_ADMIN,
+        USER_ROLE_STAFF,
+    )
+
+
+def can_access_marketplace_crm(role=None):
+    """View Marketplace CRM and update inquiry follow-up status."""
     return normalize_role(role) in (
         USER_ROLE_PORTAL_ADMIN,
         USER_ROLE_ADMIN,

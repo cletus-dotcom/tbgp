@@ -232,7 +232,7 @@
         <hr class="sidebar-divider" aria-hidden="true">
         {% endif %}
 
-        {% if can_access_admin_options(session.get('role')) or can_manage_data(session.get('role')) or can_manage_site_content(session.get('role')) %}
+        {% if can_access_admin_options(session.get('role')) or can_manage_data(session.get('role')) or can_manage_site_content(session.get('role')) or can_access_marketplace_crm(session.get('role')) %}
         <ul class="sidebar-nav sidebar-nav-section">
             <li>
                 <button class="sidebar-link sidebar-section-toggle" type="button"
@@ -251,6 +251,8 @@
             <a href="{{ url_for('site_admin.marketplace_list') }}" class="sidebar-sublink {% if active_page == 'marketplace' %}active{% endif %}">
                 Marketplace Listings
             </a>
+            {% endif %}
+            {% if can_access_marketplace_crm(session.get('role')) %}
             <a href="{{ url_for('main_routes.marketplace_crm') }}" class="sidebar-sublink {% if active_page == 'marketplace_crm' %}active{% endif %}">
                 Marketplace CRM
             </a>
