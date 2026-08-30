@@ -215,6 +215,7 @@ from app.marketplace_service import (
     funnel_page_content,
     search_marketplace_leads,
     set_attribution_cookie,
+    clear_attribution_cookie,
 )
 
 main_routes = Blueprint("main_routes", __name__)
@@ -620,7 +621,8 @@ def partner_profile(partner_slug):
 @main_routes.route("/logout")
 def logout():
     session.clear()
-    return redirect(url_for("main_routes.index"))
+    response = redirect(url_for("main_routes.index"))
+    return clear_attribution_cookie(response)
 
 
 @main_routes.route("/api/accessibility-preferences", methods=["GET", "POST"])

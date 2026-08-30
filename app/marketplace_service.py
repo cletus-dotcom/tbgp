@@ -199,6 +199,17 @@ def set_attribution_cookie(response, member):
     return response
 
 
+def clear_attribution_cookie(response):
+    """Remove marketplace referral attribution (e.g. on portal logout)."""
+    response.delete_cookie(
+        MARKETPLACE_ATTRIBUTION_COOKIE,
+        path="/",
+        samesite="Lax",
+        httponly=True,
+    )
+    return response
+
+
 def get_attributed_member_id():
     try:
         raw = request.cookies.get(MARKETPLACE_ATTRIBUTION_COOKIE)
