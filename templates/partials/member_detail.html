@@ -183,6 +183,12 @@
                 data-member="{{ m.self_edit_payload() | tojson | forceescape }}">
                 <i class="bi bi-pencil-square"></i> Edit My Information
             </button>
+            <button type="button"
+                class="btn btn-sm btn-outline-light member-change-password-btn"
+                data-bs-toggle="modal"
+                data-bs-target="#changeMyPasswordModal">
+                <i class="bi bi-key"></i> Change Password
+            </button>
         </div>
     </div>
     {% endif %}

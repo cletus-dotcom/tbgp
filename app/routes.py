@@ -847,6 +847,51 @@ def member_update_own_profile():
         return jsonify({"status": "error", "msg": f"Database error: {exc}"}), 500
 
 
+@main_routes.route("/members/my-password", methods=["POST"])
+@login_required
+def member_change_own_password():
+    if not is_member_role(session.get("role")):
+        return access_denied_response("Access denied.")
+
+    if not require_linked_member():
+        return access_denied_response("Your account is not linked to a member record.")
+
+    user = db.session.get(User, session.get("user_id"))
+    if not user:
+        return jsonify({"status": "error", "msg": "User not found."}), 404
+
+    data = request.get_json(silent=True) if request.is_json else request.form
+    current_password = (data.get("current_password") if data else "") or ""
+    current_password = current_password.strip()
+    new_password = (data.get("new_password") if data else "") or ""
+    new_password = new_password.strip()
+    confirm_password = (data.get("confirm_password") if data else "") or ""
+    confirm_password = confirm_password.strip()
+
+    if not current_password or not new_password or not confirm_password:
+        return jsonify({"status": "error", "msg": "All password fields are required."}), 400
+
+    if not user.check_password(current_password):
+        return jsonify({"status": "error", "msg": "Current password is incorrect."}), 400
+
+    if new_password != confirm_password:
+        return jsonify({"status": "error", "msg": "New password and confirmation do not match."}), 400
+
+    if len(new_password) < 4:
+        return jsonify({"status": "error", "msg": "New password must be at least 4 characters."}), 400
+
+    if user.check_password(new_password):
+        return jsonify({"status": "error", "msg": "New password must be different from your current password."}), 400
+
+    try:
+        user.set_password(new_password)
+        db.session.commit()
+        return jsonify({"status": "success", "msg": "Your password has been updated."})
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"status": "error", "msg": f"Database error: {exc}"}), 500
+
+
 @main_routes.route("/members/template")
 @login_required
 @staff_or_admin_required

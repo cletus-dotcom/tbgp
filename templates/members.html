@@ -28,6 +28,10 @@
             {% with search_id='memberSearch', search_placeholder='Search members...' %}
             {% include 'partials/search_input.html' %}
             {% endwith %}
+            {% else %}
+            <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#changeMyPasswordModal">
+                <i class="bi bi-key"></i> Change Password
+            </button>
             {% endif %}
         </div>
     </div>
@@ -121,6 +125,7 @@
 {% endif %}
 {% if is_own_profile_view %}
 {% include 'partials/edit_my_profile_modal.html' %}
+{% include 'partials/change_my_password_modal.html' %}
 {% endif %}
 {% endblock %}
 
@@ -452,20 +457,26 @@
 
     document.addEventListener('click', e => {
         const selfEditBtn = e.target.closest('.member-self-edit-btn');
-        if (!selfEditBtn) return;
-        e.preventDefault();
-        e.stopPropagation();
-        hideFormError(selfEditAlert);
-        const json = selfEditBtn.dataset.member;
-        if (!json) {
-            showFormError(selfEditAlert, 'Could not load your profile. Please refresh.');
+        if (selfEditBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            hideFormError(selfEditAlert);
+            const json = selfEditBtn.dataset.member;
+            if (!json) {
+                showFormError(selfEditAlert, 'Could not load your profile. Please refresh.');
+                return;
+            }
+            try {
+                setSelfEditFields(JSON.parse(json));
+                bootstrap.Modal.getOrCreateInstance(selfEditModalEl).show();
+            } catch {
+                showFormError(selfEditAlert, 'Could not load your profile. Please refresh.');
+            }
             return;
         }
-        try {
-            setSelfEditFields(JSON.parse(json));
-            bootstrap.Modal.getOrCreateInstance(selfEditModalEl).show();
-        } catch {
-            showFormError(selfEditAlert, 'Could not load your profile. Please refresh.');
+
+        if (e.target.closest('.member-change-password-btn')) {
+            e.stopPropagation();
         }
     });
 
@@ -486,6 +497,45 @@
             showFormError(selfEditAlert, data.msg || 'Update failed.');
         } catch (err) {
             showFormError(selfEditAlert, err.message || 'Update failed.');
+        }
+    });
+
+    const changePasswordModalEl = document.getElementById('changeMyPasswordModal');
+    const changePasswordForm = document.getElementById('changeMyPasswordForm');
+    const changePasswordAlert = document.getElementById('changeMyPasswordAlert');
+
+    changePasswordModalEl?.addEventListener('show.bs.modal', () => {
+        hideFormError(changePasswordAlert);
+        changePasswordForm?.reset();
+    });
+
+    changePasswordForm?.addEventListener('submit', async e => {
+        e.preventDefault();
+        hideFormError(changePasswordAlert);
+
+        const currentPassword = document.getElementById('currentPassword')?.value || '';
+        const newPassword = document.getElementById('newPassword')?.value || '';
+        const confirmPassword = document.getElementById('confirmPassword')?.value || '';
+
+        try {
+            const res = await fetch('/members/my-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword,
+                    confirm_password: confirmPassword,
+                }),
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                bootstrap.Modal.getInstance(changePasswordModalEl)?.hide();
+                alert(data.msg || 'Your password has been updated.');
+                return;
+            }
+            showFormError(changePasswordAlert, data.msg || 'Password update failed.');
+        } catch (err) {
+            showFormError(changePasswordAlert, err.message || 'Password update failed.');
         }
     });
     {% endif %}
