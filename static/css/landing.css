@@ -476,6 +476,18 @@ body.landing-body {
         transition: color 0.35s ease;
     }
 
+    .hero-content .hero-title-sub {
+        font-family: "Barlow Condensed", sans-serif;
+        font-weight: 700;
+        font-size: clamp(1.05rem, 2.8vw, 1.55rem);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-white);
+        margin: -1.15rem 0 1.75rem;
+        line-height: 1.2;
+        transition: color 0.35s ease;
+    }
+
     .btn-hero {
         display: inline-block;
         background: var(--amber);
@@ -579,6 +591,10 @@ body.landing-body {
 
     .hero-overlay.is-landed .hero-content h1 .accent {
         color: #b45309;
+    }
+
+    .hero-overlay.is-landed .hero-content .hero-title-sub {
+        color: #333;
     }
 
     .hero-overlay.is-landed .notice-carousel .carousel-inner {
