@@ -1,61 +1,89 @@
 from collections import defaultdict
 
+from sqlalchemy import func
+
+from app import db
 from app.models import Contractor, Member, Supplier
 
 
 def dashboard_stats():
-    members = Member.query.all()
-    contractors = Contractor.query.all()
-    suppliers = Supplier.query.all()
+    member_batch_rows = (
+        db.session.query(Member.batch, func.count(Member.member_id))
+        .group_by(Member.batch)
+        .all()
+    )
+    by_batch = {batch: count for batch, count in member_batch_rows}
+    total_members = sum(by_batch.values())
 
-    by_batch = defaultdict(int)
-    for member in members:
-        by_batch[member.batch] += 1
+    root_members = (
+        db.session.query(func.count(Member.member_id))
+        .filter(Member.referrer_id.is_(None))
+        .scalar()
+        or 0
+    )
 
-    contractor_by_batch = defaultdict(int)
-    contractor_referrers = set()
-    for contractor in contractors:
-        contractor_by_batch[contractor.batch] += 1
-        contractor_referrers.add(contractor.member_referrer_id)
+    referral_leader_rows = (
+        db.session.query(
+            Member.referrer_id,
+            func.count(Member.member_id).label("referral_count"),
+        )
+        .filter(Member.referrer_id.isnot(None))
+        .group_by(Member.referrer_id)
+        .order_by(func.count(Member.member_id).desc())
+        .limit(5)
+        .all()
+    )
+    leader_ids = [row.referrer_id for row in referral_leader_rows if row.referral_count > 0]
+    leaders = {
+        member.member_id: member
+        for member in Member.query.filter(Member.member_id.in_(leader_ids)).all()
+    } if leader_ids else {}
 
-    supplier_by_batch = defaultdict(int)
-    supplier_referrers = set()
-    for supplier in suppliers:
-        supplier_by_batch[supplier.batch] += 1
-        supplier_referrers.add(supplier.member_referrer_id)
+    contractor_batch_rows = (
+        db.session.query(Contractor.batch, func.count(Contractor.contractor_id))
+        .group_by(Contractor.batch)
+        .all()
+    )
+    contractor_by_batch = {batch: count for batch, count in contractor_batch_rows}
+    contractor_referrers = (
+        db.session.query(func.count(func.distinct(Contractor.member_referrer_id))).scalar()
+        or 0
+    )
 
-    roots = [m for m in members if m.referrer_id is None]
-    with_referrer = [m for m in members if m.referrer_id is not None]
-
-    top_referrers = sorted(
-        members,
-        key=lambda m: len(m.referrals),
-        reverse=True,
-    )[:5]
+    supplier_batch_rows = (
+        db.session.query(Supplier.batch, func.count(Supplier.supplier_id))
+        .group_by(Supplier.batch)
+        .all()
+    )
+    supplier_by_batch = {batch: count for batch, count in supplier_batch_rows}
+    supplier_referrers = (
+        db.session.query(func.count(func.distinct(Supplier.member_referrer_id))).scalar()
+        or 0
+    )
 
     return {
-        "total_members": len(members),
-        "root_members": len(roots),
-        "referred_members": len(with_referrer),
+        "total_members": total_members,
+        "root_members": root_members,
+        "referred_members": total_members - root_members,
         "batch_counts": dict(sorted(by_batch.items())),
         "max_batch": max(by_batch.keys()) if by_batch else 0,
-        "total_contractors": len(contractors),
+        "total_contractors": sum(contractor_by_batch.values()),
         "contractor_batch_counts": dict(sorted(contractor_by_batch.items())),
         "max_contractor_batch": max(contractor_by_batch.keys()) if contractor_by_batch else 0,
-        "contractor_member_referrers": len(contractor_referrers),
-        "total_suppliers": len(suppliers),
+        "contractor_member_referrers": contractor_referrers,
+        "total_suppliers": sum(supplier_by_batch.values()),
         "supplier_batch_counts": dict(sorted(supplier_by_batch.items())),
         "max_supplier_batch": max(supplier_by_batch.keys()) if supplier_by_batch else 0,
-        "supplier_member_referrers": len(supplier_referrers),
+        "supplier_member_referrers": supplier_referrers,
         "top_referrers": [
             {
-                "member_id": m.member_id,
-                "full_name": m.full_name,
-                "referral_count": len(m.referrals),
-                "batch": m.batch,
+                "member_id": row.referrer_id,
+                "full_name": leaders[row.referrer_id].full_name,
+                "referral_count": row.referral_count,
+                "batch": leaders[row.referrer_id].batch,
             }
-            for m in top_referrers
-            if len(m.referrals) > 0
+            for row in referral_leader_rows
+            if row.referral_count > 0 and row.referrer_id in leaders
         ],
     }
 
@@ -115,10 +143,23 @@ def build_member_hierarchy_tree(member_id):
     return [serialize(member)]
 
 
-def _count_downline(member):
+def _downline_count(root_member_id):
+    """Count all descendants using one referral map query."""
+    rows = (
+        db.session.query(Member.member_id, Member.referrer_id)
+        .filter(Member.referrer_id.isnot(None))
+        .all()
+    )
+    children_map = defaultdict(list)
+    for member_id, referrer_id in rows:
+        children_map[referrer_id].append(member_id)
+
     total = 0
-    for child in member.referrals:
-        total += 1 + _count_downline(child)
+    stack = list(children_map.get(root_member_id, []))
+    while stack:
+        node = stack.pop()
+        total += 1
+        stack.extend(children_map.get(node, []))
     return total
 
 
@@ -129,6 +170,24 @@ def member_dashboard_stats(member_id):
 
     from app.ledger_service import member_ledger_stats
 
+    direct_referrals = (
+        db.session.query(func.count(Member.member_id))
+        .filter(Member.referrer_id == member_id)
+        .scalar()
+        or 0
+    )
+    contractor_referrals = (
+        db.session.query(func.count(Contractor.contractor_id))
+        .filter(Contractor.member_referrer_id == member_id)
+        .scalar()
+        or 0
+    )
+    supplier_referrals = (
+        db.session.query(func.count(Supplier.supplier_id))
+        .filter(Supplier.member_referrer_id == member_id)
+        .scalar()
+        or 0
+    )
     ledger = member_ledger_stats(member_id)
     return {
         "member_id": member.member_id,
@@ -136,10 +195,10 @@ def member_dashboard_stats(member_id):
         "batch": member.batch,
         "membership_type": member.membership_type,
         "status": member.status,
-        "direct_referrals": len(member.referrals),
-        "downline_count": _count_downline(member),
-        "contractor_referrals": len(member.contractor_referrals),
-        "supplier_referrals": len(member.supplier_referrals),
+        "direct_referrals": direct_referrals,
+        "downline_count": _downline_count(member_id),
+        "contractor_referrals": contractor_referrals,
+        "supplier_referrals": supplier_referrals,
         "ledger_transactions": ledger["transaction_count"],
         "ledger_total": ledger["total_earnings"],
     }

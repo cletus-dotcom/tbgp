@@ -71,4 +71,11 @@ DNS changes can take a few minutes to several hours depending on the domain prov
 - The app supports Render's `DATABASE_URL` and still supports local `DB_USER`, `DB_PASS`, `DB_IP`, `DB_PORT`, and `DB_NAME` settings.
 - On startup, the app creates missing tables, runs lightweight migrations, and seeds required default users/data.
 - Change default seeded account passwords after the first production login.
+- For faster logins on Render free tier, set `TBGP_SKIP_STARTUP_TASKS=1` after the first successful deploy. Migrations and seeds will no longer run on every cold start. After code changes that alter the schema, run once locally or in a one-off shell:
+
+  ```bash
+  python scripts/run_startup_migrations.py
+  ```
+
+  Set `TBGP_SKIP_DATA_SEED=1` on production so Excel imports are not attempted at boot.
 - If Render logs show `gunicorn.errors.AppImportError: Failed to find attribute 'app' in 'app'`, update the Render **Start Command** to `gunicorn wsgi:app --bind 0.0.0.0:$PORT`.
