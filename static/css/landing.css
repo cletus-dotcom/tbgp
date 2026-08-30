@@ -3116,9 +3116,19 @@ body.landing-body {
     .marketplace-card-body {
         padding: 1rem 1.1rem 1.2rem;
     }
-    .marketplace-card-body h2 {
-        font-size: 1.05rem;
+    /* Shared listing title treatment (matches navbar TBGP mark) */
+    .marketplace-card-body h2,
+    .marketplace-listing-title,
+    .mp-funnel-listing-body h3,
+    .mp-funnel-listing-title {
+        font-family: "Barlow Condensed", sans-serif;
+        font-weight: 800;
+        font-size: 1.45rem !important;
+        letter-spacing: 0.06em;
+        line-height: 1;
+        text-transform: uppercase;
         margin: 0 0 0.35rem;
+        color: var(--text-white, #fff);
     }
     .marketplace-card-price {
         color: var(--amber, #f0a500);
@@ -3364,17 +3374,6 @@ body.landing-body {
         display: flex;
         align-items: center;
         justify-content: center;
-    }
-    .mp-funnel-listing-body h3,
-    .mp-funnel-listing-title {
-        font-family: "Barlow Condensed", sans-serif;
-        font-weight: 800;
-        font-size: 1.45rem !important;
-        letter-spacing: 0.06em;
-        line-height: 1;
-        text-transform: uppercase;
-        margin: 0 0 0.3rem;
-        color: var(--text-white, #fff);
     }
     .mp-funnel-listing-body .marketplace-card-summary {
         display: -webkit-box;
