@@ -50,6 +50,7 @@ from app.config import (
     assignable_user_roles,
     can_manage_site_content,
     can_view_marketplace_help,
+    can_view_features_process_flow,
     is_site_admin_role,
     post_login_redirect,
     USER_ROLES,
@@ -98,6 +99,7 @@ def create_app():
             "/marketplace/",
             "/m/",
             "/help/marketplace-crm",
+            "/about/features-process-flow",
             "/admin/marketplace-crm",
         )
         if path == "/" or any(path.startswith(prefix) for prefix in allowed):
@@ -144,6 +146,7 @@ def create_app():
             "is_site_admin_role": is_site_admin_role,
             "can_manage_site_content": can_manage_site_content,
             "can_view_marketplace_help": can_view_marketplace_help,
+            "can_view_features_process_flow": can_view_features_process_flow,
             "is_member_role": is_member_role,
             "is_staff_or_admin": is_staff_or_admin,
             "can_manage_data": can_manage_data,

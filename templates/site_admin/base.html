@@ -95,6 +95,13 @@
                 </a>
             </li>
             {% endif %}
+            {% if can_view_features_process_flow(session.get('role')) %}
+            <li>
+                <a href="{{ url_for('main_routes.about_features_process_flow') }}" class="{% if active_page == 'about_features_process_flow' %}active{% endif %}">
+                    <i class="bi bi-diagram-2"></i> Features &amp; Process Flow
+                </a>
+            </li>
+            {% endif %}
             {% if can_view_marketplace_help(session.get('role')) %}
             <li>
                 <a href="{{ url_for('main_routes.help_marketplace_crm') }}" class="{% if active_page == 'help_marketplace_crm' %}active{% endif %}">

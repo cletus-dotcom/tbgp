@@ -331,6 +331,16 @@ def can_view_marketplace_help(role=None):
     )
 
 
+def can_view_features_process_flow(role=None):
+    """App Features & Process Flow help for Admin, Staff, and SiteAdmin (not Members)."""
+    return normalize_role(role) in (
+        USER_ROLE_PORTAL_ADMIN,
+        USER_ROLE_ADMIN,
+        USER_ROLE_SITE_ADMIN,
+        USER_ROLE_STAFF,
+    )
+
+
 def is_admin_role(role=None):
     return normalize_role(role) in (USER_ROLE_PORTAL_ADMIN, USER_ROLE_ADMIN)
 

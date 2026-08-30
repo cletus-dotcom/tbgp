@@ -67,6 +67,7 @@ from app.config import (
     PRODUCT_REF_SELLER_PERCENT,
     MARKETPLACE_CATEGORIES,
     MARKETPLACE_CATEGORY_SLUGS,
+    MARKETPLACE_CATEGORY_PRODUCTS,
     MARKETPLACE_FUNNEL_CATEGORY_SLUGS,
     USER_ROLE_ADMIN,
     USER_ROLE_MEMBER,
@@ -82,6 +83,7 @@ from app.config import (
     can_purge_member_database,
     can_manage_site_content,
     can_view_marketplace_help,
+    can_view_features_process_flow,
     payout_scheme_summary,
     is_admin_role,
     is_member_role,
@@ -432,7 +434,9 @@ def marketplace_hub_shared(share_code):
     member = get_member_by_share_code(share_code)
     if not member:
         abort(404)
-    response = redirect(url_for("main_routes.marketplace_category", category="real_property"))
+    response = redirect(
+        url_for("main_routes.marketplace_category", category=MARKETPLACE_CATEGORY_PRODUCTS)
+    )
     return set_attribution_cookie(response, member)
 
 
@@ -735,6 +739,10 @@ def user_manual():
 @login_required
 def about_features_process_flow():
     user = _dashboard_user()
+    if not can_view_features_process_flow(user.role):
+        return access_denied_response(
+            "App Features & Process Flow is available to Admin, Staff, and SiteAdmin roles."
+        )
     role = normalize_role(user.role)
     return render_template(
         "about_features_process_flow.html",

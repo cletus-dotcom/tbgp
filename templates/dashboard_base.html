@@ -281,10 +281,12 @@
                class="sidebar-sublink {% if active_page == 'user_manual' %}active{% endif %}">
                 User Manual
             </a>
+            {% if can_view_features_process_flow(session.get('role')) %}
             <a href="{{ url_for('main_routes.about_features_process_flow') }}"
                class="sidebar-sublink {% if active_page == 'about_features_process_flow' %}active{% endif %}">
                 Features &amp; Process Flow
             </a>
+            {% endif %}
             {% if can_view_marketplace_help(session.get('role')) %}
             <a href="{{ url_for('main_routes.help_marketplace_crm') }}"
                class="sidebar-sublink {% if active_page == 'help_marketplace_crm' %}active{% endif %}">
