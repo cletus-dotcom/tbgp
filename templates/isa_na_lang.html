@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}ISA Na Lang Ang Kausap — TBGP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+{% endblock %}
+
+{% block body_class %}landing-body isa-page-body{% endblock %}
+
+{% block body %}
+{% set landing_nav_active = None %}
+{% include 'partials/landing_nav.html' %}
+
+<section class="isa-page">
+    <div class="container isa-page-inner">
+        <a href="{{ url_for('main_routes.index') }}" class="isa-back-home">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            Back to Home
+        </a>
+
+        <div class="isa-layout">
+            <aside class="isa-visual">
+                <p class="isa-brand-mark">TBGP</p>
+                <p class="isa-visual-lead">We find solutions and</p>
+                <p class="isa-visual-accent">Make Lives Easier</p>
+
+                <div class="isa-mark-panel" aria-hidden="true">
+                    <div class="isa-silhouette">
+                        <svg viewBox="0 0 120 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="12" y="38" width="34" height="40" rx="4" fill="#1a1a1a"/>
+                            <rect x="74" y="38" width="34" height="40" rx="4" fill="#1a1a1a"/>
+                            <circle cx="29" cy="28" r="11" fill="#111"/>
+                            <circle cx="91" cy="28" r="11" fill="#111"/>
+                            <path d="M46 48h28" stroke="#f0a500" stroke-width="3" stroke-linecap="round"/>
+                            <circle cx="60" cy="48" r="5" fill="#f0a500"/>
+                        </svg>
+                    </div>
+                    <div class="isa-mark-copy">
+                        <span class="isa-mark-isa">ISA</span>
+                        <span class="isa-mark-sub">Nalang Ang Kausap</span>
+                    </div>
+                </div>
+
+                <figure class="isa-photo">
+                    <img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=900&q=80"
+                         alt="Partners shaking hands over project plans"
+                         loading="lazy"
+                         decoding="async">
+                </figure>
+            </aside>
+
+            <div class="isa-copy">
+                <header class="isa-copy-header">
+                    <h1>Isa Nalang Ang Kausap</h1>
+                    <p class="isa-tagline">All Your Needs — Under One Roof, One Platform, One Point of Coordination</p>
+                </header>
+
+                <div class="isa-copy-body">
+                    <p>
+                        At the core of this concept is a simple idea: when you build or expand,
+                        you should not chase a dozen contacts for materials, manpower, logistics,
+                        and coordination. With TBGP, you have <strong>one trusted partner</strong>
+                        who can source, match, and manage the moving parts of your construction
+                        and supply needs.
+                    </p>
+                    <p>
+                        The TBGP program is already supported by a growing nationwide and
+                        international network — more than <strong>1,000 Project Facilitators</strong>,
+                        <strong>400+</strong> member contractors, and <strong>100+</strong> service
+                        providers and suppliers working together under one platform.
+                    </p>
+                    <p>By December 2026, the network is projected to reach:</p>
+                    <ul class="isa-projections">
+                        <li>2,000 Project Facilitators</li>
+                        <li>800–1,000 Member Contractors</li>
+                        <li>200+ Service Providers and Partner Manufacturer Suppliers</li>
+                    </ul>
+                    <p>
+                        Membership orientations and collaboration meetings continue across the
+                        country as the TBGP network expands — so clients, facilitators, and
+                        partners always have a clear path to coordinated support.
+                    </p>
+                </div>
+
+                <div class="isa-copy-body isa-copy-body--secondary">
+                    <p>
+                        Behind the platform is a network of thousands of Project Facilitators,
+                        hundreds of contractors, service providers, and manufacturer suppliers
+                        across the Philippines — organized so ordinary Filipinos and project
+                        owners can work with confidence.
+                    </p>
+                    <p>
+                        A distinctive <strong class="text-brand">profit-sharing scheme</strong>
+                        directs <strong>35%</strong> of net profit from construction projects and
+                        <strong>45%</strong> from construction-related product sales toward
+                        benefiting ordinary Filipinos and project facilitators in the network.
+                    </p>
+                    <p>
+                        Beyond sharing, TBGP invests in skills development, business training,
+                        and financial literacy — so partners grow with the platform, not only
+                        through a single transaction.
+                    </p>
+                    <p>
+                        <strong>Isa Na Lang Ang Kausap</strong> means a simpler, more convenient
+                        life for clients: one point of contact, clear accountability, and business
+                        integrity from inquiry to delivery.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% include 'partials/landing_footer.html' %}
+{% endblock %}

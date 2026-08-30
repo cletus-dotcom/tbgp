@@ -92,55 +92,56 @@
         <div class="container hero-inner">
             <div class="hero-content">
                 <h1>Building the Nation.<span class="accent">Powering the People.</span></h1>
-                <p class="hero-title-sub">Business Partner of the People</p>
-                <a href="#portals" class="btn-hero">Get Started</a>
+                <p class="hero-title-sub">Your Business Partner.</p>
             </div>
 
-            <div id="noticeCarousel" class="carousel slide notice-carousel" data-bs-ride="carousel" data-bs-interval="6000">
-                <div class="carousel-inner">
-                    <div class="carousel-item active">
-                        <h5>Members Management System</h5>
-                        <p>
-                            Track members, referrals, and hierarchy across every batch.
-                            <a href="#" data-bs-toggle="modal" data-bs-target="#featuresModal">Learn more</a>
-                        </p>
-                    </div>
-                    <div class="carousel-item">
-                        <h5>Lowbed Hub</h5>
-                        <p>
-                            Coordinate lowbed fleet operations and logistics in one hub.
-                            <a href="#" data-coming-soon>Learn more</a>
-                        </p>
-                    </div>
-                    <div class="carousel-item">
-                        <h5>Success Showcase</h5>
-                        <p>
-                            Spotlight achievements and growth across the network.
-                            <a href="#" data-coming-soon>Learn more</a>
-                        </p>
-                    </div>
-                    <div class="carousel-item">
-                        <h5>Information Pool Management System</h5>
-                        <p>
-                            Centralize shared knowledge, updates, and operational resources.
-                            <a href="#" data-coming-soon>Learn more</a>
-                        </p>
-                    </div>
-                </div>
-                <button class="carousel-control-prev" type="button" data-bs-target="#noticeCarousel" data-bs-slide="prev">
-                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Previous</span>
-                </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#noticeCarousel" data-bs-slide="next">
-                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Next</span>
-                </button>
-                <div class="carousel-indicators">
-                    <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Notice 1"></button>
-                    <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="1" aria-label="Notice 2"></button>
-                    <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="2" aria-label="Notice 3"></button>
-                    <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="3" aria-label="Notice 4"></button>
-                </div>
+            <div class="hero-pastel-cards" aria-label="Featured highlights">
+                <a href="{{ url_for('main_routes.isa_na_lang') }}" class="hero-pastel-card hero-pastel-card--isa" style="--chase-delay: 0s">
+                    <span class="hero-pastel-card-rim" aria-hidden="true"></span>
+                    <span class="hero-pastel-card-glitter" aria-hidden="true"></span>
+                    <span class="hero-pastel-card-art" aria-hidden="true">
+                        <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="8" y="28" width="22" height="28" rx="3" fill="#5c4a3a"/>
+                            <rect x="50" y="28" width="22" height="28" rx="3" fill="#5c4a3a"/>
+                            <circle cx="19" cy="22" r="7" fill="#3d3228"/>
+                            <circle cx="61" cy="22" r="7" fill="#3d3228"/>
+                            <path d="M28 36h24" stroke="#c4783a" stroke-width="2.5" stroke-linecap="round"/>
+                            <circle cx="40" cy="36" r="4" fill="#e8a04a"/>
+                        </svg>
+                    </span>
+                    <span class="hero-pastel-card-label">ISA Na Lang</span>
+                    <span class="hero-pastel-card-hint">One point of contact</span>
+                </a>
+                <a href="{{ url_for('main_routes.partner_with_tbgp') }}" class="hero-pastel-card hero-pastel-card--network" style="--chase-delay: 2s">
+                    <span class="hero-pastel-card-rim" aria-hidden="true"></span>
+                    <span class="hero-pastel-card-glitter" aria-hidden="true"></span>
+                    <span class="hero-pastel-card-art" aria-hidden="true">
+                        <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="28" cy="34" r="10" fill="#2f6f6a"/>
+                            <circle cx="52" cy="34" r="10" fill="#3d8a84"/>
+                            <path d="M34 38c2.5 4 9.5 4 12 0" stroke="#5eb5ae" stroke-width="2.5" stroke-linecap="round"/>
+                            <rect x="22" y="50" width="36" height="10" rx="5" fill="#2f6f6a" opacity="0.85"/>
+                            <path d="M30 55h20" stroke="#9ccfc7" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </span>
+                    <span class="hero-pastel-card-label">Partner with TBGP</span>
+                    <span class="hero-pastel-card-hint">Org funding share</span>
+                </a>
+                <a href="{{ url_for('main_routes.tbgp_2030_vision') }}" class="hero-pastel-card hero-pastel-card--growth" style="--chase-delay: 4s">
+                    <span class="hero-pastel-card-rim" aria-hidden="true"></span>
+                    <span class="hero-pastel-card-glitter" aria-hidden="true"></span>
+                    <span class="hero-pastel-card-art" aria-hidden="true">
+                        <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M18 62V42l12 6 12-18 12 8V62" fill="#b86b2e" opacity="0.3"/>
+                            <path d="M18 42l12 6 12-18 16 10" stroke="#c4783a" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <circle cx="58" cy="24" r="9" stroke="#e8a04a" stroke-width="3" fill="rgba(255,255,255,0.35)"/>
+                            <circle cx="58" cy="24" r="3.5" fill="#e8a04a"/>
+                            <path d="M64 30l6 6" stroke="#e8a04a" stroke-width="3" stroke-linecap="round"/>
+                        </svg>
+                    </span>
+                    <span class="hero-pastel-card-label">TBGP 2030 Vision</span>
+                    <span class="hero-pastel-card-hint">5-year projection</span>
+                </a>
             </div>
         </div>
     </div>
@@ -413,7 +414,15 @@
                 {% for slug in ecosystem_slugs %}
                 {% set page = ecosystem_pages[slug] %}
                 {% set card = page.landing_card or {} %}
+                {% if slug == 'products' %}
                 <a href="{{ url_for('main_routes.ecosystem_page', slug=slug) }}" class="pillar-card pillar-card-link">
+                {% else %}
+                <a href="#"
+                   class="pillar-card pillar-card-link"
+                   data-coming-soon
+                   aria-disabled="true"
+                   title="Coming soon">
+                {% endif %}
                     <p class="pillar-card-label">{{ page.label }}</p>
                     <p class="pillar-card-subtitle">{{ page.subtitle }}</p>
                     <h3 class="pillar-card-title">{{ page.title }}</h3>
@@ -614,10 +623,6 @@
         });
 
         setTimeout(dismissLoader, 5000);
-
-        document.querySelectorAll(".notice-carousel h5").forEach(function (el) {
-            el.innerHTML = el.textContent.replace(/([A-Z])/g, '<span class="title-cap">$1</span>');
-        });
 
         document.querySelectorAll("[data-coming-soon]").forEach(function (el) {
             el.addEventListener("click", function (event) {

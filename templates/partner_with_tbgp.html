@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Partner with TBGP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+{% endblock %}
+
+{% block body_class %}landing-body isa-page-body{% endblock %}
+
+{% block body %}
+{% set landing_nav_active = None %}
+{% include 'partials/landing_nav.html' %}
+
+<section class="isa-page partner-page">
+    <div class="container isa-page-inner">
+        <a href="{{ url_for('main_routes.index') }}" class="isa-back-home">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            Back to Home
+        </a>
+
+        <div class="isa-layout">
+            <aside class="isa-visual">
+                <p class="isa-brand-mark">TBGP</p>
+                <p class="isa-visual-lead">For organizations that need funding</p>
+                <p class="isa-visual-accent">Partner with Us</p>
+
+                <div class="partner-split-panel" aria-hidden="true">
+                    <div class="partner-split-bar">
+                        <span class="partner-split-seg partner-split-seg--support" style="--share: 45%">45%</span>
+                        <span class="partner-split-seg partner-split-seg--company" style="--share: 55%">55%</span>
+                    </div>
+                    <div class="partner-split-legend">
+                        <span><i></i> Support program</span>
+                        <span><i></i> Founding company</span>
+                    </div>
+                </div>
+
+                <div class="partner-glass-card">
+                    <p class="partner-glass-kicker">Your partnership share</p>
+                    <p class="partner-glass-value">26%</p>
+                    <p class="partner-glass-note">20% organization + 6% referring member</p>
+                </div>
+
+                <figure class="isa-photo">
+                    <img src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=900&q=80"
+                         alt="Team collaborating in a partnership meeting"
+                         loading="lazy"
+                         decoding="async">
+                </figure>
+            </aside>
+
+            <div class="isa-copy">
+                <header class="isa-copy-header">
+                    <h1>Partner with TBGP</h1>
+                    <p class="isa-tagline">
+                        For any type of organization — association, federation, cooperative,
+                        or group of the same nature — that needs funding for their organization.
+                    </p>
+                </header>
+
+                <div class="isa-copy-body">
+                    <p class="partner-solution">
+                        <strong>Solution offered:</strong> Become a Partner with the TBGP program.
+                    </p>
+
+                    <h2 class="partner-section-title">Net profit distribution</h2>
+                    <ul class="partner-share-list">
+                        <li>
+                            <span class="partner-share-pct">20%</span>
+                            <span>of the net profit will go to your organization</span>
+                        </li>
+                        <li>
+                            <span class="partner-share-pct">6%</span>
+                            <span>will go to the person from the organization who refers the client</span>
+                        </li>
+                        <li>
+                            <span class="partner-share-pct">6%</span>
+                            <span>to 5 individual Endorsers</span>
+                        </li>
+                        <li>
+                            <span class="partner-share-pct">8%</span>
+                            <span>to 5 individual Project Facilitators (ProF)</span>
+                        </li>
+                        <li>
+                            <span class="partner-share-pct">5%</span>
+                            <span>Founder’s prerogative to help any TBGP member</span>
+                        </li>
+                    </ul>
+
+                    <div class="partner-totals">
+                        <div class="partner-total-card partner-total-card--support">
+                            <span class="partner-total-pct">45%</span>
+                            <span class="partner-total-label">TBGP support program for less-privileged Filipinos</span>
+                        </div>
+                        <div class="partner-total-card partner-total-card--company">
+                            <span class="partner-total-pct">55%</span>
+                            <span class="partner-total-label">Founding company of the TBGP program</span>
+                        </div>
+                    </div>
+
+                    <aside class="partner-note" role="note">
+                        <strong>Note:</strong>
+                        20% net profit share for your organization + 6% for the individual who
+                        referred the client from your organization is now your share in our
+                        business. You are now considered a partner of our business.
+                    </aside>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% include 'partials/landing_footer.html' %}
+{% endblock %}

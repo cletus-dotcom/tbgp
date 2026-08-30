@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% block title %}TBGP 2030 Vision{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+{% endblock %}
+
+{% block body_class %}landing-body isa-page-body{% endblock %}
+
+{% block body %}
+{% set landing_nav_active = None %}
+{% include 'partials/landing_nav.html' %}
+
+<section class="isa-page vision-page">
+    <div class="container isa-page-inner">
+        <a href="{{ url_for('main_routes.index') }}" class="isa-back-home">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            Back to Home
+        </a>
+
+        <header class="vision-hero">
+            <p class="isa-brand-mark">TBGP</p>
+            <h1>TBGP 2030 Vision</h1>
+            <p class="vision-kicker">The Vision Goal</p>
+            <p class="vision-goal">
+                By 2030, TBGP aims to be a premier marketing and partnership powerhouse in the
+                construction industry — driven by <strong>20,000 to 30,000</strong> Member Project
+                Facilitators distributing opportunities to facilitators,
+                <strong>3,000</strong> member contractors, service providers, suppliers, and
+                poor Filipino families, backed by at least <strong>10</strong> local and foreign
+                capital partners.
+            </p>
+        </header>
+
+        <div class="vision-projection" id="visionProjection">
+            <div class="vision-projection-head">
+                <h2>Our 5 Year Projection</h2>
+                <p>Targets focus under the magnifying glass — looping year by year.</p>
+            </div>
+
+            <div class="vision-chart" aria-label="Five year projection chart">
+                <div class="vision-lens" id="visionLens" aria-hidden="true">
+                    <span class="vision-lens-glass"></span>
+                    <span class="vision-lens-handle"></span>
+                </div>
+
+                {% set years = [
+                    {
+                        "n": "01",
+                        "tone": "green",
+                        "period": "July 2025 – 2026",
+                        "height": 34,
+                        "achieved": True,
+                        "items_list": [
+                            {"label": "Project Facilitators", "value": "1,000", "note": "Target Achieved"}
+                        ],
+                        "statement": "In exactly 12 months, the target of 1,000 Member Project Facilitators has been successfully realized."
+                    },
+                    {
+                        "n": "02",
+                        "tone": "white",
+                        "period": "July 2026 – 2027",
+                        "height": 48,
+                        "achieved": False,
+                        "items_list": [
+                            {"label": "Project Facilitators", "value": "3,000"},
+                            {"label": "Contractors", "value": "1,000"},
+                            {"label": "Manufacturers", "value": "150"},
+                            {"label": "Funders / Investors", "value": "4"}
+                        ]
+                    },
+                    {
+                        "n": "03",
+                        "tone": "amber",
+                        "period": "July 2027 – 2028",
+                        "height": 62,
+                        "achieved": False,
+                        "items_list": [
+                            {"label": "Project Facilitators", "value": "6,000"},
+                            {"label": "Contractors", "value": "1,500"},
+                            {"label": "Manufacturers", "value": "200"},
+                            {"label": "Funders / Investors", "value": "8"}
+                        ]
+                    },
+                    {
+                        "n": "04",
+                        "tone": "blue",
+                        "period": "July 2028 – 2029",
+                        "height": 78,
+                        "achieved": False,
+                        "items_list": [
+                            {"label": "Project Facilitators", "value": "10,000"},
+                            {"label": "Contractors", "value": "2,000"},
+                            {"label": "Manufacturers", "value": "300"},
+                            {"label": "Funders / Investors", "value": "12"}
+                        ]
+                    },
+                    {
+                        "n": "05",
+                        "tone": "red",
+                        "period": "July 2029 – 2030",
+                        "height": 96,
+                        "achieved": False,
+                        "items_list": [
+                            {"label": "Project Facilitators", "value": "20,000"},
+                            {"label": "Contractors", "value": "3,000"},
+                            {"label": "Manufacturers", "value": "500"},
+                            {"label": "Funders / Investors", "value": "15"}
+                        ]
+                    }
+                ] %}
+
+                {% for year in years %}
+                <article class="vision-year vision-year--{{ year.tone }}"
+                         data-vision-year
+                         style="--bar-h: {{ year.height }}%">
+                    <div class="vision-figures" data-vision-figures>
+                        <p class="vision-period">{{ year.period }}</p>
+                        {% for item in year.items_list %}
+                        <p class="vision-figure-row">
+                            <span class="vision-figure-label">Target:</span>
+                            <span class="vision-figure-value">{{ item.value }}</span>
+                            <span class="vision-figure-meta">{{ item.label }}{% if item.note %} — {{ item.note }}{% endif %}</span>
+                        </p>
+                        {% endfor %}
+                        {% if year.statement %}
+                        <p class="vision-statement">{{ year.statement }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="vision-arrow-wrap">
+                        <button type="button"
+                                class="vision-target"
+                                data-vision-target
+                                aria-label="Focus targets for {{ year.period }}">
+                            <svg viewBox="0 0 48 48" aria-hidden="true">
+                                <circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="3"/>
+                                <circle cx="24" cy="24" r="11" fill="none" stroke="currentColor" stroke-width="2.5"/>
+                                <circle cx="24" cy="24" r="4" fill="currentColor"/>
+                                <path d="M24 6v5M24 37v5M6 24h5M37 24h5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+                        <div class="vision-arrow" aria-hidden="true">
+                            <span class="vision-arrow-shaft"></span>
+                            <span class="vision-arrow-head"></span>
+                        </div>
+                        <div class="vision-year-base">
+                            <span class="vision-year-num">{{ year.n }}</span>
+                        </div>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+
+{% include 'partials/landing_footer.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var root = document.getElementById("visionProjection");
+    if (!root) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    var lens = document.getElementById("visionLens");
+    var years = Array.prototype.slice.call(root.querySelectorAll("[data-vision-year]"));
+    if (!lens || !years.length) return;
+
+    var index = 0;
+    var dwellMs = 2400;
+
+    function placeLens(yearEl) {
+        var target = yearEl.querySelector("[data-vision-target]");
+        var chart = root.querySelector(".vision-chart");
+        if (!target || !chart) return;
+        var chartBox = chart.getBoundingClientRect();
+        var targetBox = target.getBoundingClientRect();
+        var x = targetBox.left - chartBox.left + targetBox.width / 2;
+        var y = targetBox.top - chartBox.top + targetBox.height / 2;
+        lens.style.setProperty("--lens-x", x + "px");
+        lens.style.setProperty("--lens-y", y + "px");
+        lens.classList.add("is-active");
+    }
+
+    function activate(i) {
+        years.forEach(function (el, idx) {
+            el.classList.toggle("is-focused", idx === i);
+        });
+        placeLens(years[i]);
+    }
+
+    function tick() {
+        activate(index);
+        index = (index + 1) % years.length;
+    }
+
+    activate(0);
+    index = 1;
+    var timer = window.setInterval(tick, dwellMs);
+
+    years.forEach(function (el, idx) {
+        var btn = el.querySelector("[data-vision-target]");
+        if (!btn) return;
+        btn.addEventListener("click", function () {
+            window.clearInterval(timer);
+            index = idx;
+            activate(index);
+            index = (index + 1) % years.length;
+            timer = window.setInterval(tick, dwellMs);
+        });
+    });
+
+    window.addEventListener("resize", function () {
+        var focused = root.querySelector(".vision-year.is-focused") || years[0];
+        placeLens(focused);
+    });
+})();
+</script>
+{% endblock %}

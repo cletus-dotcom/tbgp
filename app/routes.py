@@ -338,6 +338,21 @@ def index():
     )
 
 
+@main_routes.route("/isa-na-lang")
+def isa_na_lang():
+    return render_template("isa_na_lang.html")
+
+
+@main_routes.route("/partner-with-tbgp")
+def partner_with_tbgp():
+    return render_template("partner_with_tbgp.html")
+
+
+@main_routes.route("/tbgp-2030-vision")
+def tbgp_2030_vision():
+    return render_template("tbgp_2030_vision.html")
+
+
 @main_routes.route("/ecosystem/<slug>")
 def ecosystem_page(slug):
     page = get_ecosystem_page(slug)
