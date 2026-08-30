@@ -215,7 +215,7 @@ USER_MANUALS = {
             {
                 "heading": "Portal Navigation",
                 "items": [
-                    "Use the sidebar for Members, Member Ledger, Contractors, Suppliers, and Hierarchy Tree.",
+                    "Use the sidebar for Members, Member Ledger, Contractors, Suppliers, Hierarchy Tree, and My Marketplace.",
                     "Open Payouts for payout scheme reference, payout queue work, and fund release reports.",
                     "Open Income Management for project commissions and generate project commission.",
                     "Open Help for this manual, Features & Process Flow, and About the Platform.",
@@ -227,6 +227,15 @@ USER_MANUALS = {
                 "items": [
                     "Use Dashboard for network-wide statistics on members, contractors, and suppliers.",
                     "Click any summary card to open the related Members, Contractors, or Suppliers list.",
+                ],
+            },
+            {
+                "heading": "My Marketplace",
+                "items": [
+                    "Open My Marketplace to copy your personal marketplace hub link and category links.",
+                    "Your Staff account must be linked to a Member ID (set by Admin under Users) so share links attribute inquiries to you.",
+                    "When a guest opens your /m/<code>/marketplace link, TBGP remembers you for about 30 days and credits inquiries to your CRM log.",
+                    "Review attributed guest name, contact details, listing, and message in the Inquiry CRM log.",
                 ],
             },
             {
@@ -469,12 +478,12 @@ MARKETPLACE_CRM_GUIDE = {
         {"role": "Guest", "access": "Browse marketplace, open listings, submit inquiries."},
         {"role": "Member", "access": "Copy share links and review attributed inquiries in My Marketplace."},
         {
-            "role": "Admin / PortalAdmin / SiteAdmin",
-            "access": "Create and publish listings, edit executive summaries, use Marketplace CRM.",
+            "role": "Staff",
+            "access": "Use My Marketplace (when linked to a Member ID) for share links and attributed leads; listing publish and full Marketplace CRM remain with Admin / Site Content editors.",
         },
         {
-            "role": "Staff",
-            "access": "Read this guide for operational awareness; listing publish and CRM tools remain with Admin / Site Content editors.",
+            "role": "Admin / PortalAdmin / SiteAdmin",
+            "access": "Create and publish listings, edit executive summaries, use Marketplace CRM.",
         },
     ],
     "modules": [
@@ -489,7 +498,7 @@ MARKETPLACE_CRM_GUIDE = {
         {
             "title": "Member Share & Attribution",
             "items": [
-                "Each member receives a marketplace share code (created on first visit to My Marketplace).",
+                "Each member (and Staff linked to a Member ID) receives a marketplace share code on first visit to My Marketplace.",
                 "Share URLs use the form /m/<code>/marketplace/…",
                 "Opening a share link sets a ~30-day attribution cookie (last share link visited wins).",
                 "An inquiry is stored against the listing and credited to the attributed member when the cookie is present.",
@@ -554,7 +563,7 @@ MARKETPLACE_CRM_GUIDE = {
         {"label": "Real Property", "path": "/marketplace/real_property"},
         {"label": "Products", "path": "/marketplace/products"},
         {"label": "Member share pattern", "path": "/m/<code>/marketplace/..."},
-        {"label": "My Marketplace (members)", "path": "/my-marketplace"},
+        {"label": "My Marketplace (members / staff)", "path": "/my-marketplace"},
         {"label": "Manage listings", "path": "/site-admin/marketplace"},
         {"label": "Marketplace CRM", "path": "/admin/marketplace-crm"},
     ],

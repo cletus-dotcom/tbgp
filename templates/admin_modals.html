@@ -60,8 +60,8 @@
                     </div>
                     <div class="mb-3 d-none" id="addUserMemberIdWrap">
                         <label class="form-label">Linked Member ID</label>
-                        <input type="number" name="member_id" id="addUserMemberId" class="form-control" min="1" placeholder="Required for Member role">
-                        <p class="text-muted small mb-0 mt-1">The login will only see this member's profile, ledger, and downline.</p>
+                        <input type="number" name="member_id" id="addUserMemberId" class="form-control" min="1" placeholder="Required for Member; optional for Staff">
+                        <p class="text-muted small mb-0 mt-1">Required for Member logins. Optional for Staff so they can use My Marketplace share links and attributed leads.</p>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -105,7 +105,8 @@
                     </div>
                     <div class="mb-3 d-none" id="editUserMemberIdWrap">
                         <label class="form-label">Linked Member ID</label>
-                        <input type="number" name="member_id" id="editUserMemberId" class="form-control" min="1">
+                        <input type="number" name="member_id" id="editUserMemberId" class="form-control" min="1" placeholder="Required for Member; optional for Staff">
+                        <p class="text-muted small mb-0 mt-1">Required for Member. Optional for Staff (My Marketplace attribution).</p>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -129,7 +130,7 @@
 
         function toggleMemberIdField(roleSelect, wrapEl) {
             if (!roleSelect || !wrapEl) return;
-            const show = roleSelect.value === 'Member';
+            const show = roleSelect.value === 'Member' || roleSelect.value === 'Staff';
             wrapEl.classList.toggle('d-none', !show);
         }
 

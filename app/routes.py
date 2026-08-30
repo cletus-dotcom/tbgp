@@ -171,6 +171,7 @@ from app.permissions import (
     forbid_unless_own_ledger,
     member_may_access,
     require_linked_member,
+    require_marketplace_member,
 )
 from app.prof_reports_service import (
     commission_summary_report,
@@ -445,14 +446,22 @@ def marketplace_hub_shared(share_code):
 @login_required
 def my_marketplace():
     user = User.query.get(session.get("user_id"))
-    if not is_member_role(user.role):
+    if not (is_member_role(user.role) or is_staff_role(user.role)):
         return redirect(url_for("main_routes.members"))
 
-    linked_id = require_linked_member()
+    linked_id = require_marketplace_member()
     if not linked_id:
-        return access_denied_response("Your account is not linked to a member record.")
+        return access_denied_response(
+            "My Marketplace requires a linked Member ID on your account. "
+            "Ask an Admin to link your user to a member record."
+        )
 
     member = db.session.get(Member, linked_id)
+    if not member:
+        return access_denied_response(
+            "Your linked member record was not found. Ask an Admin to update your account."
+        )
+
     share_code = ensure_member_share_code(member)
     base_url = request.url_root.rstrip("/")
     share_links = {
@@ -464,7 +473,7 @@ def my_marketplace():
     leads = member_leads(linked_id)
     return render_template(
         "my_marketplace.html",
-        fullname=user.full_name or "Member",
+        fullname=user.full_name or ("Member" if is_member_role(user.role) else "Staff"),
         role=normalize_role(user.role),
         active_page="my_marketplace",
         member=member,
@@ -1969,15 +1978,25 @@ def _dashboard_user():
 
 
 def _parse_linked_member_id(role, raw_member_id):
-    if not is_member_role(role):
-        return None
+    """Parse linked member ID. Required for Member; optional for Staff (My Marketplace)."""
     text = (raw_member_id or "").strip()
-    if not text.isdigit():
-        raise ValueError("Member ID is required for Member role users.")
-    member_id = int(text)
-    if not db.session.get(Member, member_id):
-        raise ValueError(f"Member #{member_id} not found.")
-    return member_id
+    if is_member_role(role):
+        if not text.isdigit():
+            raise ValueError("Member ID is required for Member role users.")
+        member_id = int(text)
+        if not db.session.get(Member, member_id):
+            raise ValueError(f"Member #{member_id} not found.")
+        return member_id
+    if is_staff_role(role):
+        if not text:
+            return None
+        if not text.isdigit():
+            raise ValueError("Linked Member ID must be a number.")
+        member_id = int(text)
+        if not db.session.get(Member, member_id):
+            raise ValueError(f"Member #{member_id} not found.")
+        return member_id
+    return None
 
 
 def _role_assignment_error(actor_role, requested_role):

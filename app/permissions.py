@@ -67,6 +67,19 @@ def require_linked_member():
     return int(member_id)
 
 
+def require_marketplace_member():
+    """Return linked member_id for My Marketplace (Member or Staff with a linked member)."""
+    from app.config import is_staff_role
+
+    role = session.get("role")
+    if not (is_member_role(role) or is_staff_role(role)):
+        return None
+    member_id = session_member_id()
+    if not member_id:
+        return None
+    return int(member_id)
+
+
 def access_denied_response(message="Access denied."):
     if request.is_json or request.method in ("POST", "PUT", "DELETE"):
         return jsonify({"status": "error", "msg": message, "success": False}), 403

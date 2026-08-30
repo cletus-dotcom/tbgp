@@ -125,6 +125,11 @@
                     <i class="bi bi-diagram-3"></i> Hierarchy Tree
                 </a>
             </li>
+            <li>
+                <a href="{{ url_for('main_routes.my_marketplace') }}" class="{% if active_page == 'my_marketplace' %}active{% endif %}">
+                    <i class="bi bi-shop"></i> My Marketplace
+                </a>
+            </li>
             {% endif %}
         </ul>
 
