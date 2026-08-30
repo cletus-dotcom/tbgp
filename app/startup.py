@@ -13,12 +13,15 @@ def _db():
 
 
 def should_run_startup_tasks():
-    """Return False when TBGP_SKIP_STARTUP_TASKS=1 (e.g. production after first deploy)."""
+    """Return False when TBGP_SKIP_STARTUP_TASKS=1 (e.g. production after first deploy).
+
+    Schema migrations still run when this is False — only seeds/defaults are skipped.
+    """
     return os.environ.get("TBGP_SKIP_STARTUP_TASKS") != "1"
 
 
-def initialize_database():
-    """Create tables, apply lightweight migrations, and seed required defaults."""
+def run_schema_migrations():
+    """Create missing tables and apply lightweight ALTER migrations (idempotent)."""
     db = _db()
     from app import models  # noqa: F401
 
@@ -53,6 +56,12 @@ def initialize_database():
     migrate_users_table()
     migrate_commission_levels_table()
     migrate_sharing_entries_table()
+    logger.info("Schema migrations completed")
+
+
+def initialize_database():
+    """Create tables, apply lightweight migrations, and seed required defaults."""
+    run_schema_migrations()
 
     _seed_admin()
     _seed_portal_admin()

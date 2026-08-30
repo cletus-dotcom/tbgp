@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+# Avoid double-running seeds from create_app(); this script drives initialize_database.
 os.environ["TBGP_SKIP_STARTUP_TASKS"] = "1"
 os.environ.setdefault("TBGP_SKIP_DATA_SEED", "1")
 
@@ -19,6 +20,7 @@ def main():
     app = create_app()
     with app.app_context():
         db.session.rollback()
+        # create_app already ran schema migrations when SKIP=1; re-run full seeds/defaults.
         initialize_database()
         print("Startup migrations and seeds completed.")
 

@@ -195,11 +195,18 @@ def create_app():
     app.register_blueprint(main_routes)
     app.register_blueprint(site_admin_bp)
 
-    from app.startup import initialize_database, should_run_startup_tasks
+    from app.startup import (
+        initialize_database,
+        run_schema_migrations,
+        should_run_startup_tasks,
+    )
 
-    if should_run_startup_tasks():
-        with app.app_context():
+    with app.app_context():
+        if should_run_startup_tasks():
             initialize_database()
+        else:
+            # Keep schema in sync even when seeds are skipped on Render.
+            run_schema_migrations()
 
     log = logging.getLogger("werkzeug")
     log.setLevel(logging.WARNING)
