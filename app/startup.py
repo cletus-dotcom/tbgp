@@ -30,6 +30,7 @@ def run_schema_migrations():
     from app.db_migrate import (
         migrate_ad_split_members_table,
         migrate_commission_levels_table,
+        migrate_gallery_tables,
         migrate_marketplace_tables,
         migrate_member_ledger_table,
         migrate_members_table,
@@ -50,6 +51,7 @@ def run_schema_migrations():
     migrate_ad_split_members_table()
     migrate_product_commission_ad_allocations_table()
     migrate_marketplace_tables()
+    migrate_gallery_tables()
     migrate_member_ledger_table()
     migrate_payout_tables()
     migrate_payout_ompd()

@@ -42,6 +42,9 @@
                     <li class="nav-item">
                         <a class="nav-link{% if landing_nav_active == 'values' %} active{% endif %}" href="{{ url_for('main_routes.index') }}#values">Values</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link{% if landing_nav_active == 'gallery' %} active{% endif %}" href="{{ url_for('main_routes.index') }}#gallery">Gallery</a>
+                    </li>
                 </ul>
                 <div class="landing-nav-actions d-flex align-items-center flex-wrap gap-2">
                     {% with placement='nav' %}

@@ -2,7 +2,7 @@ from functools import wraps
 
 from flask import flash, jsonify, redirect, request, session, url_for
 
-from app.config import can_manage_site_content, is_admin_role, is_staff_or_admin
+from app.config import can_manage_gallery, can_manage_site_content, is_admin_role, is_staff_or_admin
 
 
 def login_required(func):
@@ -61,6 +61,23 @@ def site_admin_required(func):
                     "success": False,
                 }), 403
             flash("Access denied. Site administrators only.", "danger")
+            return redirect(url_for("main_routes.login", next=request.path))
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def gallery_admin_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not can_manage_gallery(session.get("role")):
+            if request.is_json or request.method in ("POST", "PUT", "DELETE"):
+                return jsonify({
+                    "status": "error",
+                    "msg": "Unauthorized",
+                    "success": False,
+                }), 403
+            flash("Access denied. Gallery administrators only.", "danger")
             return redirect(url_for("main_routes.login", next=request.path))
         return func(*args, **kwargs)
 

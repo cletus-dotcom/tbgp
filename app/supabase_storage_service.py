@@ -26,6 +26,7 @@ ALLOWED_IMAGE_MIME_TYPES = {
 MAX_PARTNER_IMAGE_BYTES = 5 * 1024 * 1024
 PARTNER_IMAGE_KINDS = {"thumb", "logo", "gallery"}
 MARKETPLACE_IMAGE_KINDS = {"thumb", "gallery", "hero"}
+GALLERY_IMAGE_KINDS = {"gallery"}
 
 
 def _get_supabase_client():
@@ -193,4 +194,17 @@ def upload_marketplace_image(file_storage, listing_key, image_kind):
     key = _normalize_partner_slug(listing_key)
     extension = _extension_for_upload(file_storage.filename, content_type)
     object_name = f"marketplace/{key}/{image_kind}-{uuid.uuid4().hex}{extension}"
+    return _upload_bytes(object_name, payload, content_type, image_kind)
+
+
+def upload_gallery_folder_image(file_storage, folder_slug, image_kind):
+    """Upload landing gallery image into the partner images bucket under gallery/."""
+    image_kind = (image_kind or "gallery").strip().lower()
+    if image_kind not in GALLERY_IMAGE_KINDS:
+        raise ValueError("Invalid image type.")
+
+    payload, content_type = _validate_image_upload(file_storage)
+    slug = _normalize_partner_slug(folder_slug)
+    extension = _extension_for_upload(file_storage.filename, content_type)
+    object_name = f"gallery/{slug}/{image_kind}-{uuid.uuid4().hex}{extension}"
     return _upload_bytes(object_name, payload, content_type, image_kind)

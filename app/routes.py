@@ -206,6 +206,7 @@ from app.product_commission_service import (
     delete_product_commission,
     save_product_commission,
 )
+from app.gallery_service import list_published_folders
 from app.marketplace_service import (
     create_lead,
     ensure_member_share_code,
@@ -335,6 +336,7 @@ def index():
         marketplace_categories=MARKETPLACE_CATEGORIES,
         marketplace_category_slugs=MARKETPLACE_CATEGORY_SLUGS,
         marketplace_counts=landing_featured_counts(),
+        gallery_folders=list_published_folders(),
     )
 
 

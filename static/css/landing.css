@@ -4856,3 +4856,90 @@ body.landing-body {
             opacity: 0.42;
         }
     }
+
+    /* ── Landing page gallery ── */
+    .landing-gallery {
+        position: relative;
+        padding: 4rem 0 4.5rem;
+        background:
+            radial-gradient(ellipse 50% 40% at 15% 0%, rgba(240, 165, 0, 0.08), transparent 60%),
+            radial-gradient(ellipse 45% 35% at 90% 100%, rgba(240, 165, 0, 0.05), transparent 55%),
+            #0d0f12;
+        border-top: 3px solid var(--amber);
+    }
+
+    .landing-gallery-header {
+        text-align: center;
+        max-width: 42rem;
+        margin: 0 auto 2.5rem;
+    }
+
+    .landing-gallery-header .section-subtitle {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--amber);
+        margin: 0 0 0.65rem;
+    }
+
+    .landing-gallery-header .section-title {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: clamp(1.75rem, 4vw, 2.5rem);
+        font-weight: 800;
+        color: var(--text-white);
+        line-height: 1.15;
+        margin: 0;
+        letter-spacing: 0.02em;
+    }
+
+    .landing-gallery-lead {
+        margin: 0.75rem 0 0;
+        color: var(--gray, #9aa3b0);
+        line-height: 1.55;
+    }
+
+    .landing-gallery-folder + .landing-gallery-folder {
+        margin-top: 2.75rem;
+        padding-top: 2.25rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .landing-gallery-folder-head {
+        margin-bottom: 1.25rem;
+    }
+
+    .landing-gallery-folder-head h3 {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: var(--text-white);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin: 0 0 0.35rem;
+    }
+
+    .landing-gallery-folder-head p {
+        margin: 0;
+        color: var(--text-subtle);
+        max-width: 42rem;
+        line-height: 1.5;
+    }
+
+    .landing-gallery-empty {
+        text-align: center;
+        color: var(--text-subtle);
+        margin: 0;
+        padding: 1.5rem 0;
+    }
+
+    @media (max-width: 767px) {
+        .landing-gallery {
+            padding: 3rem 0 3.5rem;
+        }
+
+        .landing-gallery-header {
+            margin-bottom: 2rem;
+        }
+    }

@@ -364,6 +364,16 @@ def can_manage_site_content(role=None):
     )
 
 
+def can_manage_gallery(role=None):
+    """Create and edit landing page gallery folders."""
+    return normalize_role(role) in (
+        USER_ROLE_PORTAL_ADMIN,
+        USER_ROLE_SITE_ADMIN,
+        USER_ROLE_ADMIN,
+        USER_ROLE_STAFF,
+    )
+
+
 def can_view_marketplace_help(role=None):
     """Marketplace & CRM help guide for operational roles (not Members)."""
     return normalize_role(role) in (

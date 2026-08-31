@@ -51,6 +51,13 @@
             <a href="{{ url_for('site_admin.marketplace_list') }}" class="btn btn-primary btn-sm">Manage listings</a>
             <a href="{{ url_for('main_routes.marketplace_category', category='products') }}" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">Preview</a>
         </article>
+
+        <article class="site-admin-card">
+            <h2><i class="bi bi-images"></i> Landing Gallery</h2>
+            <p>{{ gallery_count }} folder(s) — {{ gallery_published }} published on the home page.</p>
+            <a href="{{ url_for('site_admin.gallery_list') }}" class="btn btn-primary btn-sm">Manage gallery</a>
+            <a href="{{ url_for('main_routes.index') }}#gallery" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">Preview</a>
+        </article>
     </div>
 </div>
 {% endblock %}

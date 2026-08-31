@@ -34,6 +34,7 @@
     <aside id="sidebar" class="sidebar" aria-label="Site admin navigation">
         <p class="sidebar-label">Content</p>
         <ul class="sidebar-nav">
+            {% if can_manage_site_content(session.get('role')) %}
             <li>
                 <a href="{{ url_for('site_admin.home') }}" class="{% if active_page == 'home' %}active{% endif %}">
                     <i class="bi bi-grid"></i> Overview
@@ -79,11 +80,21 @@
                     <i class="bi bi-shop"></i> Marketplace
                 </a>
             </li>
+            {% endif %}
+            {% if can_manage_gallery(session.get('role')) %}
+            <li>
+                <a href="{{ url_for('site_admin.gallery_list') }}" class="{% if active_page == 'gallery' %}active{% endif %}">
+                    <i class="bi bi-images"></i> Gallery
+                </a>
+            </li>
+            {% endif %}
+            {% if can_access_marketplace_crm(session.get('role')) %}
             <li>
                 <a href="{{ url_for('main_routes.marketplace_crm') }}" class="{% if active_page == 'marketplace_crm' %}active{% endif %}">
                     <i class="bi bi-graph-up-arrow"></i> Marketplace CRM
                 </a>
             </li>
+            {% endif %}
         </ul>
 
         <p class="sidebar-label">Account</p>

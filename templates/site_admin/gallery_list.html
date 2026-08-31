@@ -1,0 +1,61 @@
+{% extends "site_admin/base.html" %}
+{% block page_title %}Gallery Folders{% endblock %}
+{% block topbar_title %}Landing Gallery{% endblock %}
+
+{% block content %}
+<div class="site-admin-page">
+    <p class="site-admin-lead">
+        Organize landing page photos into folders. Only <strong>Published</strong> folders appear on the home page gallery section.
+    </p>
+
+    <div class="site-admin-toolbar">
+        <a href="{{ url_for('site_admin.gallery_new') }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg"></i> Add folder
+        </a>
+        <a href="{{ url_for('main_routes.index') }}#gallery" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">
+            Preview on site
+        </a>
+    </div>
+
+    {% if folders %}
+    <div class="table-responsive">
+        <table class="table table-hover site-admin-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Slug</th>
+                    <th>Status</th>
+                    <th>Images</th>
+                    <th>Order</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for folder in folders %}
+                <tr>
+                    <td>{{ folder.title }}</td>
+                    <td><code>{{ folder.slug }}</code></td>
+                    <td>
+                        {% if folder.status == 'published' %}
+                        <span class="badge text-bg-success">Published</span>
+                        {% else %}
+                        <span class="badge text-bg-secondary">Draft</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ (folder.images or [])|length }}</td>
+                    <td>{{ folder.sort_order or 0 }}</td>
+                    <td class="text-end">
+                        <a href="{{ url_for('site_admin.gallery_edit', folder_id=folder.folder_id) }}" class="btn btn-outline-primary btn-sm">
+                            Edit
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted">No gallery folders yet. Create one to start building the landing page gallery.</p>
+    {% endif %}
+</div>
+{% endblock %}

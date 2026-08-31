@@ -75,6 +75,9 @@
                 <li class="nav-item">
                     <a class="nav-link" href="#values">Values</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#gallery">Gallery</a>
+                </li>
             </ul>
             <div class="landing-nav-actions d-flex align-items-center flex-wrap gap-2">
                 {% with placement='nav' %}
@@ -563,6 +566,43 @@
                 </div>
             </div>
         </div>
+    </div>
+</section>
+
+<section class="landing-gallery" id="gallery" aria-label="Gallery">
+    <div class="container">
+        <div class="landing-gallery-header">
+            <p class="section-subtitle">Gallery</p>
+            <h2 class="section-title">Nation-Building in Focus</h2>
+            <p class="landing-gallery-lead">Highlights from projects, partners, and programs across the TBGP network.</p>
+        </div>
+
+        {% if gallery_folders %}
+            {% for folder in gallery_folders %}
+            <div class="landing-gallery-folder">
+                <div class="landing-gallery-folder-head">
+                    <h3>{{ folder.title }}</h3>
+                    {% if folder.description %}
+                    <p>{{ folder.description }}</p>
+                    {% endif %}
+                </div>
+                {% if folder.images %}
+                <div class="gallery-grid">
+                    {% for image in folder.images %}
+                    <figure class="gallery-item">
+                        <img src="{{ image.url }}" alt="{{ image.alt or folder.title }}" loading="lazy">
+                        {% if image.alt %}
+                        <figcaption>{{ image.alt }}</figcaption>
+                        {% endif %}
+                    </figure>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+        <p class="landing-gallery-empty">Gallery albums will appear here as folders are published.</p>
+        {% endif %}
     </div>
 </section>
 

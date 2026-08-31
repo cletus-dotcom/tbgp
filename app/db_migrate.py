@@ -795,3 +795,28 @@ def _purge_retired_marketplace_sites_category():
     )
     logger.info("Removed sites executive summary from marketplace_summaries CMS")
     db.session.commit()
+
+
+def migrate_gallery_tables():
+    inspector = inspect(db.engine)
+    if "cms_gallery_folders" in inspector.get_table_names():
+        return
+
+    db.session.execute(text("""
+        CREATE TABLE cms_gallery_folders (
+            folder_id SERIAL PRIMARY KEY,
+            slug VARCHAR(80) NOT NULL UNIQUE,
+            title VARCHAR(200) NOT NULL,
+            description VARCHAR(500),
+            status VARCHAR(20) NOT NULL DEFAULT 'published',
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            images JSON NOT NULL DEFAULT '[]',
+            created_at TIMESTAMP NOT NULL,
+            updated_at TIMESTAMP NOT NULL
+        )
+    """))
+    db.session.execute(text(
+        "CREATE INDEX ix_cms_gallery_folders_status ON cms_gallery_folders (status)"
+    ))
+    logger.info("Created cms_gallery_folders table")
+    db.session.commit()

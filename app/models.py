@@ -708,6 +708,35 @@ class CmsRegistryPartner(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class CmsGalleryFolder(db.Model):
+    __tablename__ = "cms_gallery_folders"
+
+    folder_id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.String(500))
+    status = db.Column(db.String(20), nullable=False, default="published", index=True)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    images = db.Column(db.JSON, nullable=False, default=list)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    def to_dict(self):
+        return {
+            "folder_id": self.folder_id,
+            "slug": self.slug,
+            "title": self.title,
+            "description": self.description or "",
+            "status": self.status,
+            "sort_order": self.sort_order or 0,
+            "images": self.images or [],
+            "created_at": self.created_at.isoformat() if self.created_at else "",
+            "updated_at": self.updated_at.isoformat() if self.updated_at else "",
+        }
+
+
 class MarketplaceListing(db.Model):
     __tablename__ = "marketplace_listings"
 

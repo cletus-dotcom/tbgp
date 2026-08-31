@@ -1,0 +1,94 @@
+{% extends "site_admin/base.html" %}
+{% block page_title %}{% if is_new %}New Gallery Folder{% else %}Edit Gallery Folder{% endif %}{% endblock %}
+{% block topbar_title %}{% if is_new %}New gallery folder{% else %}Edit gallery folder{% endif %}{% endblock %}
+
+{% block content %}
+<div class="site-admin-page">
+    <form method="post" class="site-admin-form"
+          data-partner-image-upload-enabled="{{ 'true' if partner_image_upload_enabled else 'false' }}"
+          {% if partner_image_upload_enabled %}data-partner-image-upload-url="{{ partner_image_upload_url }}"{% endif %}>
+
+        <fieldset>
+            <legend>Folder</legend>
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label" for="title">Title</label>
+                    <input class="form-control" id="title" name="title" value="{{ folder.title }}" required maxlength="200">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="sort_order">Sort order</label>
+                    <input class="form-control" id="sort_order" name="sort_order" type="number" value="{{ folder.sort_order or 0 }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="slug">URL slug</label>
+                    <input class="form-control" id="slug" name="slug" value="{{ folder.slug }}"
+                           placeholder="e.g. project-highlights" maxlength="80">
+                    <div class="form-text">Used for image uploads and folder identification.</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="status">Status</label>
+                    <select class="form-select" id="status" name="status">
+                        {% for status in gallery_statuses %}
+                        <option value="{{ status }}" {% if folder.status == status %}selected{% endif %}>
+                            {{ status|capitalize }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="description">Description</label>
+                    <textarea class="form-control" id="description" name="description" rows="2" maxlength="500"
+                              placeholder="Optional short intro shown above this folder on the landing page.">{{ folder.description }}</textarea>
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset class="mt-4">
+            <legend>Images</legend>
+            <div class="repeater-list" data-repeater="gallery" data-fields="url,alt">
+                {% set gallery_items = folder.images if folder.images else [{'url': '', 'alt': ''}] %}
+                {% for item in gallery_items %}
+                <div class="repeater-row">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-7">
+                            <label class="form-label">Image URL</label>
+                            <div class="partner-image-field partner-image-field-inline" data-image-kind="gallery">
+                                <input class="form-control partner-image-url" name="gallery_url_{{ loop.index0 }}"
+                                       value="{{ item.url or '' }}" placeholder="https://... or upload below">
+                                {% if partner_image_upload_enabled %}
+                                <div class="partner-image-upload">
+                                    <input type="file" class="form-control form-control-sm partner-image-file" accept="image/*">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm partner-image-upload-btn">Upload</button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Alt text</label>
+                            <input class="form-control" name="gallery_alt_{{ loop.index0 }}" value="{{ item.alt or '' }}">
+                        </div>
+                        <div class="col-md-1">
+                            <button type="button" class="btn btn-outline-danger btn-sm repeater-remove" aria-label="Remove image">&times;</button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn btn-outline-secondary btn-sm mt-2 repeater-add" data-target="gallery">
+                <i class="bi bi-plus"></i> Add image
+            </button>
+        </fieldset>
+
+        <div class="site-admin-form-actions">
+            <button type="submit" class="btn btn-primary">Save folder</button>
+            <a href="{{ url_for('site_admin.gallery_list') }}" class="btn btn-outline-secondary">Back to folders</a>
+            {% if not is_new %}
+            <button type="submit" name="_action" value="delete" class="btn btn-outline-danger ms-auto"
+                    onclick="return confirm('Delete this gallery folder and all of its images?');">
+                Delete folder
+            </button>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

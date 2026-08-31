@@ -1,6 +1,6 @@
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
-from app.auth import login_required, site_admin_required
+from app.auth import gallery_admin_required, login_required, site_admin_required
 from app.config import (
     MARKETPLACE_CATEGORIES,
     MARKETPLACE_CATEGORY_SLUGS,
@@ -10,6 +10,14 @@ from app.config import (
     normalize_role,
     supabase_storage_config_error,
     supabase_storage_configured,
+)
+from app.gallery_service import (
+    GALLERY_STATUSES,
+    delete_folder,
+    get_folder,
+    list_folders_for_admin,
+    parse_folder_form,
+    save_folder,
 )
 from app.marketplace_service import (
     delete_listing,
@@ -46,6 +54,7 @@ from app.site_content_service import (
 )
 from app.user_manual_content import resolve_user_manual
 from app.supabase_storage_service import (
+    upload_gallery_folder_image as store_gallery_image,
     upload_marketplace_image as store_marketplace_image,
     upload_partner_image as store_partner_image,
 )
@@ -113,6 +122,8 @@ def _partner_edit_context(partner, registry_type, meta, is_new):
 def home():
     listings = list_all_for_admin()
     published_count = sum(1 for row in listings if row.status == "published")
+    folders = list_folders_for_admin()
+    gallery_published = sum(1 for row in folders if row.status == "published")
     return render_template(
         "site_admin/home.html",
         active_page="home",
@@ -123,6 +134,8 @@ def home():
         contact_cta=get_services_contact_cta(),
         marketplace_count=len(listings),
         marketplace_published=published_count,
+        gallery_count=len(folders),
+        gallery_published=gallery_published,
     )
 
 
@@ -548,3 +561,120 @@ def upload_marketplace_image():
 @site_admin_bp.errorhandler(413)
 def marketplace_upload_too_large(_exc):
     return jsonify({"error": "Image is too large (max 5 MB)."}), 413
+
+
+def _gallery_edit_context(folder, is_new=False):
+    payload = folder.to_dict() if hasattr(folder, "to_dict") else dict(folder)
+    image_key = payload.get("slug") or "draft"
+    return {
+        "active_page": "gallery",
+        "folder": payload,
+        "is_new": is_new,
+        "gallery_statuses": GALLERY_STATUSES,
+        "partner_image_upload_enabled": supabase_storage_configured(),
+        "partner_image_upload_url": url_for("site_admin.upload_gallery_image"),
+        "image_key": image_key,
+    }
+
+
+@site_admin_bp.route("/gallery")
+@login_required
+@gallery_admin_required
+def gallery_list():
+    folders = list_folders_for_admin()
+    return render_template(
+        "site_admin/gallery_list.html",
+        active_page="gallery",
+        folders=folders,
+    )
+
+
+@site_admin_bp.route("/gallery/new", methods=["GET", "POST"])
+@login_required
+@gallery_admin_required
+def gallery_new():
+    if request.method == "POST":
+        try:
+            data = parse_folder_form(request.form)
+            folder = save_folder(data)
+            flash("Gallery folder created.", "success")
+            return redirect(url_for("site_admin.gallery_edit", folder_id=folder.folder_id))
+        except ValueError as exc:
+            flash(str(exc), "danger")
+            draft = {
+                "title": request.form.get("title") or "",
+                "slug": request.form.get("slug") or "",
+                "description": request.form.get("description") or "",
+                "status": request.form.get("status") or "draft",
+                "sort_order": request.form.get("sort_order") or 0,
+                "images": [],
+            }
+            return render_template(
+                "site_admin/gallery_edit.html",
+                **_gallery_edit_context(draft, is_new=True),
+            )
+
+    blank = {
+        "title": "",
+        "slug": "",
+        "description": "",
+        "status": "draft",
+        "sort_order": 0,
+        "images": [],
+    }
+    return render_template(
+        "site_admin/gallery_edit.html",
+        **_gallery_edit_context(blank, is_new=True),
+    )
+
+
+@site_admin_bp.route("/gallery/<int:folder_id>/edit", methods=["GET", "POST"])
+@login_required
+@gallery_admin_required
+def gallery_edit(folder_id):
+    folder = get_folder(folder_id=folder_id)
+    if not folder:
+        flash("Gallery folder not found.", "danger")
+        return redirect(url_for("site_admin.gallery_list"))
+
+    if request.method == "POST":
+        if request.form.get("_action") == "delete":
+            delete_folder(folder_id)
+            flash("Gallery folder deleted.", "success")
+            return redirect(url_for("site_admin.gallery_list"))
+        try:
+            data = parse_folder_form(request.form, existing=folder)
+            save_folder(data, folder=folder)
+            flash("Gallery folder updated.", "success")
+            return redirect(url_for("site_admin.gallery_edit", folder_id=folder_id))
+        except ValueError as exc:
+            flash(str(exc), "danger")
+
+    return render_template(
+        "site_admin/gallery_edit.html",
+        **_gallery_edit_context(folder, is_new=False),
+    )
+
+
+@site_admin_bp.route("/gallery/image", methods=["POST"])
+@login_required
+@gallery_admin_required
+def upload_gallery_image():
+    if not supabase_storage_configured():
+        return jsonify({
+            "error": supabase_storage_config_error()
+            or "Supabase Storage is not configured on this server."
+        }), 503
+
+    file = request.files.get("file")
+    kind = (request.form.get("kind") or "gallery").strip().lower()
+    if kind != "gallery":
+        kind = "gallery"
+    slug = request.form.get("slug", "draft")
+    try:
+        result = store_gallery_image(file, slug, kind)
+        return jsonify(result)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": str(exc) or "Image upload failed. Try again or paste an image URL."}), 500
