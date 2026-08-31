@@ -445,14 +445,17 @@ body.landing-body {
     }
 
     .hero-inner {
-        padding: 2rem 1.5rem 2.25rem;
+        display: flex;
+        flex-direction: column;
+        min-height: calc(100dvh - var(--landing-header) - 1.5rem);
+        padding: 2rem 1.5rem 2.5rem;
     }
 
     .hero-content {
         position: relative;
         max-width: min(920px, 100%);
         text-align: left;
-        margin-bottom: 1.75rem;
+        margin-bottom: 2.75rem;
     }
 
     .hero-content h1 {
@@ -604,8 +607,8 @@ body.landing-body {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         justify-items: center;
         align-items: stretch;
-        gap: 0.65rem 0.75rem;
-        margin-top: 0;
+        gap: 0.75rem 0.85rem;
+        margin-top: 1.25rem;
         width: 100%;
         max-width: none;
         perspective: 980px;
@@ -765,45 +768,45 @@ body.landing-body {
     }
 
     .hero-pastel-card--isa {
-        --glass-tint: rgba(247, 226, 196, 0.42);
-        --glass-tint-deep: rgba(232, 181, 122, 0.22);
+        --glass-tint: rgba(255, 122, 89, 0.58);
+        --glass-tint-deep: rgba(255, 87, 51, 0.34);
         background:
-            linear-gradient(155deg, rgba(247, 226, 196, 0.48) 0%, rgba(239, 201, 154, 0.28) 48%, rgba(232, 181, 122, 0.16) 100%);
+            linear-gradient(155deg, rgba(255, 122, 89, 0.72) 0%, rgba(255, 154, 118, 0.48) 48%, rgba(255, 87, 51, 0.28) 100%);
     }
 
     .hero-pastel-card--network {
-        --glass-tint: rgba(213, 236, 232, 0.42);
-        --glass-tint-deep: rgba(156, 207, 199, 0.22);
+        --glass-tint: rgba(45, 212, 191, 0.58);
+        --glass-tint-deep: rgba(20, 184, 166, 0.34);
         background:
-            linear-gradient(155deg, rgba(213, 236, 232, 0.48) 0%, rgba(183, 221, 215, 0.28) 48%, rgba(156, 207, 199, 0.16) 100%);
+            linear-gradient(155deg, rgba(45, 212, 191, 0.72) 0%, rgba(94, 234, 212, 0.48) 48%, rgba(20, 184, 166, 0.28) 100%);
     }
 
     .hero-pastel-card--growth {
-        --glass-tint: rgba(243, 224, 207, 0.42);
-        --glass-tint-deep: rgba(223, 181, 143, 0.22);
+        --glass-tint: rgba(251, 146, 60, 0.58);
+        --glass-tint-deep: rgba(249, 115, 22, 0.34);
         background:
-            linear-gradient(155deg, rgba(243, 224, 207, 0.48) 0%, rgba(232, 201, 173, 0.28) 48%, rgba(223, 181, 143, 0.16) 100%);
+            linear-gradient(155deg, rgba(251, 146, 60, 0.72) 0%, rgba(253, 186, 116, 0.48) 48%, rgba(249, 115, 22, 0.28) 100%);
     }
 
     .hero-pastel-card--members {
-        --glass-tint: rgba(210, 220, 236, 0.42);
-        --glass-tint-deep: rgba(140, 160, 190, 0.22);
+        --glass-tint: rgba(96, 165, 250, 0.58);
+        --glass-tint-deep: rgba(59, 130, 246, 0.34);
         background:
-            linear-gradient(155deg, rgba(210, 220, 236, 0.48) 0%, rgba(175, 190, 215, 0.28) 48%, rgba(140, 160, 190, 0.16) 100%);
+            linear-gradient(155deg, rgba(96, 165, 250, 0.72) 0%, rgba(125, 211, 252, 0.48) 48%, rgba(59, 130, 246, 0.28) 100%);
     }
 
     .hero-pastel-card--capital {
-        --glass-tint: rgba(236, 224, 200, 0.42);
-        --glass-tint-deep: rgba(196, 170, 120, 0.22);
+        --glass-tint: rgba(232, 121, 249, 0.58);
+        --glass-tint-deep: rgba(192, 132, 252, 0.34);
         background:
-            linear-gradient(155deg, rgba(236, 224, 200, 0.48) 0%, rgba(216, 196, 150, 0.28) 48%, rgba(196, 170, 120, 0.16) 100%);
+            linear-gradient(155deg, rgba(232, 121, 249, 0.72) 0%, rgba(240, 171, 252, 0.48) 48%, rgba(192, 132, 252, 0.28) 100%);
     }
 
     .hero-pastel-card--pipeline {
-        --glass-tint: rgba(218, 230, 210, 0.42);
-        --glass-tint-deep: rgba(150, 175, 140, 0.22);
+        --glass-tint: rgba(163, 230, 53, 0.58);
+        --glass-tint-deep: rgba(132, 204, 22, 0.34);
         background:
-            linear-gradient(155deg, rgba(218, 230, 210, 0.48) 0%, rgba(184, 205, 172, 0.28) 48%, rgba(150, 175, 140, 0.16) 100%);
+            linear-gradient(155deg, rgba(163, 230, 53, 0.72) 0%, rgba(190, 242, 100, 0.48) 48%, rgba(132, 204, 22, 0.28) 100%);
     }
 
     .hero-pastel-card-art {
@@ -984,14 +987,54 @@ body.landing-body {
             opacity: 0.55;
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.55), rgba(240, 165, 0, 0.65), transparent 70%);
         }
+
+        .hero-stats-divider {
+            animation: none;
+            background-position: 50% 50%;
+        }
     }
 
     /* ── Hero network stats strip ── */
+    .hero-stats-block {
+        margin-top: auto;
+        padding-top: 2.25rem;
+        width: 100%;
+    }
+
+    .hero-stats-divider {
+        height: 3px;
+        width: 100%;
+        margin: 0 0 1.65rem;
+        border-radius: 999px;
+        background: linear-gradient(
+            90deg,
+            #f0a500 0%,
+            #ff6b4a 16%,
+            #2dd4bf 32%,
+            #60a5fa 48%,
+            #e879f9 64%,
+            #a3e635 80%,
+            #f0a500 100%
+        );
+        background-size: 220% 100%;
+        box-shadow: 0 0 14px rgba(240, 165, 0, 0.35);
+        animation: hero-stats-divider-shift 6s linear infinite;
+    }
+
+    .hero-overlay.is-landed .hero-stats-divider {
+        box-shadow: 0 0 10px rgba(240, 165, 0, 0.22);
+    }
+
+    @keyframes hero-stats-divider-shift {
+        0% { background-position: 0% 50%; }
+        100% { background-position: 220% 50%; }
+    }
+
     .hero-stats {
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 0;
-        margin-top: 1.35rem;
+        margin-top: 0;
         width: 100%;
         border: 1px solid rgba(255, 255, 255, 0.14);
         border-radius: 0.35rem;
@@ -1996,9 +2039,13 @@ body.landing-body {
     }
 
     @media (min-width: 768px) {
+        .hero-content {
+            margin-bottom: 3.25rem;
+        }
+
         .hero-pastel-cards {
-            gap: 0.85rem 1rem;
-            margin-top: 1.25rem;
+            gap: 0.9rem 1.05rem;
+            margin-top: 1.75rem;
         }
 
         .hero-pastel-card {
@@ -3769,14 +3816,26 @@ body.landing-body {
 
     @media (min-width: 768px) {
         body.landing-body { padding-top: 76px; --landing-header: 76px; }
-        .hero-inner { padding: 2.5rem 3rem 2.5rem; }
+        .hero-inner { padding: 2.5rem 3rem 2.75rem; }
         .portal-section { padding: 4rem 2rem 5rem; }
         .ecosystem-overlay-inner { padding: 4rem 2rem 3rem; }
         .portal-grid { grid-template-columns: 1fr 1fr; }
     }
 
     @media (min-width: 992px) {
-        .hero-inner { padding: 3rem 3rem 3rem; }
+        .hero-inner { padding: 3rem 3rem 3.25rem; }
+
+        .hero-content {
+            margin-bottom: 3.75rem;
+        }
+
+        .hero-pastel-cards {
+            margin-top: 2rem;
+        }
+
+        .hero-stats-block {
+            padding-top: 2.75rem;
+        }
         .landing-footer .row > div { margin-bottom: 0; }
     }
 
