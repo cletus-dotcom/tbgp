@@ -5206,6 +5206,45 @@ body.landing-body {
         text-wrap: pretty;
     }
 
+    .landing-disclaimer-contacts {
+        list-style: none;
+        margin: 0 0 0.95rem;
+        padding: 0 0 0.9rem;
+        border-top: none;
+        border-bottom: 1px solid rgba(20, 17, 14, 0.08);
+        display: grid;
+        gap: 0.55rem;
+        justify-items: center;
+        text-align: center;
+    }
+
+    .landing-disclaimer-contacts li {
+        display: grid;
+        gap: 0.1rem;
+        justify-items: center;
+    }
+
+    .landing-disclaimer-contact-label {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #6b7280;
+    }
+
+    .landing-disclaimer-contacts a {
+        color: #9f1239;
+        font-weight: 700;
+        text-decoration: none;
+        word-break: break-word;
+    }
+
+    .landing-disclaimer-contacts a:hover {
+        color: #b45309;
+        text-decoration: underline;
+    }
+
     .landing-disclaimer-closing {
         margin: 0;
         font-weight: 600;

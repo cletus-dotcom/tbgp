@@ -476,6 +476,8 @@
     </div>
 </section>
 
+{# Cooperative ecosystem section temporarily hidden on landing #}
+{% if false %}
 <section class="ecosystem-stage" id="ecosystem-pillars">
     <div class="ecosystem-overlay" data-eco-parallax-overlay>
         <div class="container ecosystem-overlay-inner">
@@ -531,6 +533,7 @@
 
     <div class="ecosystem-land" data-eco-parallax-land aria-hidden="true"></div>
 </section>
+{% endif %}
 
 <section class="portal-section" id="portals">
     <div class="container">
@@ -876,14 +879,6 @@
             media: "[data-mp-parallax-media]",
             overlay: "[data-mp-parallax-overlay]",
             heightVar: "--mp-overlay-height",
-            landMode: "strict",
-        });
-        initParallaxStage({
-            stage: ".ecosystem-stage",
-            hero: "[data-eco-parallax-hero]",
-            media: "[data-eco-parallax-media]",
-            overlay: "[data-eco-parallax-overlay]",
-            heightVar: "--eco-overlay-height",
             landMode: "strict",
         });
     })();
