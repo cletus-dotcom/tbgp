@@ -10,7 +10,15 @@
     border-top: 1px solid rgba(240, 165, 0, 0.28);
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.35);
     backdrop-filter: blur(8px);
-    transition: transform 0.25s ease, opacity 0.25s ease;
+    transition: transform 0.28s ease, opacity 0.28s ease;
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.bgm-taskbar.is-autohidden {
+    transform: translateY(calc(100% + 0.5rem));
+    opacity: 0;
+    pointer-events: none;
 }
 
 .bgm-taskbar[hidden] {

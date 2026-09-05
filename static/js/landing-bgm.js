@@ -30,6 +30,9 @@
     var statusEl = null;
     var volumeBeforeMute = DEFAULT_VOLUME;
     var controlsReady = false;
+    var autoHideTimer = null;
+    var AUTO_HIDE_MS = 2400;
+    var scrollRevealBound = false;
 
     function clampVolume(value) {
         var num = Number(value);
@@ -145,21 +148,83 @@
         hideTaskbarEnded();
     }
 
+    function clearAutoHide() {
+        if (autoHideTimer) {
+            window.clearTimeout(autoHideTimer);
+            autoHideTimer = null;
+        }
+    }
+
+    function isTaskbarInteractive() {
+        if (!taskbar || taskbar.hidden) {
+            return false;
+        }
+        if (taskbar.matches(":hover")) {
+            return true;
+        }
+        return Boolean(taskbar.contains(document.activeElement));
+    }
+
+    function setTaskbarAutohidden(hidden) {
+        if (!taskbar || taskbar.hidden) {
+            return;
+        }
+        taskbar.classList.toggle("is-autohidden", hidden);
+        document.body.classList.toggle("bgm-taskbar-active", !hidden);
+    }
+
+    function scheduleTaskbarAutoHide() {
+        if (!taskbar || taskbar.hidden || taskbar.classList.contains("is-ended")) {
+            return;
+        }
+        clearAutoHide();
+        autoHideTimer = window.setTimeout(function () {
+            autoHideTimer = null;
+            if (isTaskbarInteractive()) {
+                scheduleTaskbarAutoHide();
+                return;
+            }
+            setTaskbarAutohidden(true);
+        }, AUTO_HIDE_MS);
+    }
+
+    function revealTaskbarOnActivity() {
+        if (!taskbar || taskbar.hidden || taskbar.classList.contains("is-ended")) {
+            return;
+        }
+        setTaskbarAutohidden(false);
+        scheduleTaskbarAutoHide();
+    }
+
+    function bindScrollReveal() {
+        if (scrollRevealBound) {
+            return;
+        }
+        scrollRevealBound = true;
+        window.addEventListener("scroll", revealTaskbarOnActivity, { passive: true });
+        window.addEventListener("wheel", revealTaskbarOnActivity, { passive: true });
+        window.addEventListener("touchmove", revealTaskbarOnActivity, { passive: true });
+    }
+
     function showTaskbar() {
         if (!taskbar) {
             return;
         }
         taskbar.hidden = false;
         taskbar.classList.remove("is-ended");
-        document.body.classList.add("bgm-taskbar-active");
+        setTaskbarAutohidden(false);
+        bindScrollReveal();
         updateTaskbarUI();
+        scheduleTaskbarAutoHide();
     }
 
     function hideTaskbarEnded() {
         if (!taskbar) {
             return;
         }
+        clearAutoHide();
         taskbar.classList.add("is-ended");
+        taskbar.classList.remove("is-autohidden");
         if (statusEl) {
             statusEl.textContent = "Finished";
         }
@@ -210,18 +275,6 @@
         applyVolume();
         controlsReady = true;
 
-        muteBtn.addEventListener("click", function () {
-            setMuted(!isMuted());
-        });
-
-        volDownBtn?.addEventListener("click", function () {
-            adjustVolume(-VOLUME_STEP);
-        });
-
-        volUpBtn?.addEventListener("click", function () {
-            adjustVolume(VOLUME_STEP);
-        });
-
         volSlider.addEventListener("input", function () {
             if (isMuted()) {
                 setMuted(false);
@@ -229,6 +282,40 @@
             saveVolumeSetting(percentToVolume(parseInt(volSlider.value, 10)));
             applyVolume();
             updateTaskbarUI();
+            revealTaskbarOnActivity();
+        });
+
+        taskbar.addEventListener("mouseenter", function () {
+            clearAutoHide();
+            setTaskbarAutohidden(false);
+        });
+        taskbar.addEventListener("mouseleave", function () {
+            scheduleTaskbarAutoHide();
+        });
+        taskbar.addEventListener("focusin", function () {
+            clearAutoHide();
+            setTaskbarAutohidden(false);
+        });
+        taskbar.addEventListener("focusout", function () {
+            window.setTimeout(function () {
+                if (!isTaskbarInteractive()) {
+                    scheduleTaskbarAutoHide();
+                }
+            }, 0);
+        });
+        muteBtn.addEventListener("click", function () {
+            setMuted(!isMuted());
+            revealTaskbarOnActivity();
+        });
+
+        volDownBtn?.addEventListener("click", function () {
+            adjustVolume(-VOLUME_STEP);
+            revealTaskbarOnActivity();
+        });
+
+        volUpBtn?.addEventListener("click", function () {
+            adjustVolume(VOLUME_STEP);
+            revealTaskbarOnActivity();
         });
     }
 

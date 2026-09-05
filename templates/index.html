@@ -536,38 +536,42 @@
     <div class="container">
         <h4>Choose your portal</h4>
 
-        <div class="portal-cards">
-            <div class="portal-card">
-                <h5>Members Management System</h5>
-                <p class="portal-desc">Track members, referrals, and hierarchy across every batch.</p>
-                <div class="btn-row">
-                    <a href="{{ url_for('main_routes.login', next='/members') }}" class="btn-proceed">Proceed</a>
-                </div>
-            </div>
+        <div class="portal-list" role="list">
+            <a href="{{ url_for('main_routes.login', next='/members') }}" class="portal-line" role="listitem">
+                <span class="portal-line-icon" aria-hidden="true"><i class="bi bi-people"></i></span>
+                <span class="portal-line-copy">
+                    <span class="portal-line-title">Members Management System</span>
+                    <span class="portal-line-desc">Track members, referrals, and hierarchy across every batch.</span>
+                </span>
+                <span class="portal-line-action">Proceed <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+            </a>
 
-            <div class="portal-card">
-                <h5>Lowbed Hub</h5>
-                <p class="portal-desc">Coordinate lowbed fleet operations and logistics in one hub.</p>
-                <div class="btn-row">
-                    <a href="#" class="btn-proceed" data-coming-soon>Proceed</a>
-                </div>
-            </div>
+            <a href="#" class="portal-line" role="listitem" data-coming-soon>
+                <span class="portal-line-icon" aria-hidden="true"><i class="bi bi-truck"></i></span>
+                <span class="portal-line-copy">
+                    <span class="portal-line-title">Lowbed Hub</span>
+                    <span class="portal-line-desc">Coordinate lowbed fleet operations and logistics in one hub.</span>
+                </span>
+                <span class="portal-line-action">Soon <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+            </a>
 
-            <div class="portal-card">
-                <h5>Success Showcase</h5>
-                <p class="portal-desc">Spotlight achievements and growth across the network.</p>
-                <div class="btn-row">
-                    <a href="#" class="btn-proceed" data-coming-soon>Proceed</a>
-                </div>
-            </div>
+            <a href="#" class="portal-line" role="listitem" data-coming-soon>
+                <span class="portal-line-icon" aria-hidden="true"><i class="bi bi-trophy"></i></span>
+                <span class="portal-line-copy">
+                    <span class="portal-line-title">Success Showcase</span>
+                    <span class="portal-line-desc">Spotlight achievements and growth across the network.</span>
+                </span>
+                <span class="portal-line-action">Soon <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+            </a>
 
-            <div class="portal-card">
-                <h5>INFORMATION POOL MANAGEMENT SYSTEM</h5>
-                <p class="portal-desc">Centralize shared knowledge, updates, and operational resources.</p>
-                <div class="btn-row">
-                    <a href="#" class="btn-proceed" data-coming-soon>Proceed</a>
-                </div>
-            </div>
+            <a href="#" class="portal-line" role="listitem" data-coming-soon>
+                <span class="portal-line-icon" aria-hidden="true"><i class="bi bi-collection"></i></span>
+                <span class="portal-line-copy">
+                    <span class="portal-line-title">Information Pool Management System</span>
+                    <span class="portal-line-desc">Centralize shared knowledge, updates, and operational resources.</span>
+                </span>
+                <span class="portal-line-action">Soon <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+            </a>
         </div>
     </div>
 </section>
@@ -608,6 +612,8 @@
         {% endif %}
     </div>
 </section>
+
+{% include 'partials/landing_disclaimer.html' %}
 
 <footer class="landing-footer" id="contacts">
     <div class="container">
