@@ -236,83 +236,66 @@
     <div class="hero-land" data-parallax-land aria-hidden="true"></div>
 </div>
 
-<div class="marketplace-stage" id="marketplace">
-    <div class="marketplace-overlay" data-mp-parallax-overlay>
-        <div class="container marketplace-overlay-inner">
-            <header class="marketplace-showcase-header">
-                <p class="section-subtitle">Marketplace</p>
-                <h2 class="section-title">Products, services, and real property</h2>
-                <p class="marketplace-showcase-lead">
-                    Browse featured opportunities in order: Products, Services, then Real Property.
-                    Members can share their marketplace link so guest inquiries are logged to their CRM.
-                </p>
-            </header>
+<section class="marketplace-section" id="marketplace" aria-label="Marketplace">
+    <div class="container marketplace-section-inner">
+        <header class="marketplace-showcase-header">
+            <p class="section-subtitle">Marketplace</p>
+            <h2 class="section-title">Products, services, and real property</h2>
+            <p class="marketplace-showcase-lead">
+                Browse featured opportunities in order: Products, Services, then Real Property.
+                Members can share their marketplace link so guest inquiries are logged to their CRM.
+            </p>
+        </header>
 
-            <div id="marketplaceCarousel" class="carousel slide marketplace-carousel" data-bs-ride="carousel" data-bs-interval="7000">
-                <div class="carousel-inner">
-                    {% for slug in marketplace_category_slugs %}
-                    {% set meta = marketplace_categories[slug] %}
-                    <div class="carousel-item {% if loop.first %}active{% endif %}">
-                        <a href="{{ url_for('main_routes.marketplace_category', category=slug) }}" class="marketplace-carousel-card">
-                            <div class="marketplace-carousel-icon" aria-hidden="true">
-                                <i class="bi {{ meta.icon }}"></i>
-                            </div>
-                            <div class="marketplace-carousel-copy">
-                                <p class="marketplace-carousel-label">{{ meta.label }}</p>
-                                <h3>{{ meta.tagline }}</h3>
-                                <p class="marketplace-carousel-meta">
-                                    {{ marketplace_counts.get(slug, 0) }} published listing{{ 's' if marketplace_counts.get(slug, 0) != 1 else '' }}
-                                </p>
-                                <span class="marketplace-carousel-cta">Open marketplace <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
-                            </div>
-                        </a>
-                    </div>
-                    {% endfor %}
-                </div>
-                <button class="carousel-control-prev" type="button" data-bs-target="#marketplaceCarousel" data-bs-slide="prev">
-                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Previous</span>
-                </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#marketplaceCarousel" data-bs-slide="next">
-                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Next</span>
-                </button>
-                <div class="carousel-indicators">
-                    {% for slug in marketplace_category_slugs %}
-                    <button type="button" data-bs-target="#marketplaceCarousel" data-bs-slide-to="{{ loop.index0 }}"
-                            {% if loop.first %}class="active" aria-current="true"{% endif %}
-                            aria-label="{{ marketplace_categories[slug].label }}"></button>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <div class="marketplace-showcase-grid">
+        <div id="marketplaceCarousel" class="carousel slide marketplace-carousel" data-bs-ride="carousel" data-bs-interval="7000">
+            <div class="carousel-inner">
                 {% for slug in marketplace_category_slugs %}
                 {% set meta = marketplace_categories[slug] %}
-                <a href="{{ url_for('main_routes.marketplace_category', category=slug) }}" class="marketplace-pillar-link">
-                    <i class="bi {{ meta.icon }}" aria-hidden="true"></i>
-                    <span>{{ meta.label }}</span>
-                </a>
+                <div class="carousel-item {% if loop.first %}active{% endif %}">
+                    <a href="{{ url_for('main_routes.marketplace_category', category=slug) }}" class="marketplace-carousel-card">
+                        <div class="marketplace-carousel-icon" aria-hidden="true">
+                            <i class="bi {{ meta.icon }}"></i>
+                        </div>
+                        <div class="marketplace-carousel-copy">
+                            <p class="marketplace-carousel-label">{{ meta.label }}</p>
+                            <h3>{{ meta.tagline }}</h3>
+                            <p class="marketplace-carousel-meta">
+                                {{ marketplace_counts.get(slug, 0) }} published listing{{ 's' if marketplace_counts.get(slug, 0) != 1 else '' }}
+                            </p>
+                            <span class="marketplace-carousel-cta">Open marketplace <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#marketplaceCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#marketplaceCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
+            <div class="carousel-indicators">
+                {% for slug in marketplace_category_slugs %}
+                <button type="button" data-bs-target="#marketplaceCarousel" data-bs-slide-to="{{ loop.index0 }}"
+                        {% if loop.first %}class="active" aria-current="true"{% endif %}
+                        aria-label="{{ marketplace_categories[slug].label }}"></button>
                 {% endfor %}
             </div>
         </div>
-    </div>
 
-    <section class="marketplace-media-shell" data-mp-parallax-hero aria-hidden="true">
-        <div class="marketplace-media-clip">
-            <div class="marketplace-media" data-mp-parallax-media>
-                <img class="marketplace-bg"
-                     src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=1600&q=80"
-                     alt=""
-                     decoding="async"
-                     loading="lazy">
-                <div class="marketplace-scrim"></div>
-            </div>
+        <div class="marketplace-showcase-grid">
+            {% for slug in marketplace_category_slugs %}
+            {% set meta = marketplace_categories[slug] %}
+            <a href="{{ url_for('main_routes.marketplace_category', category=slug) }}" class="marketplace-pillar-link">
+                <i class="bi {{ meta.icon }}" aria-hidden="true"></i>
+                <span>{{ meta.label }}</span>
+            </a>
+            {% endfor %}
         </div>
-    </section>
-
-    <div class="marketplace-land" data-mp-parallax-land aria-hidden="true"></div>
-</div>
+    </div>
+</section>
 
 <section class="mission-section" id="mission" aria-labelledby="missionHeading">
     <div class="container">
@@ -871,14 +854,6 @@
             media: "[data-parallax-media]",
             overlay: "[data-parallax-overlay]",
             heightVar: "--overlay-height",
-            landMode: "strict",
-        });
-        initParallaxStage({
-            stage: ".marketplace-stage",
-            hero: "[data-mp-parallax-hero]",
-            media: "[data-mp-parallax-media]",
-            overlay: "[data-mp-parallax-overlay]",
-            heightVar: "--mp-overlay-height",
             landMode: "strict",
         });
     })();
