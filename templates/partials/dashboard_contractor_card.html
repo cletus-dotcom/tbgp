@@ -1,0 +1,46 @@
+{# Contractor dashboard: expects `contractor` and `contractor_summary` (contractor_dashboard_summary()). #}
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-building-gear"></i> {{ contractor.company_name if contractor else 'My projects' }}</h5>
+            <p class="section-subtitle mb-0">Projects TBGP assigned to you.</p>
+        </div>
+        <a href="{{ url_for('main_routes.contractor_projects_list') }}" class="btn btn-sm btn-brand">My projects</a>
+    </div>
+    {% if not contractor_summary %}
+    <div class="alert alert-warning mb-0">Your account is not linked to a contractor record yet. Ask the TBGP administrator to link it in Manage Users.</div>
+    {% else %}
+    <div class="row g-2 mb-3">
+        <div class="col-4"><div class="prj-kpi"><div class="prj-kpi-label">All projects</div><div class="prj-kpi-value">{{ contractor_summary.total }}</div></div></div>
+        <div class="col-4"><div class="prj-kpi"><div class="prj-kpi-label">Active</div><div class="prj-kpi-value">{{ contractor_summary.active|length }}</div></div></div>
+        <div class="col-4"><div class="prj-kpi"><div class="prj-kpi-label">Completed / closed</div><div class="prj-kpi-value">{{ contractor_summary.completed }}</div></div></div>
+    </div>
+    {% if contractor_summary.active %}
+    <h6 class="stats-section-title"><i class="bi bi-graph-up-arrow"></i> Report progress</h6>
+    <ul class="list-unstyled notice-dashboard-list">
+        {% for lead in contractor_summary.active %}
+        <li class="notice-dashboard-item">
+            <a href="{{ url_for('main_routes.contractor_project_detail', lead_id=lead.lead_id) }}" class="notice-dashboard-link">
+                <span class="trx-status trx-{{ lead.status or 'new' }}">{{ lead.reference_number }}</span>
+                <span class="notice-dashboard-title">{{ lead.display_item|truncate(60) }}</span>
+                <span class="notice-dashboard-meta text-muted">{{ lead.progress_percent if lead.progress_percent is not none else 0 }}% complete</span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% if contractor_summary.events %}
+    <h6 class="stats-section-title"><i class="bi bi-calendar-event"></i> Upcoming site visits &amp; meetings</h6>
+    <ul class="list-unstyled mb-0 notice-dashboard-list">
+        {% for event in contractor_summary.events %}
+        <li class="notice-dashboard-item">
+            <a href="{{ url_for('main_routes.contractor_project_detail', lead_id=event.lead_id) }}" class="notice-dashboard-link">
+                <span class="notice-dashboard-title">{{ event.title|truncate(60) }} <span class="small text-muted fw-normal">{{ event.lead.reference_number }}</span></span>
+                <span class="notice-dashboard-meta text-muted">{{ event.starts_at.strftime('%b %d %I:%M %p') }}</span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% endif %}
+</div>

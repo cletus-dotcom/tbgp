@@ -1,15 +1,33 @@
+import re
 from datetime import datetime
 from decimal import Decimal
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db
+from app.timeutil import manila_now, manila_today
 
 
 def _money(value):
     if value is None:
         return None
     return round(float(value), 2)
+
+
+_PHONE_RE = re.compile(r"\+?\d[\d\s\-()]{5,}\d")
+_EMAIL_RE = re.compile(r"[^@\s|/,;]+@[^@\s|/,;]+\.[A-Za-z]{2,}")
+
+
+def _first_phone(text):
+    match = _PHONE_RE.search(text or "")
+    if not match:
+        return ""
+    return re.sub(r"[^\d+]", "", match.group(0))
+
+
+def _first_email(text):
+    match = _EMAIL_RE.search(text or "")
+    return match.group(0) if match else ""
 
 
 class User(db.Model):
@@ -21,17 +39,55 @@ class User(db.Model):
     full_name = db.Column(db.String(120))
     role = db.Column(db.String(20), default="Admin")
     status = db.Column(db.String(20), default="Active")
+    department = db.Column(db.String(40), nullable=True)
     member_id = db.Column(db.Integer, db.ForeignKey("members.member_id"), nullable=True)
+    # Contractor-role logins: the portal contractor company they act for.
+    contractor_id = db.Column(
+        db.Integer, db.ForeignKey("contractors.contractor_id", ondelete="SET NULL"), nullable=True
+    )
+    # Supplier-role logins: the portal supplier company they act for.
+    supplier_id = db.Column(
+        db.Integer, db.ForeignKey("suppliers.supplier_id", ondelete="SET NULL"), nullable=True
+    )
     comfort_text_size = db.Column(db.String(20), default="standard", nullable=False)
     comfort_high_contrast = db.Column(db.Boolean, default=False, nullable=False)
 
     linked_member = db.relationship("Member", foreign_keys=[member_id])
+    linked_contractor = db.relationship("Contractor", foreign_keys=[contractor_id])
+    linked_supplier = db.relationship("Supplier", foreign_keys=[supplier_id])
+    duty_rows = db.relationship(
+        "UserDuty", back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+    )
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    @property
+    def duty_keys(self):
+        return {row.duty for row in self.duty_rows}
+
+    def has_duty(self, duty):
+        return duty in self.duty_keys
+
+
+class UserDuty(db.Model):
+    """A work duty (e.g. Project Coordinator) held by a user on top of their login role."""
+
+    __tablename__ = "user_duties"
+
+    duty_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    duty = db.Column(db.String(40), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=manila_now)
+
+    __table_args__ = (db.UniqueConstraint("user_id", "duty", name="uq_user_duties_user_duty"),)
+
+    user = db.relationship("User", back_populates="duty_rows")
 
 
 class Member(db.Model):
@@ -73,6 +129,16 @@ class Member(db.Model):
     beneficiary_relationship = db.Column(db.String(80))
 
     referrer = db.relationship("Member", remote_side=[member_id], backref="referrals")
+    positions = db.relationship(
+        "MemberPosition",
+        backref="member",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    def positions_by_department(self):
+        """Map department name -> MemberPosition for this member."""
+        return {row.department: row for row in self.positions}
 
     @property
     def full_name(self):
@@ -140,6 +206,7 @@ class Member(db.Model):
             "age": self.age,
             "id_picture_location": self.id_picture_location,
             "beneficiary_relationship": self.beneficiary_relationship,
+            "positions": {row.department: row.position_id for row in self.positions},
         }
 
     def to_dict(self):
@@ -180,6 +247,10 @@ class Member(db.Model):
             self.beneficiary_phone or "",
             self.termination_type or "",
         ]
+        for row in self.positions:
+            parts.append(row.department)
+            if row.position:
+                parts.append(row.position.title)
         if self.number_of_dependents is not None:
             parts.append(str(self.number_of_dependents))
         if self.referrer:
@@ -280,6 +351,7 @@ class ProjectCommission(db.Model):
     contractor_id = db.Column(db.Integer, db.ForeignKey("contractors.contractor_id"), nullable=False)
     client_referrer_id = db.Column(db.Integer, db.ForeignKey("members.member_id"), nullable=False)
     contractor_referrer_id = db.Column(db.Integer, db.ForeignKey("members.member_id"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=True, default=manila_now)
 
     contractor = db.relationship("Contractor", backref="project_commissions")
     client_referrer = db.relationship("Member", foreign_keys=[client_referrer_id])
@@ -367,9 +439,9 @@ class AdSplitMember(db.Model):
         db.Integer, db.ForeignKey("members.member_id"), nullable=False, unique=True
     )
     description = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=manila_now)
     updated_at = db.Column(
-        db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, nullable=False, default=manila_now, onupdate=manila_now
     )
     created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=True)
 
@@ -555,7 +627,7 @@ class ProductCommission(db.Model):
     total_shared = db.Column(db.Numeric(14, 2), default=0)
     total_mandate = db.Column(db.Numeric(14, 2), default=0)
 
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=manila_now)
     created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=True)
 
     ref_seller = db.relationship("Member", foreign_keys=[ref_seller_id])
@@ -686,7 +758,7 @@ class CmsLandingSection(db.Model):
 
     section_key = db.Column(db.String(64), primary_key=True)
     data = db.Column(db.JSON, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=manila_now, onupdate=manila_now)
 
 
 class CmsEcosystemPage(db.Model):
@@ -694,7 +766,7 @@ class CmsEcosystemPage(db.Model):
 
     slug = db.Column(db.String(40), primary_key=True)
     data = db.Column(db.JSON, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=manila_now, onupdate=manila_now)
 
 
 class CmsRegistryPartner(db.Model):
@@ -705,7 +777,7 @@ class CmsRegistryPartner(db.Model):
     partner_type = db.Column(db.String(20), nullable=False)
     sort_order = db.Column(db.Integer, default=0, nullable=False)
     data = db.Column(db.JSON, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=manila_now, onupdate=manila_now)
 
 
 class CmsGalleryFolder(db.Model):
@@ -718,9 +790,9 @@ class CmsGalleryFolder(db.Model):
     status = db.Column(db.String(20), nullable=False, default="published", index=True)
     sort_order = db.Column(db.Integer, nullable=False, default=0)
     images = db.Column(db.JSON, nullable=False, default=list)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=manila_now)
     updated_at = db.Column(
-        db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, nullable=False, default=manila_now, onupdate=manila_now
     )
 
     def to_dict(self):
@@ -754,16 +826,17 @@ class MarketplaceListing(db.Model):
     contact_phone = db.Column(db.String(40))
     contact_email = db.Column(db.String(120))
     sort_order = db.Column(db.Integer, nullable=False, default=0)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=manila_now)
     updated_at = db.Column(
-        db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, nullable=False, default=manila_now, onupdate=manila_now
     )
     created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=True)
 
     leads = db.relationship(
         "MarketplaceLead",
         backref="listing",
-        cascade="all, delete-orphan",
+        cascade="save-update, merge",
+        passive_deletes=True,
         order_by="MarketplaceLead.created_at.desc()",
     )
     created_by = db.relationship("User", foreign_keys=[created_by_user_id])
@@ -794,23 +867,96 @@ class MarketplaceLead(db.Model):
 
     lead_id = db.Column(db.Integer, primary_key=True)
     listing_id = db.Column(
-        db.Integer, db.ForeignKey("marketplace_listings.listing_id"), nullable=True
+        db.Integer,
+        db.ForeignKey("marketplace_listings.listing_id", ondelete="SET NULL"),
+        nullable=True,
     )
     interest_category = db.Column(db.String(40), nullable=True, index=True)
     attributed_member_id = db.Column(
         db.Integer, db.ForeignKey("members.member_id"), nullable=True, index=True
     )
-    guest_name = db.Column(db.String(120), nullable=False)
-    guest_phone = db.Column(db.String(40))
-    guest_email = db.Column(db.String(120))
+    # guest_* hold the client's representative (the person who inquired).
+    guest_name = db.Column(db.String(160), nullable=True)
+    guest_phone = db.Column(db.String(160))
+    guest_email = db.Column(db.String(255))
     message = db.Column(db.Text)
     source_path = db.Column(db.String(255))
-    status = db.Column(db.String(20), nullable=False, default="new", index=True)
+    status = db.Column(db.String(30), nullable=False, default="new", index=True)
+    # Legacy CRM fields (pre-transaction workflow); kept for historical rows only.
     action_required = db.Column(db.String(60), nullable=True)
     final_result = db.Column(db.String(40), nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=manila_now)
+
+    transaction_type = db.Column(db.String(40), nullable=True, index=True)
+    inquiry_no = db.Column(db.Integer, nullable=True)
+    reference_number = db.Column(db.String(30), nullable=True, unique=True)
+    item_name = db.Column(db.String(255))
+    date_requested = db.Column(db.Date)
+    estimated_implementation = db.Column(db.String(160))
+    quantity = db.Column(db.Text)
+    specifications = db.Column(db.Text)
+    delivery_location = db.Column(db.Text)
+    referrer_name = db.Column(db.String(255))
+    referrer_phone = db.Column(db.String(120))
+    referrer_email = db.Column(db.String(255))
+    client_company = db.Column(db.Text)
+    status_detail = db.Column(db.Text)
+    action_needed = db.Column(db.Text)
+    project_coordinator = db.Column(db.String(160))
+    assigned_contractor = db.Column(db.String(255))
+    assigned_user_id = db.Column(
+        db.Integer, db.ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    date_completed = db.Column(db.Date)
+    remarks = db.Column(db.Text)
+    source = db.Column(db.String(20), nullable=False, default="web")
+    updated_at = db.Column(db.DateTime, nullable=True)
+    status_changed_at = db.Column(db.DateTime, nullable=True)
+
+    # Project delivery (project transactions only).
+    progress_percent = db.Column(db.Integer, nullable=True)
+    awarded_contractor_id = db.Column(
+        db.Integer, db.ForeignKey("contractors.contractor_id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    contract_amount = db.Column(db.Numeric(14, 2), nullable=True)
+    contract_signed_on = db.Column(db.Date, nullable=True)
+    commission_percent = db.Column(db.Numeric(6, 2), nullable=True)
+    commission_project_id = db.Column(
+        db.Integer, db.ForeignKey("project_commissions.project_id", ondelete="SET NULL"), nullable=True
+    )
+    # Project team beside the coordinator (assigned_user_id).
+    estimator_user_id = db.Column(
+        db.Integer, db.ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    site_engineer_user_id = db.Column(
+        db.Integer, db.ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    # Product team beside the account officer (assigned_user_id) and pricing officer (estimator_user_id).
+    sourcing_user_id = db.Column(
+        db.Integer, db.ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    logistics_user_id = db.Column(
+        db.Integer, db.ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    agent_user_id = db.Column(
+        db.Integer, db.ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    # Product order: the registered supplier filling it and the scheduled delivery date.
+    supplier_id = db.Column(
+        db.Integer, db.ForeignKey("suppliers.supplier_id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    delivery_date = db.Column(db.Date, nullable=True)
 
     attributed_member = db.relationship("Member", foreign_keys=[attributed_member_id])
+    assigned_user = db.relationship("User", foreign_keys=[assigned_user_id])
+    estimator_user = db.relationship("User", foreign_keys=[estimator_user_id])
+    site_engineer_user = db.relationship("User", foreign_keys=[site_engineer_user_id])
+    sourcing_user = db.relationship("User", foreign_keys=[sourcing_user_id])
+    logistics_user = db.relationship("User", foreign_keys=[logistics_user_id])
+    agent_user = db.relationship("User", foreign_keys=[agent_user_id])
+    supplier = db.relationship("Supplier", foreign_keys=[supplier_id])
+    awarded_contractor = db.relationship("Contractor", foreign_keys=[awarded_contractor_id])
+    commission_project = db.relationship("ProjectCommission", foreign_keys=[commission_project_id])
     history_entries = db.relationship(
         "MarketplaceLeadHistory",
         backref="lead",
@@ -818,36 +964,95 @@ class MarketplaceLead(db.Model):
         order_by="MarketplaceLeadHistory.created_at.asc()",
     )
 
+    __table_args__ = (
+        db.UniqueConstraint("transaction_type", "inquiry_no", name="uq_marketplace_leads_type_inquiry_no"),
+    )
+
+    @property
+    def is_closed(self):
+        return (self.status or "new") in ("completed", "terminated")
+
     @property
     def aging_days(self):
-        if not self.created_at:
+        start = self.date_requested or (self.created_at.date() if self.created_at else None)
+        if not start:
             return 0
-        created = self.created_at
-        now = datetime.utcnow()
-        delta = now - created
-        return max(0, delta.days)
+        if self.is_closed:
+            end = self.date_completed or (
+                self.updated_at.date() if self.updated_at else manila_today()
+            )
+        else:
+            end = manila_today()
+        return max(0, (end - start).days)
+
+    @property
+    def days_in_status(self):
+        since = self.status_changed_at or self.updated_at or self.created_at
+        if not since:
+            return 0
+        return max(0, (manila_today() - since.date()).days)
+
+    @property
+    def last_activity_at(self):
+        stamps = [stamp for stamp in (self.updated_at, self.created_at) if stamp]
+        return max(stamps) if stamps else None
+
+    @property
+    def display_item(self):
+        if self.item_name:
+            return self.item_name
+        if self.listing is not None:
+            return self.listing.title
+        return ""
+
+    @property
+    def referred_by_name(self):
+        if self.attributed_member is not None:
+            return self.attributed_member.full_name
+        return self.referrer_name or ""
+
+    @property
+    def client_tel(self):
+        return _first_phone(self.guest_phone)
+
+    @property
+    def client_mailto(self):
+        return _first_email(self.guest_email)
+
+    @property
+    def referrer_tel(self):
+        member = self.attributed_member
+        return _first_phone(self.referrer_phone or (member.phone if member else None))
+
+    @property
+    def referrer_mailto(self):
+        member = self.attributed_member
+        return _first_email(self.referrer_email or (member.email if member else None))
 
     def to_dict(self):
         listing = self.listing
         member = self.attributed_member
         return {
             "lead_id": self.lead_id,
+            "reference_number": self.reference_number or "",
+            "transaction_type": self.transaction_type or "",
             "listing_id": self.listing_id,
             "listing_title": listing.title if listing else None,
             "listing_category": (
                 listing.category if listing else (self.interest_category or None)
             ),
             "interest_category": self.interest_category or "",
+            "item_name": self.display_item,
             "attributed_member_id": self.attributed_member_id,
             "attributed_member_name": member.full_name if member else None,
-            "guest_name": self.guest_name,
+            "referred_by": self.referred_by_name,
+            "guest_name": self.guest_name or "",
             "guest_phone": self.guest_phone or "",
             "guest_email": self.guest_email or "",
+            "client_company": self.client_company or "",
             "message": self.message or "",
             "source_path": self.source_path or "",
             "status": self.status or "new",
-            "action_required": self.action_required or "",
-            "final_result": self.final_result or "",
             "aging_days": self.aging_days,
             "created_at": self.created_at.isoformat() if self.created_at else "",
         }
@@ -866,12 +1071,12 @@ class MarketplaceLeadHistory(db.Model):
         index=True,
     )
     event_type = db.Column(db.String(40), nullable=False, default="update")
-    status = db.Column(db.String(20))
+    status = db.Column(db.String(30))
     action_required = db.Column(db.String(60))
     final_result = db.Column(db.String(40))
-    note = db.Column(db.String(500))
+    note = db.Column(db.Text)
     created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=manila_now)
 
     created_by = db.relationship("User", foreign_keys=[created_by_user_id])
 
@@ -888,3 +1093,335 @@ class MarketplaceLeadHistory(db.Model):
             "created_by_name": self.created_by.full_name if self.created_by else "",
             "created_at": self.created_at.isoformat() if self.created_at else "",
         }
+
+
+class MarketplaceLeadRead(db.Model):
+    """Per-user seen marker so Admin/Staff are notified of new or assigned transactions."""
+
+    __tablename__ = "marketplace_lead_reads"
+
+    read_id = db.Column(db.Integer, primary_key=True)
+    lead_id = db.Column(
+        db.Integer,
+        db.ForeignKey("marketplace_leads.lead_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    read_at = db.Column(db.DateTime, nullable=False, default=manila_now)
+
+    __table_args__ = (
+        db.UniqueConstraint("lead_id", "user_id", name="uq_marketplace_lead_reads_lead_user"),
+    )
+
+
+class ProjectStagePlan(db.Model):
+    """Target / reached date per delivery stage of a project transaction."""
+
+    __tablename__ = "project_stage_plans"
+
+    plan_id = db.Column(db.Integer, primary_key=True)
+    lead_id = db.Column(
+        db.Integer, db.ForeignKey("marketplace_leads.lead_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    stage = db.Column(db.String(30), nullable=False)
+    target_date = db.Column(db.Date, nullable=True)
+    reached_on = db.Column(db.Date, nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint("lead_id", "stage", name="uq_project_stage_plans_lead_stage"),
+    )
+
+
+class ProjectDocument(db.Model):
+    """File (stored in the database) or external link attached to a project or product transaction.
+
+    shared_with_contractor means "shared with the partner": the contractor on projects, the supplier on products.
+    """
+
+    __tablename__ = "project_documents"
+
+    document_id = db.Column(db.Integer, primary_key=True)
+    lead_id = db.Column(
+        db.Integer, db.ForeignKey("marketplace_leads.lead_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    kind = db.Column(db.String(30), nullable=False, default="other")
+    title = db.Column(db.String(255), nullable=False)
+    file_name = db.Column(db.String(255), nullable=True)
+    content_type = db.Column(db.String(120), nullable=True)
+    size_bytes = db.Column(db.Integer, nullable=True)
+    file_data = db.deferred(db.Column(db.LargeBinary, nullable=True))
+    external_url = db.Column(db.String(500), nullable=True)
+    shared_with_contractor = db.Column(db.Boolean, nullable=False, default=False)
+    uploaded_by_user_id = db.Column(db.Integer, db.ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=manila_now)
+
+    uploaded_by = db.relationship("User", foreign_keys=[uploaded_by_user_id])
+
+    @property
+    def is_image(self):
+        return (self.content_type or "").startswith("image/")
+
+
+class ProjectEvent(db.Model):
+    """Site ocular, meeting, or Zoom call scheduled for a project."""
+
+    __tablename__ = "project_events"
+
+    event_id = db.Column(db.Integer, primary_key=True)
+    lead_id = db.Column(
+        db.Integer, db.ForeignKey("marketplace_leads.lead_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    kind = db.Column(db.String(20), nullable=False, default="site_visit")
+    title = db.Column(db.String(255), nullable=False)
+    starts_at = db.Column(db.DateTime, nullable=False, index=True)
+    ends_at = db.Column(db.DateTime, nullable=True)
+    location = db.Column(db.String(255), nullable=True)
+    meeting_link = db.Column(db.String(500), nullable=True)
+    assigned_user_id = db.Column(
+        db.Integer, db.ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    status = db.Column(db.String(20), nullable=False, default="scheduled")
+    notes = db.Column(db.Text)
+    outcome = db.Column(db.Text)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=manila_now)
+
+    lead = db.relationship("MarketplaceLead", backref=db.backref("events", passive_deletes=True))
+    assigned_user = db.relationship("User", foreign_keys=[assigned_user_id])
+
+    @property
+    def is_overdue(self):
+        return self.status == "scheduled" and self.starts_at < manila_now()
+
+
+class ProjectPayment(db.Model):
+    """Client payment milestone; a paid milestone can be posted as a project commission billing."""
+
+    __tablename__ = "project_payments"
+
+    payment_id = db.Column(db.Integer, primary_key=True)
+    lead_id = db.Column(
+        db.Integer, db.ForeignKey("marketplace_leads.lead_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title = db.Column(db.String(160), nullable=False)
+    amount = db.Column(db.Numeric(14, 2), nullable=False)
+    due_date = db.Column(db.Date, nullable=True)
+    paid_on = db.Column(db.Date, nullable=True)
+    reference = db.Column(db.String(120), nullable=True)
+    commission_amount = db.Column(db.Numeric(14, 2), nullable=True)
+    billing_id = db.Column(
+        db.Integer, db.ForeignKey("project_billings.billing_id", ondelete="SET NULL"), nullable=True
+    )
+    notes = db.Column(db.Text)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=manila_now)
+
+    lead = db.relationship("MarketplaceLead", backref=db.backref("payments", passive_deletes=True))
+
+    @property
+    def is_paid(self):
+        return self.paid_on is not None
+
+    @property
+    def is_overdue(self):
+        return not self.is_paid and self.due_date is not None and self.due_date < manila_today()
+
+
+class PortalPosition(db.Model):
+    """A position title available within one department (e.g. Sales -> Team Lead)."""
+
+    __tablename__ = "portal_positions"
+
+    position_id = db.Column(db.Integer, primary_key=True)
+    department = db.Column(db.String(40), nullable=False, index=True)
+    title = db.Column(db.String(120), nullable=False)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, nullable=False, default=manila_now)
+
+    __table_args__ = (
+        db.UniqueConstraint("department", "title", name="uq_portal_positions_department_title"),
+    )
+
+    assignments = db.relationship("MemberPosition", back_populates="position", passive_deletes=True)
+
+
+class MemberPosition(db.Model):
+    """A member's position within a department; at most one per department."""
+
+    __tablename__ = "member_positions"
+
+    member_position_id = db.Column(db.Integer, primary_key=True)
+    member_id = db.Column(
+        db.Integer,
+        db.ForeignKey("members.member_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    department = db.Column(db.String(40), nullable=False)
+    position_id = db.Column(
+        db.Integer,
+        db.ForeignKey("portal_positions.position_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    assigned_at = db.Column(db.DateTime, nullable=False, default=manila_now)
+
+    __table_args__ = (
+        db.UniqueConstraint("member_id", "department", name="uq_member_positions_member_department"),
+    )
+
+    position = db.relationship("PortalPosition", back_populates="assignments")
+
+
+class AuditLog(db.Model):
+    """One traced request: who did what, from where, the outcome, and which records changed."""
+
+    __tablename__ = "audit_logs"
+
+    log_id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=manila_now, index=True)
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    # Snapshots so the trail survives renamed or deleted accounts.
+    username = db.Column(db.String(80))
+    full_name = db.Column(db.String(120))
+    role = db.Column(db.String(20))
+    ip_address = db.Column(db.String(64))
+    user_agent = db.Column(db.String(255))
+    method = db.Column(db.String(10))
+    path = db.Column(db.String(500))
+    endpoint = db.Column(db.String(120), index=True)
+    category = db.Column(db.String(30), index=True)
+    action = db.Column(db.String(160))
+    target_type = db.Column(db.String(40), index=True)
+    target_id = db.Column(db.String(60), index=True)
+    target_label = db.Column(db.String(200))
+    outcome = db.Column(db.String(20), index=True)
+    status_code = db.Column(db.Integer)
+    summary = db.Column(db.Text)
+    details = db.Column(db.JSON)
+    changes = db.Column(db.JSON)
+
+
+class MemberSanction(db.Model):
+    """A time-limited suspension of a member's ad posting and/or contractor endorsement privileges."""
+
+    __tablename__ = "member_sanctions"
+
+    sanction_id = db.Column(db.Integer, primary_key=True)
+    member_id = db.Column(
+        db.Integer,
+        db.ForeignKey("members.member_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    memo_number = db.Column(db.String(80))
+    reason = db.Column(db.Text, nullable=False)
+    start_date = db.Column(db.Date, nullable=False)
+    # Last suspended day (inclusive).
+    end_date = db.Column(db.Date, nullable=False)
+    blocks_ads = db.Column(db.Boolean, nullable=False, default=True)
+    blocks_endorsement = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=manila_now)
+    created_by_user_id = db.Column(
+        db.Integer, db.ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True
+    )
+    lifted_at = db.Column(db.DateTime, nullable=True)
+    lifted_by_user_id = db.Column(
+        db.Integer, db.ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True
+    )
+    lift_reason = db.Column(db.String(255))
+
+    member = db.relationship("Member", foreign_keys=[member_id])
+    created_by = db.relationship("User", foreign_keys=[created_by_user_id])
+    lifted_by = db.relationship("User", foreign_keys=[lifted_by_user_id])
+
+    @property
+    def total_days(self):
+        return (self.end_date - self.start_date).days + 1
+
+    def is_active_on(self, day=None):
+        day = day or manila_today()
+        return self.lifted_at is None and self.start_date <= day <= self.end_date
+
+    def status_on(self, day=None):
+        day = day or manila_today()
+        if self.lifted_at is not None:
+            return "lifted"
+        if day < self.start_date:
+            return "scheduled"
+        if day > self.end_date:
+            return "served"
+        return "active"
+
+    @property
+    def scope_labels(self):
+        labels = []
+        if self.blocks_ads:
+            labels.append("Posting ads")
+        if self.blocks_endorsement:
+            labels.append("Endorsing contractors")
+        return labels
+
+
+class PortalNotice(db.Model):
+    """Policy, memo, or announcement visible on role dashboards."""
+
+    __tablename__ = "portal_notices"
+
+    notice_id = db.Column(db.Integer, primary_key=True)
+    notice_type = db.Column(db.String(20), nullable=False, default="announcement", index=True)
+    title = db.Column(db.String(200), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    reference_number = db.Column(db.String(60), nullable=True)
+    effective_date = db.Column(db.Date, nullable=True)
+    issued_by = db.Column(db.String(160), nullable=True)
+    issued_date = db.Column(db.Date, nullable=True)
+    # JSON list of roles; empty list means all roles.
+    audience_roles = db.Column(db.JSON, nullable=False, default=list)
+    is_published = db.Column(db.Boolean, nullable=False, default=True)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=manila_now)
+    updated_at = db.Column(db.DateTime, nullable=False, default=manila_now, onupdate=manila_now)
+
+    created_by = db.relationship("User", foreign_keys=[created_by_user_id])
+    reads = db.relationship(
+        "PortalNoticeRead",
+        backref="notice",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
+
+
+class PortalNoticeRead(db.Model):
+    """Tracks which users have seen a portal notice."""
+
+    __tablename__ = "portal_notice_reads"
+
+    read_id = db.Column(db.Integer, primary_key=True)
+    notice_id = db.Column(
+        db.Integer,
+        db.ForeignKey("portal_notices.notice_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    read_at = db.Column(db.DateTime, nullable=False, default=manila_now)
+
+    __table_args__ = (
+        db.UniqueConstraint("notice_id", "user_id", name="uq_portal_notice_reads_notice_user"),
+    )
+
+    user = db.relationship("User", foreign_keys=[user_id])

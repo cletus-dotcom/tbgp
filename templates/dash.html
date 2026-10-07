@@ -30,7 +30,29 @@
     </div>
 </div>
 
-{% if is_personal_dashboard %}
+{% include 'partials/dashboard_notices_card.html' %}
+
+{% if transaction_alerts is defined %}
+{% include 'partials/dashboard_transactions_card.html' %}
+{% endif %}
+
+{% if duty_cards %}
+{% include 'partials/dashboard_duty_cards.html' %}
+{% endif %}
+
+{% if product_cards %}
+{% include 'partials/dashboard_product_duty_cards.html' %}
+{% endif %}
+
+{% if project_overview %}
+{% include 'partials/dashboard_projects_card.html' %}
+{% endif %}
+
+{% if is_contractor_dashboard %}
+{% include 'partials/dashboard_contractor_card.html' %}
+{% elif is_supplier_dashboard %}
+{% include 'partials/dashboard_supplier_card.html' %}
+{% elif is_personal_dashboard %}
 <div class="dashboard-card">
     <h5 class="text-brand fw-bold mb-3">My Summary</h5>
     {% if personal_stats %}
@@ -49,6 +71,7 @@
         <div class="stats-grid">
             {{ stat_tile_link(url_for('main_routes.members'), personal_stats.batch, 'Batch') }}
             {{ stat_tile_link(url_for('main_routes.member_ledger'), '{:,.2f}'.format(personal_stats.ledger_total), 'Ledger Earnings') }}
+            {{ stat_tile_link(url_for('main_routes.my_projects'), personal_stats.referred_projects, 'Referred Projects') }}
         </div>
     </div>
     <p class="text-muted small mb-0 mt-3">

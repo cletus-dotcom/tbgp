@@ -33,6 +33,8 @@ from app.config import (
     THEME_WHITE,
     is_admin_role,
     is_member_role,
+    is_supplier_role,
+    is_contractor_role,
     is_staff_or_admin,
     can_access_admin_options,
     can_delete_sharing_batch,
@@ -50,11 +52,14 @@ from app.config import (
     assignable_user_roles,
     can_manage_site_content,
     can_manage_gallery,
+    can_manage_notices,
     can_view_marketplace_help,
     can_view_features_process_flow,
     can_access_marketplace_crm,
     is_site_admin_role,
     post_login_redirect,
+    DEPARTMENT_ROLES,
+    DEPARTMENTS,
     USER_ROLES,
     database_uri,
     payout_scheme_summary,
@@ -79,10 +84,14 @@ def create_app():
     from app.config import SUPABASE_PARTNER_IMAGES_BUCKET
 
     app.config["SUPABASE_PARTNER_IMAGES_BUCKET"] = SUPABASE_PARTNER_IMAGES_BUCKET
-    # Partner/marketplace image uploads are capped at 5 MB; allow a little headroom for multipart wrappers.
-    app.config["MAX_CONTENT_LENGTH"] = 6 * 1024 * 1024
+    # Project documents are capped at 10 MB (images at 5 MB in their services); headroom for multipart wrappers.
+    app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024
 
     db.init_app(app)
+
+    from app.audit_service import init_audit
+
+    init_audit(app)
 
     @app.before_request
     def restrict_site_admin_portal_access():
@@ -96,6 +105,7 @@ def create_app():
             "/logout",
             "/static/",
             "/login",
+            "/notices",
             "/ecosystem/",
             "/partners/",
             "/marketplace/",
@@ -103,6 +113,7 @@ def create_app():
             "/help/marketplace-crm",
             "/about/features-process-flow",
             "/admin/marketplace-crm",
+            "/api/accessibility-preferences",
         )
         if path == "/" or any(path.startswith(prefix) for prefix in allowed):
             return None
@@ -116,6 +127,11 @@ def create_app():
             return jsonify({"error": "Image is too large (max 5 MB)."}), 413
         if request.path.startswith("/site-admin/") and "partner-image" in request.path:
             return jsonify({"error": "Image is too large (max 5 MB)."}), 413
+        if "/projects/" in request.path and request.path.endswith("/documents"):
+            from flask import flash, redirect
+
+            flash("File too large. Project documents must be 10 MB or smaller.", "danger")
+            return redirect(request.referrer or "/")
         return ("File too large.", 413)
 
     @app.context_processor
@@ -123,16 +139,39 @@ def create_app():
         from flask import session, url_for
 
         from app.accessibility_service import DEFAULT_ACCESSIBILITY_PREFS, get_user_accessibility_prefs
+        from app.notice_service import unread_notice_count
         from app.payout_service import payout_queue_counts
         from app.platform_about import PLATFORM_DEVELOPER
         from app.site_content_service import get_services_contact_cta
+        from app.config import DUTY_DESCRIPTIONS, DUTY_GROUPS, DUTY_LABELS, TRANSACTION_TYPE_PROJECTS, duties_allowed_for_role
+        from app.duty_service import user_has_field_duty
+        from app.transaction_service import field_unread_count, unread_transaction_count
+
+        from app.sanction_service import active_sanction, active_sanction_count
 
         role = session.get("role")
         user_id = session.get("user_id")
+        field_agent = False
+        assignment_unread = 0
+        member_sanction = None
+        suspension_count = 0
+        if user_id and is_member_role(role) and session.get("member_id"):
+            member_sanction = active_sanction(session.get("member_id"))
+        elif user_id and is_staff_or_admin(role):
+            suspension_count = active_sanction_count()
         if user_id:
             user_accessibility_prefs = get_user_accessibility_prefs(user_id)
+            notice_unread = unread_notice_count(user_id, role)
+            transaction_unread = unread_transaction_count(user_id, role, exclude_type=TRANSACTION_TYPE_PROJECTS)
+            project_unread = unread_transaction_count(user_id, role, transaction_type=TRANSACTION_TYPE_PROJECTS)
+            if is_member_role(role) and user_has_field_duty(user_id):
+                field_agent = True
+                assignment_unread = field_unread_count(user_id)
         else:
             user_accessibility_prefs = dict(DEFAULT_ACCESSIBILITY_PREFS)
+            notice_unread = 0
+            transaction_unread = 0
+            project_unread = 0
         return {
             "brand_blue": BRAND_BLUE,
             "brand_blue_dark": BRAND_BLUE_DARK,
@@ -148,10 +187,13 @@ def create_app():
             "is_site_admin_role": is_site_admin_role,
             "can_manage_site_content": can_manage_site_content,
             "can_manage_gallery": can_manage_gallery,
+            "can_manage_notices": can_manage_notices,
             "can_view_marketplace_help": can_view_marketplace_help,
             "can_view_features_process_flow": can_view_features_process_flow,
             "can_access_marketplace_crm": can_access_marketplace_crm,
             "is_member_role": is_member_role,
+            "is_supplier_role": is_supplier_role,
+            "is_contractor_role": is_contractor_role,
             "is_staff_or_admin": is_staff_or_admin,
             "can_manage_data": can_manage_data,
             "can_access_admin_options": can_access_admin_options,
@@ -170,8 +212,21 @@ def create_app():
             "payout_ompd_percent": PAYOUT_OMPD_PERCENT,
             "payout_scheme": payout_scheme_summary(),
             "payout_queue_counts": payout_queue_counts(role),
+            "notice_unread_count": notice_unread,
+            "transaction_unread_count": transaction_unread,
+            "project_unread_count": project_unread,
+            "is_field_agent": field_agent,
+            "assignment_unread_count": assignment_unread,
+            "member_sanction": member_sanction,
+            "suspension_count": suspension_count,
+            "duty_labels": DUTY_LABELS,
+            "duty_descriptions": DUTY_DESCRIPTIONS,
+            "duty_groups": DUTY_GROUPS,
+            "duties_by_role": {user_role: list(duties_allowed_for_role(user_role)) for user_role in USER_ROLES},
             "assignable_user_roles": assignable_user_roles(session.get("role")),
             "user_roles": USER_ROLES,
+            "departments": DEPARTMENTS,
+            "department_roles": DEPARTMENT_ROLES,
             "member_statuses": MEMBER_STATUSES,
             "member_separation_types": MEMBER_SEPARATION_TYPES,
             "sharing_pool_percent": CLIENT_POOL_PERCENT,
@@ -192,6 +247,11 @@ def create_app():
         }
 
     from app.routes import main_routes
+    from app import transaction_routes  # noqa: F401  (registers routes on main_routes)
+    from app import project_routes  # noqa: F401  (registers routes on main_routes)
+    from app import product_routes  # noqa: F401  (registers routes on main_routes)
+    from app import sanction_routes  # noqa: F401  (registers routes on main_routes)
+    from app import audit_routes  # noqa: F401  (registers routes on main_routes and site_admin)
     from app.site_admin_routes import site_admin_bp
 
     app.register_blueprint(main_routes)

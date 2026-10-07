@@ -17,7 +17,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 from sqlalchemy import func, text
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from werkzeug.security import generate_password_hash
 
 from app import db
@@ -42,6 +42,7 @@ from app.config import (
     COMMISSION_SCHEMES,
     CONTRACTOR_POOL_PERCENT,
     CONTRACTORS_SHEET,
+    DUTY_PROJECT_COORDINATOR,
     SUPPLIERS_SHEET,
     DEFAULT_PRODUCT_POOL_LEVELS,
     MAX_SHARING_LEVELS,
@@ -71,14 +72,16 @@ from app.config import (
     MARKETPLACE_FUNNEL_CATEGORY_SLUGS,
     MARKETPLACE_LEAD_STATUS_LABELS,
     MARKETPLACE_LEAD_STATUSES,
-    MARKETPLACE_LEAD_ACTION_LABELS,
-    MARKETPLACE_LEAD_ACTIONS,
-    MARKETPLACE_LEAD_RESULT_LABELS,
-    MARKETPLACE_LEAD_RESULTS,
+    PROJECT_SCOPE_SUGGESTIONS,
+    TRANSACTION_TYPE_LABELS,
+    TRANSACTION_TYPE_PROJECTS,
     USER_ROLE_ADMIN,
     USER_ROLE_MEMBER,
     USER_ROLE_PORTAL_ADMIN,
     USER_ROLE_STAFF,
+    USER_ROLES,
+    NOTICE_TYPES,
+    NOTICE_TYPE_LABELS,
     assignable_user_roles,
     can_approve_payout_release,
     can_approve_payout_request,
@@ -87,18 +90,25 @@ from app.config import (
     can_view_payout_reports,
     can_view_payout_scheme,
     can_purge_member_database,
+    can_manage_notices,
     can_manage_site_content,
     can_view_marketplace_help,
     can_view_features_process_flow,
     can_access_marketplace_crm,
+    duties_allowed_for_role,
     payout_scheme_summary,
     is_admin_role,
+    is_contractor_role,
     is_member_role,
     is_portal_admin_role,
     is_site_admin_role,
+    is_staff_or_admin,
     is_staff_role,
+    is_supplier_role,
+    normalize_department,
     normalize_role,
     post_login_redirect,
+    role_uses_department,
     staff_may_manage_user,
 )
 
@@ -126,6 +136,28 @@ from app.hierarchy_service import (
     member_lineage,
 )
 from app.member_support_service import member_support_subjects
+from app.sanction_service import active_sanction, endorsement_credit_member_id, ensure_can_endorse
+from app.position_service import (
+    apply_member_positions,
+    assignment_counts,
+    create_position,
+    delete_position,
+    positions_by_department,
+    rename_position,
+)
+from app.notice_service import (
+    create_notice,
+    dashboard_notices,
+    delete_notice,
+    get_notice,
+    get_visible_notice,
+    list_manageable_notices,
+    mark_notice_read,
+    notice_to_dict,
+    notices_for_role,
+    update_notice,
+    unread_notice_ids,
+)
 from app.accessibility_service import (
     get_user_accessibility_prefs,
     save_user_accessibility_prefs,
@@ -143,6 +175,7 @@ from app.models import (
     MarketplaceLead,
     Member,
     MemberLedger,
+    MemberPosition,
     OmpdFundEntry,
     PayoutRequest,
     PayoutNotification,
@@ -224,13 +257,16 @@ from app.marketplace_service import (
     products_page_content,
     funnel_page_content,
     search_marketplace_leads,
-    serialize_lead_history,
     set_attribution_cookie,
     clear_attribution_cookie,
-    update_marketplace_lead,
-    update_marketplace_lead_status,
-    get_marketplace_lead_history,
 )
+from app.transaction_service import (
+    create_inquiry,
+    dashboard_transaction_alerts,
+    preview_reference_number,
+)
+from app.duty_service import link_sheet_coordinators, set_user_duties
+from app.timeutil import manila_now, manila_today
 
 main_routes = Blueprint("main_routes", __name__)
 
@@ -373,6 +409,43 @@ def ecosystem_page(slug):
     return render_template("ecosystem_page.html", **context)
 
 
+INQUIRY_FORM_FIELDS = (
+    "guest_name",
+    "guest_email",
+    "guest_phone",
+    "client_company",
+    "quantity",
+    "specifications",
+    "delivery_location",
+    "estimated_implementation",
+    "message",
+)
+
+
+PROJECT_INQUIRY_FORM_FIELDS = (
+    "guest_name",
+    "guest_email",
+    "guest_phone",
+    "client_company",
+    "item_name",
+    "delivery_location",
+    "specifications",
+    "estimated_implementation",
+    "message",
+)
+
+
+def _inquiry_referrer(attributed_member):
+    """Share-link attribution first, otherwise the logged-in member is the referrer."""
+    if attributed_member is not None:
+        return attributed_member
+    if session.get("user_id") and is_member_role(session.get("role")):
+        portal_user = db.session.get(User, session["user_id"])
+        if portal_user and portal_user.member_id:
+            return db.session.get(Member, portal_user.member_id)
+    return None
+
+
 def _marketplace_page_context(category, share_member=None):
     meta = get_marketplace_category(category)
     if not meta:
@@ -409,34 +482,36 @@ def marketplace_detail(category, listing_id):
         abort(404)
     ctx = _marketplace_page_context(category)
     ctx["listing"] = listing
+
+    referrer = _inquiry_referrer(ctx["attributed_member"])
+    ctx["inquiry_referrer"] = referrer
+
+    blank_values = {field: "" for field in INQUIRY_FORM_FIELDS}
+    form_values = dict(blank_values)
     form_error = None
     form_success = None
-    form_values = {"guest_name": "", "guest_phone": "", "guest_email": "", "message": ""}
-
     if request.method == "POST":
-        form_values = {
-            "guest_name": request.form.get("guest_name") or "",
-            "guest_phone": request.form.get("guest_phone") or "",
-            "guest_email": request.form.get("guest_email") or "",
-            "message": request.form.get("message") or "",
-        }
+        form_values = {field: request.form.get(field) or "" for field in INQUIRY_FORM_FIELDS}
         try:
-            create_lead(
+            lead = create_lead(
                 listing,
-                guest_name=form_values["guest_name"],
-                guest_phone=form_values["guest_phone"],
-                guest_email=form_values["guest_email"],
-                message=form_values["message"],
                 source_path=request.path,
+                attributed_member_id=referrer.member_id if referrer else None,
+                **form_values,
             )
-            form_success = "Thank you. Your inquiry was sent. A TBGP representative will follow up."
-            form_values = {"guest_name": "", "guest_phone": "", "guest_email": "", "message": ""}
+            form_success = (
+                f"Thank you. Your inquiry was sent with reference no. {lead.reference_number}. "
+                "A TBGP representative will contact you."
+            )
+            form_values = dict(blank_values)
         except ValueError as exc:
             form_error = str(exc)
 
     ctx["form_error"] = form_error
     ctx["form_success"] = form_success
     ctx["form_values"] = form_values
+    ctx["transaction_type_label"] = TRANSACTION_TYPE_LABELS.get(category, ctx["category_meta"]["label"])
+    ctx["reference_preview"] = preview_reference_number(category)
     return render_template("marketplace_detail.html", **ctx)
 
 
@@ -471,6 +546,53 @@ def marketplace_hub_shared(share_code):
     return set_attribution_cookie(response, member)
 
 
+@main_routes.route("/projects/inquire", methods=["GET", "POST"])
+def project_inquiry():
+    referrer = _inquiry_referrer(get_attributed_member())
+    blank_values = {field: "" for field in PROJECT_INQUIRY_FORM_FIELDS}
+    form_values = dict(blank_values)
+    form_error = None
+    form_success = None
+    if request.method == "POST":
+        form_values = {field: request.form.get(field) or "" for field in PROJECT_INQUIRY_FORM_FIELDS}
+        try:
+            lead = create_inquiry(
+                transaction_type=TRANSACTION_TYPE_PROJECTS,
+                source_path=request.path,
+                attributed_member_id=referrer.member_id if referrer else None,
+                **form_values,
+            )
+            form_success = (
+                f"Thank you. Your project inquiry was sent with reference no. {lead.reference_number}. "
+                "A TBGP project coordinator will contact you."
+            )
+            form_values = dict(blank_values)
+        except ValueError as exc:
+            db.session.rollback()
+            form_error = str(exc)
+
+    return render_template(
+        "project_inquiry.html",
+        attributed_member=referrer,
+        form_values=form_values,
+        form_error=form_error,
+        form_success=form_success,
+        reference_preview=preview_reference_number(TRANSACTION_TYPE_PROJECTS),
+        scope_suggestions=PROJECT_SCOPE_SUGGESTIONS,
+        categories=MARKETPLACE_CATEGORIES,
+        landing_nav_active="marketplace",
+    )
+
+
+@main_routes.route("/m/<share_code>/projects/inquire")
+def project_inquiry_shared(share_code):
+    member = get_member_by_share_code(share_code)
+    if not member:
+        abort(404)
+    response = redirect(url_for("main_routes.project_inquiry"))
+    return set_attribution_cookie(response, member)
+
+
 @main_routes.route("/my-marketplace")
 @login_required
 def my_marketplace():
@@ -498,6 +620,7 @@ def my_marketplace():
     }
     for slug in MARKETPLACE_CATEGORY_SLUGS:
         share_links[slug] = f"{base_url}/m/{share_code}/marketplace/{slug}"
+    share_links["project_inquiry"] = f"{base_url}/m/{share_code}/projects/inquire"
 
     leads = member_leads(linked_id)
     return render_template(
@@ -513,8 +636,7 @@ def my_marketplace():
         leads=leads,
         lead_count=member_lead_count(linked_id),
         lead_status_labels=MARKETPLACE_LEAD_STATUS_LABELS,
-        lead_action_labels=MARKETPLACE_LEAD_ACTION_LABELS,
-        lead_result_labels=MARKETPLACE_LEAD_RESULT_LABELS,
+        ads_suspension=active_sanction(linked_id, "ads"),
     )
 
 
@@ -571,10 +693,6 @@ def marketplace_crm():
         listing_options=listing_options,
         lead_statuses=MARKETPLACE_LEAD_STATUSES,
         lead_status_labels=MARKETPLACE_LEAD_STATUS_LABELS,
-        lead_actions=MARKETPLACE_LEAD_ACTIONS,
-        lead_action_labels=MARKETPLACE_LEAD_ACTION_LABELS,
-        lead_results=MARKETPLACE_LEAD_RESULTS,
-        lead_result_labels=MARKETPLACE_LEAD_RESULT_LABELS,
         can_edit_listings=can_manage_site_content(user.role),
     )
 
@@ -603,77 +721,8 @@ def marketplace_crm_listing(listing_id):
         category_slugs=MARKETPLACE_CATEGORY_SLUGS,
         lead_statuses=MARKETPLACE_LEAD_STATUSES,
         lead_status_labels=MARKETPLACE_LEAD_STATUS_LABELS,
-        lead_actions=MARKETPLACE_LEAD_ACTIONS,
-        lead_action_labels=MARKETPLACE_LEAD_ACTION_LABELS,
-        lead_results=MARKETPLACE_LEAD_RESULTS,
-        lead_result_labels=MARKETPLACE_LEAD_RESULT_LABELS,
         can_edit_listings=can_manage_site_content(user.role),
     )
-
-
-@main_routes.route("/admin/marketplace-crm/leads/<int:lead_id>/status", methods=["POST"])
-@login_required
-def marketplace_crm_lead_status(lead_id):
-    user = _dashboard_user()
-    if not can_access_marketplace_crm(user.role):
-        return access_denied_response(
-            "Marketplace CRM is available to Admin, SiteAdmin, and Staff roles."
-        )
-
-    data = request.get_json(silent=True) if request.is_json else request.form
-    data = data or {}
-    status = data.get("status")
-    action_required = data.get("action_required")
-    final_result = data.get("final_result")
-    note = data.get("note")
-    try:
-        lead = update_marketplace_lead(
-            lead_id,
-            status=status if status is not None else None,
-            action_required=action_required if "action_required" in data else None,
-            final_result=final_result if "final_result" in data else None,
-            note=note,
-            created_by_user_id=user.user_id,
-        )
-        return jsonify({
-            "status": "success",
-            "msg": f"Inquiry #{lead.lead_id} updated.",
-            "lead_id": lead.lead_id,
-            "lead_status": lead.status,
-            "lead_status_label": MARKETPLACE_LEAD_STATUS_LABELS.get(lead.status, lead.status),
-            "action_required": lead.action_required or "",
-            "action_required_label": MARKETPLACE_LEAD_ACTION_LABELS.get(lead.action_required or "", ""),
-            "final_result": lead.final_result or "",
-            "final_result_label": MARKETPLACE_LEAD_RESULT_LABELS.get(lead.final_result or "", ""),
-            "aging_days": lead.aging_days,
-        })
-    except ValueError as exc:
-        return jsonify({"status": "error", "msg": str(exc)}), 400
-    except Exception as exc:
-        db.session.rollback()
-        return jsonify({"status": "error", "msg": f"Could not update inquiry: {exc}"}), 500
-
-
-@main_routes.route("/admin/marketplace-crm/leads/<int:lead_id>/history")
-@login_required
-def marketplace_crm_lead_history(lead_id):
-    user = _dashboard_user()
-    if not can_access_marketplace_crm(user.role):
-        return access_denied_response(
-            "Marketplace CRM is available to Admin, SiteAdmin, and Staff roles."
-        )
-
-    lead = db.session.get(MarketplaceLead, lead_id)
-    if not lead:
-        return jsonify({"status": "error", "msg": "Inquiry not found."}), 404
-
-    entries = get_marketplace_lead_history(lead_id)
-    return jsonify({
-        "status": "success",
-        "lead_id": lead_id,
-        "aging_days": lead.aging_days,
-        "history": serialize_lead_history(entries),
-    })
 
 
 @main_routes.route("/admin/marketplace-crm/export.csv")
@@ -696,8 +745,8 @@ def marketplace_crm_export():
     # UTF-8 BOM for Excel
     output.write("\ufeff".encode("utf-8"))
     writer_lines = [
-        "lead_id,created_at,aging_days,status,action_required,final_result,category,listing_id,listing_title,"
-        "guest_name,guest_phone,guest_email,message,referred_by_id,referred_by_name,source_path\n"
+        "lead_id,reference_number,created_at,aging_days,status,category,listing_id,listing_title,"
+        "guest_name,guest_phone,guest_email,client_company,message,referred_by_id,referred_by_name,source_path\n"
     ]
     for lead in leads:
         listing = lead.listing
@@ -706,20 +755,20 @@ def marketplace_crm_export():
         category_label = MARKETPLACE_CATEGORIES.get(category, {}).get("label", category)
         cells = [
             lead.lead_id,
+            lead.reference_number or "",
             lead.created_at.isoformat(sep=" ", timespec="minutes") if lead.created_at else "",
             lead.aging_days,
             MARKETPLACE_LEAD_STATUS_LABELS.get(lead.status or "new", lead.status or "new"),
-            MARKETPLACE_LEAD_ACTION_LABELS.get(lead.action_required or "", lead.action_required or ""),
-            MARKETPLACE_LEAD_RESULT_LABELS.get(lead.final_result or "", lead.final_result or ""),
             category_label,
             lead.listing_id or "",
-            (listing.title if listing else "").replace('"', '""'),
+            (listing.title if listing else (lead.item_name or "")).replace('"', '""'),
             (lead.guest_name or "").replace('"', '""'),
-            lead.guest_phone or "",
-            lead.guest_email or "",
+            (lead.guest_phone or "").replace('"', '""'),
+            (lead.guest_email or "").replace('"', '""'),
+            (lead.client_company or "").replace('"', '""').replace("\n", " "),
             (lead.message or "").replace('"', '""').replace("\n", " "),
             lead.attributed_member_id or "",
-            (member.full_name if member else "").replace('"', '""'),
+            (member.full_name if member else (lead.referrer_name or "")).replace('"', '""'),
             lead.source_path or "",
         ]
         writer_lines.append(
@@ -731,7 +780,7 @@ def marketplace_crm_export():
         output,
         mimetype="text/csv",
         as_attachment=True,
-        download_name=f"marketplace-crm-{datetime.utcnow().strftime('%Y%m%d-%H%M')}.csv",
+        download_name=f"marketplace-crm-{manila_now().strftime('%Y%m%d-%H%M')}.csv",
     )
 
 
@@ -823,17 +872,75 @@ def dashboard():
     if is_site_admin_role(user.role):
         return redirect(url_for("site_admin.home"))
 
+    role = normalize_role(user.role)
+    notices = dashboard_notices(user.user_id, role)
+    transaction_alerts = dashboard_transaction_alerts(user.user_id, role)
+
     if is_member_role(user.role):
         linked_id = require_linked_member()
         personal_stats = member_dashboard_stats(linked_id) if linked_id else None
+        if personal_stats:
+            from app.project_service import member_projects
+
+            personal_stats["referred_projects"] = len(member_projects(linked_id))
+        from app.duty_service import is_field_agent
+        from app.product_service import product_duty_dashboard
+        from app.project_service import duty_dashboard
+
+        field_agent = is_field_agent(user)
         return render_template(
             "dash.html",
             fullname=user.full_name or "Member",
-            role=normalize_role(user.role),
+            role=role,
             stats=None,
             personal_stats=personal_stats,
             is_personal_dashboard=True,
             member_support_subjects=member_support_subjects(),
+            notices=notices,
+            duty_cards=duty_dashboard(user) if field_agent else None,
+            duty_lead_endpoint="main_routes.my_assignment_detail",
+            product_cards=product_duty_dashboard(user) if field_agent else None,
+            product_lead_endpoint="main_routes.my_assignment_detail",
+            active_page="dashboard",
+        )
+
+    from app.product_service import product_duty_dashboard, supplier_dashboard_summary
+    from app.project_service import (
+        contractor_dashboard_summary,
+        dashboard_project_overview,
+        duty_dashboard,
+        format_peso,
+    )
+
+    if is_supplier_role(user.role):
+        return render_template(
+            "dash.html",
+            fullname=user.full_name or "Supplier",
+            role=role,
+            stats=None,
+            personal_stats=None,
+            is_personal_dashboard=False,
+            is_supplier_dashboard=True,
+            supplier=user.linked_supplier,
+            supplier_summary=supplier_dashboard_summary(user.supplier_id) if user.supplier_id else None,
+            status_labels=MARKETPLACE_LEAD_STATUS_LABELS,
+            notices=notices,
+            active_page="dashboard",
+        )
+
+    if is_contractor_role(user.role):
+        return render_template(
+            "dash.html",
+            fullname=user.full_name or "Contractor",
+            role=role,
+            stats=None,
+            personal_stats=None,
+            is_personal_dashboard=False,
+            is_contractor_dashboard=True,
+            contractor=user.linked_contractor,
+            contractor_summary=contractor_dashboard_summary(user.contractor_id) if user.contractor_id else None,
+            format_peso=format_peso,
+            notices=notices,
             active_page="dashboard",
         )
 
@@ -841,11 +948,160 @@ def dashboard():
     return render_template(
         "dash.html",
         fullname=user.full_name or "Admin",
-        role=normalize_role(user.role),
+        role=role,
         stats=stats,
         personal_stats=None,
         is_personal_dashboard=False,
+        notices=notices,
+        transaction_alerts=transaction_alerts,
+        project_overview=dashboard_project_overview(user) if is_staff_or_admin(user.role) else None,
+        duty_cards=duty_dashboard(user) if is_staff_or_admin(user.role) else None,
+        duty_lead_endpoint="main_routes.transaction_detail",
+        product_cards=product_duty_dashboard(user) if is_staff_or_admin(user.role) else None,
+        product_lead_endpoint="main_routes.transaction_detail",
         active_page="dashboard",
+    )
+
+
+@main_routes.route("/notices")
+@login_required
+def notices_list():
+    user = _dashboard_user()
+    role = normalize_role(user.role)
+    unread = unread_notice_ids(user.user_id, role)
+    rows = [
+        notice_to_dict(n, unread_ids=unread)
+        for n in notices_for_role(role, published_only=True)
+    ]
+    return render_template(
+        "notices.html",
+        fullname=user.full_name or "User",
+        role=role,
+        notices=rows,
+        unread_count=len(unread),
+        active_page="notices",
+    )
+
+
+@main_routes.route("/notices/<int:notice_id>")
+@login_required
+def notice_detail(notice_id):
+    user = _dashboard_user()
+    role = normalize_role(user.role)
+    notice = get_visible_notice(notice_id, role)
+    if not notice:
+        abort(404)
+    mark_notice_read(notice.notice_id, user.user_id)
+    return render_template(
+        "notice_detail.html",
+        fullname=user.full_name or "User",
+        role=role,
+        notice=notice_to_dict(notice, user_id=user.user_id),
+        active_page="notices",
+    )
+
+
+@main_routes.route("/notices/manage", methods=["GET", "POST"])
+@login_required
+@staff_or_admin_required
+def notices_manage():
+    user = _dashboard_user()
+    role = normalize_role(user.role)
+
+    if request.method == "POST":
+        action = (request.form.get("action") or "create").strip().lower()
+        try:
+            if action == "create":
+                create_notice(
+                    notice_type=request.form.get("notice_type"),
+                    title=request.form.get("title"),
+                    body=request.form.get("body"),
+                    reference_number=request.form.get("reference_number"),
+                    effective_date=request.form.get("effective_date"),
+                    issued_by=request.form.get("issued_by"),
+                    issued_date=request.form.get("issued_date"),
+                    audience_roles=request.form.getlist("audience_roles"),
+                    is_published=request.form.get("is_published") == "1",
+                    created_by_user_id=user.user_id,
+                )
+                flash("Notice posted. Target users will see it on their dashboard.", "success")
+            elif action == "update":
+                notice = get_notice(int(request.form.get("notice_id")))
+                if not notice:
+                    raise ValueError("Notice not found.")
+                update_notice(
+                    notice,
+                    notice_type=request.form.get("notice_type"),
+                    title=request.form.get("title"),
+                    body=request.form.get("body"),
+                    reference_number=request.form.get("reference_number"),
+                    effective_date=request.form.get("effective_date"),
+                    issued_by=request.form.get("issued_by"),
+                    issued_date=request.form.get("issued_date"),
+                    audience_roles=request.form.getlist("audience_roles"),
+                    is_published=request.form.get("is_published") == "1",
+                )
+                flash("Notice updated.", "success")
+            elif action == "delete":
+                notice = get_notice(int(request.form.get("notice_id")))
+                if not notice:
+                    raise ValueError("Notice not found.")
+                delete_notice(notice)
+                flash("Notice deleted.", "success")
+            else:
+                raise ValueError("Unknown action.")
+        except (TypeError, ValueError) as exc:
+            db.session.rollback()
+            flash(str(exc), "danger")
+        return redirect(url_for("main_routes.notices_manage"))
+
+    rows = [notice_to_dict(n, user_id=user.user_id) for n in list_manageable_notices()]
+    return render_template(
+        "notices_manage.html",
+        fullname=user.full_name or "User",
+        role=role,
+        notices=rows,
+        default_issued_by=user.full_name or user.username,
+        today=manila_today(),
+        notice_types=NOTICE_TYPES,
+        notice_type_labels=NOTICE_TYPE_LABELS,
+        audience_role_choices=USER_ROLES,
+        active_page="notices_manage",
+    )
+
+
+@main_routes.route("/trends-analysis")
+@login_required
+@staff_or_admin_required
+def trends_analysis():
+    return redirect(url_for("main_routes.trends_suppliers"))
+
+
+@main_routes.route("/trends-analysis/suppliers")
+@login_required
+@staff_or_admin_required
+def trends_suppliers():
+    user = _dashboard_user()
+    return render_template(
+        "trends_analysis.html",
+        fullname=user.full_name or "User",
+        role=normalize_role(user.role),
+        active_page="trends_suppliers",
+        trends_section="Suppliers",
+    )
+
+
+@main_routes.route("/trends-analysis/buyers")
+@login_required
+@staff_or_admin_required
+def trends_buyers():
+    user = _dashboard_user()
+    return render_template(
+        "trends_analysis.html",
+        fullname=user.full_name or "User",
+        role=normalize_role(user.role),
+        active_page="trends_buyers",
+        trends_section="Buyers",
     )
 
 
@@ -930,7 +1186,11 @@ def members():
     user = User.query.get(session.get("user_id"))
     query = (
         Member.query
-        .options(joinedload(Member.referrer), joinedload(Member.referrals))
+        .options(
+            joinedload(Member.referrer),
+            joinedload(Member.referrals),
+            joinedload(Member.positions).joinedload(MemberPosition.position),
+        )
         .order_by(Member.batch.asc(), Member.member_id.asc())
     )
     if is_member_role(user.role):
@@ -945,8 +1205,47 @@ def members():
         fullname=user.full_name or "Admin",
         role=normalize_role(user.role),
         members=members_list,
+        department_positions=positions_by_department(),
         active_page="members",
         is_own_profile_view=is_member_role(user.role),
+    )
+
+
+@main_routes.route("/members/positions", methods=["GET", "POST"])
+@login_required
+@staff_or_admin_required
+def member_positions():
+    user = _dashboard_user()
+
+    if request.method == "POST":
+        action = (request.form.get("action") or "").strip().lower()
+        try:
+            if action == "create":
+                position = create_position(request.form.get("department"), request.form.get("title"))
+                flash(f"Added '{position.title}' to {position.department}.", "success")
+            elif action == "rename":
+                position = rename_position(
+                    _parse_form_int(request.form.get("position_id"), "position_id"),
+                    request.form.get("title"),
+                )
+                flash(f"Renamed position to '{position.title}'.", "success")
+            elif action == "delete":
+                delete_position(_parse_form_int(request.form.get("position_id"), "position_id"))
+                flash("Position deleted.", "success")
+            else:
+                raise ValueError("Unknown action.")
+        except ValueError as exc:
+            db.session.rollback()
+            flash(str(exc), "danger")
+        return redirect(url_for("main_routes.member_positions"))
+
+    return render_template(
+        "member_positions.html",
+        fullname=user.full_name or "User",
+        role=normalize_role(user.role),
+        department_positions=positions_by_department(),
+        position_counts=assignment_counts(),
+        active_page="member_positions",
     )
 
 
@@ -1275,7 +1574,7 @@ def add_contractor():
         return jsonify({"status": "error", "msg": f"Import failed: {exc}"}), 500
 
 
-def _apply_contractor_form(contractor, data, include_batch=False):
+def _apply_contractor_form(contractor, data, include_batch=False, is_new=False):
     company_name = (data.get("company_name") or "").strip()
     if not company_name:
         raise ValueError("Company name is required.")
@@ -1294,6 +1593,8 @@ def _apply_contractor_form(contractor, data, include_batch=False):
     referrer = db.session.get(Member, member_referrer_id)
     if not referrer:
         raise ValueError("Member referrer not found.")
+    if is_new or contractor.member_referrer_id != member_referrer_id:
+        ensure_can_endorse(member_referrer_id)
 
     contractor.company_name = company_name
     contractor.company_address = (data.get("company_address") or "").strip() or None
@@ -1317,7 +1618,7 @@ def admin_create_contractor():
             raise ValueError(f"Contractor #{contractor_id} already exists.")
 
         contractor = Contractor(contractor_id=contractor_id, batch=1, member_referrer_id=1, company_name="")
-        _apply_contractor_form(contractor, data, include_batch=True)
+        _apply_contractor_form(contractor, data, include_batch=True, is_new=True)
         db.session.add(contractor)
         db.session.commit()
         return jsonify({
@@ -1726,6 +2027,8 @@ def admin_create_member():
 
         member = Member(member_id=member_id, batch=batch, first_name="", last_name="")
         _apply_member_form(member, data, actor_role=session.get("role"))
+        if data.get("positions_submitted") == "1":
+            apply_member_positions(member, data)
         db.session.add(member)
         db.session.commit()
         return jsonify({"status": "success", "msg": f"Member #{member.member_id} added.", "member": member.to_dict()})
@@ -1749,6 +2052,8 @@ def admin_update_member(member_id):
 
     try:
         _apply_member_form(member, data, actor_role=session.get("role"))
+        if data.get("positions_submitted") == "1":
+            apply_member_positions(member, data)
         db.session.commit()
         return jsonify({"status": "success", "msg": f"Member #{member.member_id} updated.", "member": member.to_dict()})
     except ValueError as exc:
@@ -1990,6 +2295,7 @@ def list_users():
     actor_role = session.get("role")
     users = (
         User.query
+        .options(selectinload(User.duty_rows))
         .filter(User.username != "PortalAdmin")
         .filter(User.role != USER_ROLE_PORTAL_ADMIN)
         .order_by(User.user_id.asc())
@@ -2005,10 +2311,24 @@ def list_users():
             "username": u.username,
             "full_name": u.full_name,
             "role": u.role,
+            "department": u.department,
             "status": u.status,
             "member_id": u.member_id,
+            "contractor_id": u.contractor_id,
+            "contractor_name": u.linked_contractor.company_name if u.linked_contractor else None,
+            "supplier_id": u.supplier_id,
+            "supplier_name": u.linked_supplier.company_name if u.linked_supplier else None,
+            "duties": sorted(u.duty_keys),
             "can_manage": staff_may_manage_user(actor_role, u.role),
-        } for u in visible_users]
+        } for u in visible_users],
+        "contractors": [
+            {"id": c.contractor_id, "name": c.company_name}
+            for c in Contractor.query.order_by(Contractor.company_name.asc()).all()
+        ],
+        "suppliers": [
+            {"id": s.supplier_id, "name": s.company_name}
+            for s in Supplier.query.order_by(Supplier.company_name.asc()).all()
+        ],
     })
 
 
@@ -2031,6 +2351,9 @@ def add_user():
 
     try:
         member_id = _parse_linked_member_id(role, request.form.get("member_id"))
+        department = _parse_department(role, request.form.get("department"))
+        contractor_id = _parse_linked_contractor_id(role, request.form.get("contractor_id"))
+        supplier_id = _parse_linked_supplier_id(role, request.form.get("supplier_id"))
     except ValueError as exc:
         return jsonify({"status": "error", "msg": str(exc)})
 
@@ -2039,12 +2362,17 @@ def add_user():
         full_name=full_name or username,
         role=role,
         status="Active",
+        department=department,
         member_id=member_id,
+        contractor_id=contractor_id,
+        supplier_id=supplier_id,
         password_hash=generate_password_hash(password),
     )
     db.session.add(user)
+    db.session.flush()
+    linked = _apply_user_duties(user)
     db.session.commit()
-    return jsonify({"status": "success", "msg": f"User '{username}' added."})
+    return jsonify({"status": "success", "msg": f"User '{username}' added.{_linked_projects_note(linked)}"})
 
 
 @main_routes.route("/admin/update_user/<int:user_id>", methods=["POST"])
@@ -2074,11 +2402,35 @@ def update_user(user_id):
 
     try:
         user.member_id = _parse_linked_member_id(user.role, request.form.get("member_id"))
+        user.department = _parse_department(user.role, request.form.get("department"))
+        user.contractor_id = _parse_linked_contractor_id(user.role, request.form.get("contractor_id"))
+        user.supplier_id = _parse_linked_supplier_id(user.role, request.form.get("supplier_id"))
     except ValueError as exc:
         return jsonify({"status": "error", "msg": str(exc)})
 
+    linked = _apply_user_duties(user)
     db.session.commit()
-    return jsonify({"status": "success", "msg": f"User '{user.username}' updated."})
+    return jsonify({"status": "success", "msg": f"User '{user.username}' updated.{_linked_projects_note(linked)}"})
+
+
+def _apply_user_duties(user):
+    """Save the duty checkboxes (dropping any the role cannot hold); returns projects linked by sheet name."""
+    if request.form.get("duties_present") != "1":
+        if not duties_allowed_for_role(user.role):
+            set_user_duties(user, [])
+        return 0
+    allowed = duties_allowed_for_role(user.role)
+    added = set_user_duties(user, [duty for duty in request.form.getlist("duties") if duty in allowed])
+    if DUTY_PROJECT_COORDINATOR not in added:
+        return 0
+    db.session.flush()
+    return link_sheet_coordinators(user)
+
+
+def _linked_projects_note(linked):
+    if not linked:
+        return ""
+    return f" Linked as coordinator on {linked} project(s) whose sheet coordinator name matches."
 
 
 @main_routes.route("/admin/delete_user", methods=["DELETE"])
@@ -2123,6 +2475,49 @@ def _parse_linked_member_id(role, raw_member_id):
             raise ValueError(f"Member #{member_id} not found.")
         return member_id
     return None
+
+
+def _parse_linked_contractor_id(role, raw_contractor_id):
+    """Contractor-role accounts may be linked to a contractor record (contractor project portal)."""
+    if not is_contractor_role(role):
+        return None
+    text = (raw_contractor_id or "").strip()
+    if not text:
+        return None
+    if not text.isdigit():
+        raise ValueError("Linked contractor must be chosen from the list.")
+    contractor_id = int(text)
+    if not db.session.get(Contractor, contractor_id):
+        raise ValueError(f"Contractor #{contractor_id} not found.")
+    return contractor_id
+
+
+def _parse_linked_supplier_id(role, raw_supplier_id):
+    """Supplier-role accounts may be linked to a supplier record (supplier order portal)."""
+    if not is_supplier_role(role):
+        return None
+    text = (raw_supplier_id or "").strip()
+    if not text:
+        return None
+    if not text.isdigit():
+        raise ValueError("Linked supplier must be chosen from the list.")
+    supplier_id = int(text)
+    if not db.session.get(Supplier, supplier_id):
+        raise ValueError(f"Supplier #{supplier_id} not found.")
+    return supplier_id
+
+
+def _parse_department(role, raw_department):
+    """Departments apply to internal accounts only; external roles are always cleared."""
+    if not role_uses_department(role):
+        return None
+    text = (raw_department or "").strip()
+    if not text:
+        return None
+    department = normalize_department(text)
+    if not department:
+        raise ValueError(f"Unknown department '{text}'.")
+    return department
 
 
 def _role_assignment_error(actor_role, requested_role):
@@ -2365,9 +2760,15 @@ def prof_project_commission_save():
         if not client_referrer:
             raise ValueError("Project client referral member not found.")
 
-        contractor_referrer_id = (
-            project.contractor_referrer_id if staff_generated_lock else contractor.member_referrer_id
-        )
+        if staff_generated_lock:
+            contractor_referrer_id = project.contractor_referrer_id
+        elif not contractor.member_referrer_id:
+            raise ValueError("Selected contractor has no member referrer.")
+        else:
+            contractor_referrer_id = endorsement_credit_member_id(
+                contractor.member_referrer_id,
+                on=project.created_at if project is not None and project.created_at else None,
+            )
         if not contractor_referrer_id:
             raise ValueError("Selected contractor has no member referrer.")
         if not db.session.get(Member, contractor_referrer_id):
@@ -2646,7 +3047,7 @@ def prof_ad_split_members_save():
                 raise ValueError(f"Member #{member_id} is already in AD-Members Split Sharing.")
             row.member_id = member_id
             row.description = description
-            row.updated_at = datetime.utcnow()
+            row.updated_at = manila_now()
             msg = "AD-Member updated."
         else:
             if AdSplitMember.query.filter_by(member_id=member_id).first():
@@ -2654,8 +3055,8 @@ def prof_ad_split_members_save():
             row = AdSplitMember(
                 member_id=member_id,
                 description=description,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=manila_now(),
+                updated_at=manila_now(),
                 created_by_user_id=session.get("user_id"),
             )
             db.session.add(row)
@@ -2791,7 +3192,7 @@ def member_ledger():
         members_list = Member.query.order_by(Member.last_name.asc(), Member.first_name.asc()).all()
 
     stats = member_ledger_stats(member_id)
-    transactions = member_ledger_rows(member_id)
+    transactions = member_ledger_rows(member_id, member_view=is_member_role(user.role))
     selected_member = db.session.get(Member, member_id) if member_id else None
     payout_requests = []
     if member_id and is_member_role(user.role):
@@ -2832,7 +3233,9 @@ def api_member_ledger(member_id):
         "member_id": member_id,
         "member_name": member.full_name,
         "stats": member_ledger_stats(member_id),
-        "transactions": member_ledger_rows(member_id, limit=limit),
+        "transactions": member_ledger_rows(
+            member_id, limit=limit, member_view=is_member_role(session.get("role"))
+        ),
     })
 
 

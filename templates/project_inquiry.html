@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Request a project — TBGP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+{% endblock %}
+
+{% block body_class %}landing-body{% endblock %}
+
+{% block body %}
+{% include 'partials/landing_nav.html' %}
+
+<section class="marketplace-page">
+    <div class="container">
+        <nav class="ecosystem-breadcrumb" aria-label="Breadcrumb">
+            <a href="{{ url_for('main_routes.index') }}">Home</a>
+            <span aria-hidden="true">/</span>
+            <a href="{{ url_for('main_routes.marketplace_category', category='services') }}">{{ categories['services'].label }}</a>
+            <span aria-hidden="true">/</span>
+            <span>Request a project</span>
+        </nav>
+
+        {% if attributed_member %}
+        <div class="marketplace-referral-banner" role="status">
+            Referred by <strong>#{{ attributed_member.member_id }} — {{ attributed_member.full_name }}</strong>.
+            Your project inquiry will be recorded for this member.
+        </div>
+        {% endif %}
+
+        <div class="marketplace-detail-layout">
+            <div class="marketplace-detail-main">
+                <header class="marketplace-detail-header">
+                    <p class="section-subtitle">Projects</p>
+                    <h1>Request a project</h1>
+                </header>
+                <p class="marketplace-detail-summary">
+                    Foundation, slope protection, site development, retrofitting, and design-and-build works delivered
+                    through accredited TBGP contractors. Tell us about your project and a project coordinator will follow up.
+                </p>
+
+                <ol class="project-steps">
+                    <li>
+                        <strong>Inquiry</strong>
+                        <span>You send the scope, location, and target schedule. You get a PRJ reference number.</span>
+                    </li>
+                    <li>
+                        <strong>Assessment</strong>
+                        <span>A coordinator calls you, reviews plans, and schedules a site ocular when needed.</span>
+                    </li>
+                    <li>
+                        <strong>Costing &amp; quotation</strong>
+                        <span>The technical team prepares the layout / BOQ and submits a quotation.</span>
+                    </li>
+                    <li>
+                        <strong>Contractor assignment</strong>
+                        <span>An accredited contractor is endorsed and assigned to deliver the works.</span>
+                    </li>
+                    <li>
+                        <strong>Implementation</strong>
+                        <span>The coordinator monitors the project until completion.</span>
+                    </li>
+                </ol>
+            </div>
+
+            <aside class="marketplace-inquiry-card" id="inquiry">
+                <h2>Project inquiry</h2>
+                <p class="text-muted small">No payment online. Leave your details and a TBGP project coordinator will follow up.</p>
+
+                {% if form_success %}
+                <div class="alert alert-success py-2 small">{{ form_success }}</div>
+                {% endif %}
+                {% if form_error %}
+                <div class="alert alert-danger py-2 small">{{ form_error }}</div>
+                {% endif %}
+
+                <form method="post" action="#inquiry">
+                    <dl class="marketplace-inquiry-auto small mb-3">
+                        <div><dt>Transaction type</dt><dd>Project inquiry</dd></div>
+                        <div><dt>Reference no.</dt><dd>{{ reference_preview }} <span class="text-muted">(confirmed on submit)</span></dd></div>
+                        <div>
+                            <dt>Referred by</dt>
+                            <dd>{% if attributed_member %}#{{ attributed_member.member_id }} — {{ attributed_member.full_name }}{% else %}Direct (no referrer){% endif %}</dd>
+                        </div>
+                    </dl>
+
+                    <div class="mb-2">
+                        <label class="form-label" for="guest_name">Full name <span class="text-danger">*</span></label>
+                        <input class="form-control" id="guest_name" name="guest_name" required maxlength="160"
+                               autocomplete="name" value="{{ form_values.guest_name }}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="guest_email">Email address <span class="text-danger">*</span></label>
+                        <input class="form-control" id="guest_email" name="guest_email" type="email" required maxlength="255"
+                               autocomplete="email" value="{{ form_values.guest_email }}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="guest_phone">Contact number <span class="text-danger">*</span></label>
+                        <input class="form-control" id="guest_phone" name="guest_phone" type="tel" required maxlength="160"
+                               autocomplete="tel" placeholder="e.g. 0917 123 4567" value="{{ form_values.guest_phone }}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="client_company">Company</label>
+                        <input class="form-control" id="client_company" name="client_company" autocomplete="organization"
+                               value="{{ form_values.client_company }}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="item_name">Project / scope of work</label>
+                        <input class="form-control" id="item_name" name="item_name" maxlength="255" list="projectScopeOptions"
+                               placeholder="e.g. Bored piling" value="{{ form_values.item_name }}">
+                        <datalist id="projectScopeOptions">
+                            {% for scope in scope_suggestions %}<option value="{{ scope }}">{% endfor %}
+                        </datalist>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-sm-6">
+                            <label class="form-label" for="delivery_location">Project location</label>
+                            <input class="form-control" id="delivery_location" name="delivery_location"
+                                   placeholder="City / province" value="{{ form_values.delivery_location }}">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label" for="estimated_implementation">Target start</label>
+                            <input class="form-control" id="estimated_implementation" name="estimated_implementation" maxlength="160"
+                                   placeholder="e.g. ASAP, Nov 2026" value="{{ form_values.estimated_implementation }}">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="specifications">Project details and specifications</label>
+                        <textarea class="form-control" id="specifications" name="specifications" rows="3"
+                                  placeholder="Area, quantity, depth/diameter, plans available…">{{ form_values.specifications }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="message">Message</label>
+                        <textarea class="form-control" id="message" name="message" rows="2">{{ form_values.message }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-brand w-100">Submit project inquiry</button>
+                </form>
+            </aside>
+        </div>
+    </div>
+</section>
+
+{% include 'partials/landing_footer.html' %}
+{% endblock %}

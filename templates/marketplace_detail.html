@@ -122,9 +122,9 @@
                 {% endif %}
             </div>
 
-            <aside class="marketplace-inquiry-card">
+            <aside class="marketplace-inquiry-card" id="inquiry">
                 <h2>Send an inquiry</h2>
-                <p class="text-muted small">No payment online. Leave your details and we will follow up.</p>
+                <p class="text-muted small">No payment online. Leave your details and a TBGP representative will follow up.</p>
 
                 {% if form_success %}
                 <div class="alert alert-success py-2 small">{{ form_success }}</div>
@@ -133,22 +133,62 @@
                 <div class="alert alert-danger py-2 small">{{ form_error }}</div>
                 {% endif %}
 
-                <form method="post" novalidate>
-                    <div class="mb-3">
-                        <label class="form-label" for="guest_name">Name <span class="text-danger">*</span></label>
-                        <input class="form-control" id="guest_name" name="guest_name" required value="{{ form_values.guest_name }}">
+                <form method="post" action="#inquiry">
+                    <dl class="marketplace-inquiry-auto small mb-3">
+                        <div><dt>{{ transaction_type_label }}</dt><dd>{{ listing.title }}</dd></div>
+                        <div><dt>Transaction type</dt><dd>{{ transaction_type_label }} inquiry</dd></div>
+                        <div><dt>Reference no.</dt><dd>{{ reference_preview }} <span class="text-muted">(confirmed on submit)</span></dd></div>
+                        <div>
+                            <dt>Referred by</dt>
+                            <dd>{% if inquiry_referrer %}#{{ inquiry_referrer.member_id }} — {{ inquiry_referrer.full_name }}{% else %}Direct (no referrer){% endif %}</dd>
+                        </div>
+                    </dl>
+
+                    <div class="mb-2">
+                        <label class="form-label" for="guest_name">Full name <span class="text-danger">*</span></label>
+                        <input class="form-control" id="guest_name" name="guest_name" required maxlength="160"
+                               autocomplete="name" value="{{ form_values.guest_name }}">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="guest_phone">Phone</label>
-                        <input class="form-control" id="guest_phone" name="guest_phone" value="{{ form_values.guest_phone }}">
+                    <div class="mb-2">
+                        <label class="form-label" for="guest_email">Email address <span class="text-danger">*</span></label>
+                        <input class="form-control" id="guest_email" name="guest_email" type="email" required maxlength="255"
+                               autocomplete="email" value="{{ form_values.guest_email }}">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="guest_email">Email</label>
-                        <input class="form-control" id="guest_email" name="guest_email" type="email" value="{{ form_values.guest_email }}">
+                    <div class="mb-2">
+                        <label class="form-label" for="guest_phone">Contact number <span class="text-danger">*</span></label>
+                        <input class="form-control" id="guest_phone" name="guest_phone" type="tel" required maxlength="160"
+                               autocomplete="tel" placeholder="e.g. 0917 123 4567" value="{{ form_values.guest_phone }}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="client_company">Company</label>
+                        <input class="form-control" id="client_company" name="client_company" autocomplete="organization"
+                               value="{{ form_values.client_company }}">
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-sm-6">
+                            <label class="form-label" for="quantity">Qty / volume</label>
+                            <input class="form-control" id="quantity" name="quantity" placeholder="e.g. 200 pcs"
+                                   value="{{ form_values.quantity }}">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label" for="estimated_implementation">Needed by</label>
+                            <input class="form-control" id="estimated_implementation" name="estimated_implementation" maxlength="160"
+                                   placeholder="e.g. ASAP, Nov 2026" value="{{ form_values.estimated_implementation }}">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="specifications">Specifications</label>
+                        <textarea class="form-control" id="specifications" name="specifications" rows="2"
+                                  placeholder="Size, grade, type, brand…">{{ form_values.specifications }}</textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="delivery_location">Delivery location</label>
+                        <input class="form-control" id="delivery_location" name="delivery_location"
+                               placeholder="City / province" value="{{ form_values.delivery_location }}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="message">Message</label>
-                        <textarea class="form-control" id="message" name="message" rows="4">{{ form_values.message }}</textarea>
+                        <textarea class="form-control" id="message" name="message" rows="3">{{ form_values.message }}</textarea>
                     </div>
                     <button type="submit" class="btn btn-brand w-100">Submit inquiry</button>
                 </form>

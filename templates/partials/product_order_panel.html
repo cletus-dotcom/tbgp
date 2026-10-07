@@ -1,0 +1,134 @@
+{# Product order panel on the product transaction detail page (staff). #}
+{% macro person(user) -%}
+{%- if user -%}<strong>{{ user.full_name or user.username }}</strong>{%- else -%}<span class="text-warning">Not assigned</span>{%- endif -%}
+{%- endmacro %}
+{% set status = lead.status or 'new' %}
+{% set order_steps = ['quotation_submitted'] + product_order_statuses|list + ['completed'] %}
+{% set step_index = order_steps.index(status) if status in order_steps else -1 %}
+<div class="dashboard-card section-card mb-3" id="product-order">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-truck"></i> Product order</h5>
+            <p class="section-subtitle mb-0">
+                {{ status_labels.get(status, status) }} for <strong>{{ lead.days_in_status }}</strong> day(s)
+                {% if lead.supplier or lead.assigned_contractor %} · Supplier <strong>{{ lead.supplier.company_name if lead.supplier else lead.assigned_contractor }}</strong>{% endif %}
+                {% if lead.delivery_date %} · Delivery <strong>{{ lead.delivery_date.isoformat() }}</strong>{% endif %}
+                {% if target_date %} · Client target <strong>{{ target_date.isoformat() }}</strong>{% endif %}
+            </p>
+        </div>
+    </div>
+
+    {% if attention_reasons %}
+    <div class="prj-attention mb-3">
+        <div class="fw-semibold text-danger-emphasis mb-1"><i class="bi bi-exclamation-triangle"></i> Needs attention</div>
+        <ul>{% for reason in attention_reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-6">
+            <div class="trx-panel h-100">
+                <div class="trx-panel-title">Product team</div>
+                <div class="small">
+                    <div>{{ team_slot_labels.assigned_user_id }}: {{ person(lead.assigned_user) }}</div>
+                    <div>{{ team_slot_labels.sourcing_user_id }}: {{ person(lead.sourcing_user) }}</div>
+                    <div>{{ team_slot_labels.estimator_user_id }}: {{ person(lead.estimator_user) }}</div>
+                    <div>{{ team_slot_labels.logistics_user_id }}: {{ person(lead.logistics_user) }}</div>
+                    <div>{{ team_slot_labels.agent_user_id }}: {{ person(lead.agent_user) }}</div>
+                    <div>Supplier: {% if lead.supplier %}<strong>{{ lead.supplier.company_name }}</strong>{% elif lead.assigned_contractor %}<strong>{{ lead.assigned_contractor }}</strong> <span class="text-muted">(not on the portal)</span>{% else %}<span class="text-warning">Not assigned</span>{% endif %}</div>
+                </div>
+                <div class="form-text">Change the team and supplier under Product team in the update form below.</div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="trx-panel h-100">
+                <div class="trx-panel-title">Order to delivery</div>
+                {% for step in order_steps %}
+                <div class="prj-stage state-{{ 'current' if loop.index0 == step_index else ('done' if loop.index0 < step_index else 'upcoming') }} mb-2">
+                    <span class="prj-stage-label">
+                        <span class="trx-status trx-{{ step }} me-1">&nbsp;</span>{{ status_labels.get(step, step) }}
+                        {% if loop.index0 == step_index %}<span class="badge bg-warning text-dark ms-1">Current · {{ lead.days_in_status }}d</span>{% endif %}
+                    </span>
+                    {% if step == 'for_delivery' and lead.delivery_date %}
+                    <span class="small text-muted">Scheduled {{ lead.delivery_date.isoformat() }}{% if lead.delivery_date < today and status != 'delivered' and step_index <= loop.index0 %} <span class="prj-flag">overdue</span>{% endif %}</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% if step_index < 0 %}
+                <p class="small text-muted mb-0">The order steps start once the quotation is submitted to the client.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div id="product-documents">
+        <div class="trx-panel-title">Documents <span class="badge bg-secondary">{{ documents|length }}</span></div>
+        {% if documents %}
+        <div class="table-responsive mb-3">
+            <table class="table table-sm align-middle">
+                <thead><tr><th></th><th>Document</th><th>Type</th><th>Uploaded</th><th>Supplier</th><th class="text-end"></th></tr></thead>
+                <tbody>
+                    {% for document in documents %}
+                    <tr>
+                        <td style="width: 3.5rem;">
+                            {% if document.is_image and not document.external_url %}
+                            <img src="{{ url_for('main_routes.project_document_download', document_id=document.document_id) }}" alt="" class="prj-doc-thumb" loading="lazy">
+                            {% else %}
+                            <i class="bi {{ 'bi-link-45deg' if document.external_url else 'bi-file-earmark-text' }} fs-4"></i>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('main_routes.project_document_download', document_id=document.document_id) }}" target="_blank" rel="noopener">{{ document.title }}</a>
+                            <div class="small text-muted">
+                                {% if document.external_url %}External link{% else %}{{ document.file_name }} · {{ '%.1f'|format((document.size_bytes or 0) / 1048576) }} MB{% endif %}
+                            </div>
+                        </td>
+                        <td class="small">{{ document_kinds.get(document.kind, document.kind) }}</td>
+                        <td class="small">{{ document.created_at.strftime('%Y-%m-%d %H:%M') if document.created_at else '' }}<br><span class="text-muted">{{ (document.uploaded_by.full_name or document.uploaded_by.username) if document.uploaded_by else '' }}</span></td>
+                        <td class="small">{{ 'Shared' if document.shared_with_contractor else 'Internal' }}</td>
+                        <td class="text-end">
+                            <form method="post" action="{{ url_for('main_routes.project_delete_document', document_id=document.document_id) }}" onsubmit="return confirm('Remove this document?');">
+                                <button class="btn btn-outline-danger btn-sm" type="submit" title="Remove"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted small">No documents yet. Attach supplier quotations, the client quotation, the PO, the DR, and proof of delivery here.</p>
+        {% endif %}
+        <form method="post" enctype="multipart/form-data" action="{{ url_for('main_routes.product_add_document', lead_id=lead.lead_id) }}" class="trx-panel">
+            <div class="trx-panel-title">Add a document</div>
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label" for="doc_kind">Type</label>
+                    <select class="form-select form-select-sm" id="doc_kind" name="kind">
+                        {% for key, label in document_kinds.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="doc_title">Title (optional)</label>
+                    <input class="form-control form-control-sm" id="doc_title" name="title" maxlength="255">
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label" for="doc_file">File (max 10 MB)</label>
+                    <input type="file" class="form-control form-control-sm" id="doc_file" name="file">
+                </div>
+                <div class="col-md-7">
+                    <label class="form-label" for="doc_url">or link (Google Drive, Dropbox…)</label>
+                    <input type="url" class="form-control form-control-sm" id="doc_url" name="external_url" placeholder="https://">
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" value="1" id="doc_shared" name="shared_with_contractor">
+                        <label class="form-check-label small" for="doc_shared">Share with the supplier</label>
+                    </div>
+                </div>
+                <div class="col-md-2"><button type="submit" class="btn btn-brand btn-sm w-100"><i class="bi bi-upload"></i> Upload</button></div>
+            </div>
+            <div class="form-text">Sales agents never see supplier quotations or supplier invoices.</div>
+        </form>
+    </div>
+</div>

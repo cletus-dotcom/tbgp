@@ -13,6 +13,16 @@
         </div>
     </div>
 
+    {% include 'partials/confidentiality_notice.html' %}
+
+    {% if ads_suspension %}
+    <div class="alert alert-danger mb-0">
+        <strong>Your share links are disabled until {{ ads_suspension.end_date.strftime('%b %d, %Y') }}.</strong>
+        You are suspended from posting ads{% if ads_suspension.memo_number %} under Memorandum {{ ads_suspension.memo_number }}{% endif %}.
+        Inquiries that arrive through your old links during this period are not credited to you.
+        Delete any post that shows project or client details. You have {{ lead_count }} attributed inquiries on record.
+    </div>
+    {% else %}
     <div class="row g-3 mb-3">
         <div class="col-md-4">
             <div class="stat-tile p-3">
@@ -58,9 +68,23 @@
                     </td>
                 </tr>
                 {% endfor %}
+                <tr>
+                    <td>Project inquiry form</td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm" id="shareLink_project_inquiry"
+                               value="{{ share_links.project_inquiry }}" readonly>
+                    </td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-outline-light btn-sm" data-copy-target="shareLink_project_inquiry">
+                            Copy
+                        </button>
+                        <a href="{{ share_links.project_inquiry }}" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">Open</a>
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>
+    {% endif %}
 </div>
 
 <div class="dashboard-card section-card">
@@ -82,7 +106,7 @@
                     <th>Guest</th>
                     <th>Contact</th>
                     <th>Status</th>
-                    <th>Follow-up</th>
+                    <th>Ref no.</th>
                     <th>Message</th>
                 </tr>
             </thead>
@@ -105,19 +129,11 @@
                         {% if lead.guest_email %}<div class="small">{{ lead.guest_email }}</div>{% endif %}
                     </td>
                     <td>
-                        <span class="badge bg-secondary">
+                        <span class="trx-status trx-{{ lead.status or 'new' }}">
                             {{ lead_status_labels.get(lead.status or 'new', lead.status or 'New') }}
                         </span>
                     </td>
-                    <td class="small">
-                        {% if lead.status == 'in_progress' and lead.action_required %}
-                        {{ lead_action_labels.get(lead.action_required, lead.action_required) }}
-                        {% elif lead.status == 'closed' and lead.final_result %}
-                        {{ lead_result_labels.get(lead.final_result, lead.final_result) }}
-                        {% else %}
-                        —
-                        {% endif %}
-                    </td>
+                    <td class="small text-nowrap">{{ lead.reference_number or '—' }}</td>
                     <td class="small">{{ lead.message or '—' }}</td>
                 </tr>
                 {% endfor %}

@@ -1,0 +1,212 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}{{ lead.reference_number }} — My Assignments{% endblock %}
+{% block topbar_title %}My Assignments{% endblock %}
+
+{% macro person(user, fallback='—') -%}
+{{ (user.full_name or user.username) if user else fallback }}
+{%- endmacro %}
+
+{% block content %}
+{% set status = lead.status or 'new' %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5 class="d-flex flex-wrap align-items-center gap-2">
+                <span class="badge bg-dark border border-warning text-warning">{{ lead.reference_number }}</span>
+                {{ lead.display_item }}
+                <span class="trx-status trx-{{ status }}">{{ status_labels.get(status, status) }}</span>
+            </h5>
+            <p class="section-subtitle mb-0">
+                You are the <strong>{{ my_roles|join(' and ')|lower }}</strong> on this project.
+                {% if lead.delivery_location %}<i class="bi bi-geo-alt"></i> {{ lead.delivery_location }} · {% endif %}
+                {% if lead.estimated_implementation %}Target implementation {{ lead.estimated_implementation }}{% endif %}
+            </p>
+        </div>
+        <div class="section-actions">
+            <a href="{{ url_for('main_routes.my_assignments') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> My assignments</a>
+        </div>
+    </div>
+    {% include 'partials/confidentiality_notice.html' %}
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="trx-panel h-100">
+                <div class="trx-panel-title">Client</div>
+                <div class="fw-semibold">{{ lead.client_company or '—' }}</div>
+                <div class="small">
+                    {% if lead.guest_name %}<div><i class="bi bi-person"></i> {{ lead.guest_name }}</div>{% endif %}
+                    {% if lead.guest_phone %}<div><i class="bi bi-telephone"></i> {{ lead.guest_phone }}</div>{% endif %}
+                    {% if lead.guest_email %}<div><i class="bi bi-envelope"></i> <a href="mailto:{{ lead.guest_email }}">{{ lead.guest_email }}</a></div>{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="trx-panel h-100">
+                <div class="trx-panel-title">Project team</div>
+                <div class="small">
+                    <div>Coordinator: <strong>{{ person(lead.assigned_user, lead.project_coordinator or '—') }}</strong></div>
+                    <div>Estimator: <strong>{{ person(lead.estimator_user) }}</strong></div>
+                    <div>Site engineer: <strong>{{ person(lead.site_engineer_user) }}</strong></div>
+                    <div>Contractor: <strong>{{ lead.awarded_contractor.company_name if lead.awarded_contractor else (lead.assigned_contractor or '—') }}</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if lead.message or lead.specifications or lead.action_needed %}
+    <div class="trx-panel mt-3">
+        {% if lead.message %}<div class="trx-panel-title">Project scope</div><div class="trx-history-note mb-2">{{ lead.message }}</div>{% endif %}
+        {% if lead.specifications %}<div class="trx-panel-title">Specifications</div><div class="trx-history-note mb-2">{{ lead.specifications }}</div>{% endif %}
+        {% if lead.action_needed %}<div class="trx-panel-title">Action needed</div><div class="trx-history-note">{{ lead.action_needed }}</div>{% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="dashboard-card section-card mb-3">
+            <div class="section-header">
+                <div><h5><i class="bi bi-chat-left-text"></i> Site note</h5>
+                    <p class="section-subtitle mb-0">Findings from the ocular, client feedback, measurements, issues. The project team is notified.</p></div>
+            </div>
+            <form method="post" action="{{ url_for('main_routes.my_assignment_action', lead_id=lead.lead_id, action='note') }}" class="d-flex gap-2">
+                <textarea class="form-control" name="note" rows="2" required placeholder="What did you find or agree on?"></textarea>
+                <button class="btn btn-brand align-self-end" type="submit">Post</button>
+            </form>
+        </div>
+
+        <div class="dashboard-card section-card mb-3">
+            <div class="section-header">
+                <div><h5><i class="bi bi-graph-up-arrow"></i> Report progress</h5></div>
+                {% if lead.progress_percent is not none %}
+                <div style="min-width: 10rem;"><div class="prj-progress-label mb-1">{{ lead.progress_percent }}% complete</div><div class="prj-progress"><span style="width: {{ lead.progress_percent }}%"></span></div></div>
+                {% endif %}
+            </div>
+            <form method="post" action="{{ url_for('main_routes.my_assignment_action', lead_id=lead.lead_id, action='progress') }}" class="row g-2 align-items-end">
+                <div class="col-sm-3">
+                    <label class="form-label" for="progress_percent">Percent complete</label>
+                    <input type="number" min="0" max="100" class="form-control" id="progress_percent" name="progress_percent" value="{{ lead.progress_percent if lead.progress_percent is not none else '' }}" required>
+                </div>
+                <div class="col-sm-7">
+                    <label class="form-label" for="progress_note">Update</label>
+                    <input class="form-control" id="progress_note" name="note" placeholder="Work done, issues, next steps">
+                </div>
+                <div class="col-sm-2"><button class="btn btn-brand w-100" type="submit">Report</button></div>
+            </form>
+        </div>
+
+        <div class="dashboard-card section-card mb-3">
+            <div class="section-header">
+                <div><h5><i class="bi bi-signpost-split"></i> Suggest a status change</h5>
+                    <p class="section-subtitle mb-0">The coordinator reviews your suggestion and updates the status.</p></div>
+            </div>
+            <form method="post" action="{{ url_for('main_routes.my_assignment_action', lead_id=lead.lead_id, action='suggest') }}" class="row g-2 align-items-end">
+                <div class="col-sm-5">
+                    <label class="form-label" for="suggest_status">New status</label>
+                    <select class="form-select" id="suggest_status" name="status" required>
+                        {% for key in lead_statuses if key != status %}<option value="{{ key }}">{{ status_labels.get(key, key) }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-sm-5">
+                    <label class="form-label" for="suggest_reason">Reason</label>
+                    <input class="form-control" id="suggest_reason" name="reason" placeholder="e.g. Quotation sent to client today">
+                </div>
+                <div class="col-sm-2"><button class="btn btn-outline-light w-100" type="submit">Send</button></div>
+            </form>
+        </div>
+
+        {% if stage_plan %}
+        <div class="dashboard-card section-card mb-3">
+            <div class="section-header"><div><h5><i class="bi bi-flag"></i> Stage plan</h5></div></div>
+            {% for row in stage_plan %}
+            <div class="prj-stage state-{{ row.state }} mb-2">
+                <span class="prj-stage-label">{{ row.label }}{% if row.state == 'current' %} <span class="badge bg-warning text-dark">Current</span>{% endif %}{% if row.state == 'overdue' %} <span class="prj-flag">{{ row.days_late }}d late</span>{% endif %}</span>
+                <span class="small text-muted">Target {{ row.target_date.isoformat() if row.target_date else '—' }}</span>
+                <span class="small text-muted">Reached {{ row.reached_on.isoformat() if row.reached_on else '—' }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="dashboard-card section-card mb-3">
+            <div class="section-header"><div><h5><i class="bi bi-calendar-event"></i> Site visits &amp; meetings</h5></div></div>
+            {% if events %}
+            <ul class="list-unstyled mb-0">
+                {% for event in events %}
+                <li class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                    <div>
+                        <div class="fw-semibold">{{ event.starts_at.strftime('%a %b %d, %Y %I:%M %p') }} — {{ event.title }}</div>
+                        <div class="small text-muted">
+                            {{ event_kinds.get(event.kind, event.kind) }} · {{ event_status_labels.get(event.status, event.status) }}
+                            · {{ person(event.assigned_user, 'Unassigned') }}
+                            {% if event.location %} · {{ event.location }}{% endif %}
+                            {% if event.meeting_link %} · <a href="{{ event.meeting_link }}" target="_blank" rel="noopener">Join link</a>{% endif %}
+                        </div>
+                        {% if event.outcome %}<div class="small">Outcome: {{ event.outcome }}</div>{% endif %}
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a class="btn btn-outline-light btn-sm" href="{{ url_for('main_routes.project_event_ics', event_id=event.event_id) }}" title="Add to calendar"><i class="bi bi-calendar-plus"></i></a>
+                        {% if event.status == 'scheduled' and event.assigned_user_id == current_user_id %}
+                        <form method="post" action="{{ url_for('main_routes.my_assignment_event_done', event_id=event.event_id) }}" class="d-flex gap-1">
+                            <input class="form-control form-control-sm" name="outcome" placeholder="Outcome (optional)">
+                            <button class="btn btn-outline-success btn-sm text-nowrap" type="submit"><i class="bi bi-check2"></i> Done</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted mb-0">No site visits or meetings scheduled yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="dashboard-card section-card mb-3">
+            <div class="section-header"><div><h5><i class="bi bi-folder2-open"></i> Project files</h5></div></div>
+            {% if documents %}
+            <ul class="list-unstyled mb-0">
+                {% for document in documents %}
+                <li class="mb-2">
+                    <a href="{{ url_for('main_routes.project_document_download', document_id=document.document_id) }}" target="_blank" rel="noopener">
+                        <i class="bi {{ 'bi-image' if document.is_image else ('bi-link-45deg' if document.external_url else 'bi-file-earmark-text') }}"></i> {{ document.title }}
+                    </a>
+                    <div class="small text-muted">{{ document_kinds.get(document.kind, document.kind) }} · {{ document.created_at.strftime('%Y-%m-%d') if document.created_at else '' }} · {{ person(document.uploaded_by, 'TBGP') }}</div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-0">No files yet.</p>
+            {% endif %}
+            <hr>
+            <form method="post" enctype="multipart/form-data" action="{{ url_for('main_routes.my_assignment_action', lead_id=lead.lead_id, action='document') }}">
+                <div class="mb-2">
+                    <label class="form-label" for="doc_kind">Upload</label>
+                    <select class="form-select form-select-sm" id="doc_kind" name="kind">
+                        {% for key in field_document_kinds %}<option value="{{ key }}" {{ 'selected' if key == 'site_photo' }}>{{ document_kinds[key] }}</option>{% endfor %}
+                    </select>
+                </div>
+                <input class="form-control form-control-sm mb-2" name="title" placeholder="Title (optional)">
+                <input type="file" class="form-control form-control-sm mb-2" name="file">
+                <input type="url" class="form-control form-control-sm mb-2" name="external_url" placeholder="or a link (https://)">
+                <button class="btn btn-outline-light btn-sm w-100" type="submit"><i class="bi bi-upload"></i> Upload</button>
+            </form>
+        </div>
+
+        <div class="dashboard-card section-card">
+            <div class="section-header"><div><h5><i class="bi bi-clock-history"></i> Activity</h5></div></div>
+            {% if history %}
+            <ul class="trx-history">
+                {% for entry in history %}
+                <li>
+                    <div class="trx-history-meta">{{ entry.created_at.strftime('%Y-%m-%d %H:%M') if entry.created_at else '' }} · {{ person(entry.created_by, 'System') }}</div>
+                    <div class="trx-history-note">{{ entry.note or status_labels.get(entry.status, entry.status) }}</div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-0">No activity yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

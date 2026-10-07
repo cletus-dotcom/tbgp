@@ -1,0 +1,334 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}{{ 'Project Monitoring' if is_project else 'Transaction Monitoring' }}{% endblock %}
+{% block topbar_title %}{{ 'Project Monitoring' if is_project else 'Transaction Monitoring' }}{% endblock %}
+
+{% macro filter_url(overrides) -%}
+{%- set args = dict(filters) -%}
+{%- set _ = args.update({'type': filters.transaction_type}) -%}
+{%- set _ = args.pop('transaction_type') -%}
+{%- set _ = args.update(overrides) -%}
+{{ url_for('main_routes.transactions_list', **args) }}
+{%- endmacro %}
+
+{% block content %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5>
+                {% if is_project %}
+                <i class="bi bi-cone-striped"></i> Project Monitoring
+                {% else %}
+                <i class="bi bi-clipboard-data"></i> Transaction Monitoring
+                {% endif %}
+                {% if unread_ids %}<span class="badge bg-danger ms-1">{{ unread_ids|length }} new</span>{% endif %}
+            </h5>
+            <p class="section-subtitle">
+                {% if is_project %}
+                Project inquiries, costing / quotation, contractor assignment, follow-up, and history
+                · <a href="{{ url_for('main_routes.project_inquiry') }}" target="_blank" rel="noopener">Public project inquiry form</a>
+                {% elif is_product %}
+                Product inquiries: sourcing, pricing, quotation, order to delivery, product team, supplier, and history
+                {% else %}
+                Inquiries from the marketplace, follow-up status, assignment, and history
+                {% endif %}
+            </p>
+        </div>
+        <div class="section-actions d-flex flex-wrap gap-2">
+            {% if unread_ids %}
+            <form method="post" action="{{ url_for('main_routes.transactions_mark_all_read') }}">
+                <button type="submit" class="btn btn-outline-light btn-sm"><i class="bi bi-check2-all"></i> Mark all seen</button>
+            </form>
+            {% endif %}
+            {% if is_project %}
+            <a href="{{ url_for('main_routes.project_calendar') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-calendar3"></i> Calendar</a>
+            <a href="{{ url_for('main_routes.trends_projects') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-bar-chart-line"></i> Analytics</a>
+            {% endif %}
+            <a href="{{ url_for('main_routes.transaction_new', transaction_type=filters.transaction_type if filters.transaction_type != 'all' else 'products') }}"
+               class="btn btn-outline-light btn-sm"><i class="bi bi-plus-lg"></i> {{ 'New project' if is_project else 'New transaction' }}</a>
+            <a href="{{ url_for('main_routes.transactions_export') }}{% if request.query_string %}?{{ request.query_string.decode('utf-8') }}{% endif %}"
+               class="btn btn-outline-light btn-sm"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+            {% if can_import %}
+            <button type="button" class="btn btn-brand btn-sm" data-bs-toggle="modal" data-bs-target="#transactionImportModal">
+                <i class="bi bi-upload"></i> Upload Excel
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-3">
+        {% for slug, label in transaction_types.items() %}
+        <li class="nav-item">
+            <a class="nav-link {% if filters.transaction_type == slug %}active{% endif %}"
+               href="{{ url_for('main_routes.transactions_list', type=slug) }}">{{ label }}s</a>
+        </li>
+        {% endfor %}
+        <li class="nav-item">
+            <a class="nav-link {% if filters.transaction_type == 'all' %}active{% endif %}"
+               href="{{ url_for('main_routes.transactions_list', type='all') }}">All</a>
+        </li>
+    </ul>
+
+    <div class="trx-status-tiles mb-3">
+        {% for status in status_choices %}
+        <a class="trx-status-tile trx-{{ status }} {% if filters.status == status %}active{% endif %}"
+           href="{{ filter_url({'status': '' if filters.status == status else status}) }}">
+            <span class="trx-dot" aria-hidden="true"></span>
+            <span>{{ status_labels[status] }}</span>
+            <strong>{{ counts.get(status, 0) }}</strong>
+        </a>
+        {% endfor %}
+        {% if has_team %}
+        <a class="trx-status-tile {% if filters.attention %}active{% endif %}" style="--trx-color: #ff4d4f;"
+           href="{{ filter_url({'attention': '' if filters.attention else '1'}) }}"
+           title="{{ 'No update, stuck in a status, overdue stage target, payment, or site visit' if is_project else 'No account officer, no update, stuck in a status, quotation awaiting follow-up, or delivery overdue' }}">
+            <span class="trx-dot" aria-hidden="true"></span>
+            <span><i class="bi bi-exclamation-triangle"></i> Needs attention</span>
+            <strong>{{ attention|length }}</strong>
+        </a>
+        {% endif %}
+    </div>
+
+    <form method="get" class="row g-2 align-items-end">
+        <input type="hidden" name="type" value="{{ filters.transaction_type }}">
+        {% if filters.attention %}<input type="hidden" name="attention" value="1">{% endif %}
+        <div class="col-md-3">
+            <label class="form-label" for="q">Search</label>
+            <input type="text" class="form-control" id="q" name="q" value="{{ filters.q }}"
+                   placeholder="{{ 'Ref no., project, client, ProF, location, contractor…' if is_project else ('Ref no., product, client, ProF, location, supplier…' if is_product else 'Ref no., product, client, ProF, location…') }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" for="status">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All statuses</option>
+                {% for status in status_choices %}
+                <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>{{ status_labels[status] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" for="stage">Open / closed</label>
+            <select class="form-select" id="stage" name="stage">
+                <option value="">All</option>
+                <option value="open" {% if filters.stage == 'open' %}selected{% endif %}>Open only</option>
+                <option value="closed" {% if filters.stage == 'closed' %}selected{% endif %}>Completed / dead</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" for="assigned">{{ 'Team member' if has_team else 'Assigned staff' }}</label>
+            <select class="form-select" id="assigned" name="assigned">
+                <option value="">Anyone</option>
+                <option value="me" {% if filters.assigned == 'me' %}selected{% endif %}>{{ 'On my team' if has_team else 'Assigned to me' }}</option>
+                <option value="unassigned" {% if filters.assigned == 'unassigned' %}selected{% endif %}>{{ 'No coordinator' if is_project else ('No account officer' if is_product else 'Unassigned') }}</option>
+                {% for staff in assignees %}
+                <option value="{{ staff.user_id }}" {% if filters.assigned == staff.user_id|string %}selected{% endif %}>
+                    {{ staff.full_name or staff.username }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-1">
+            <label class="form-label" for="source">Source</label>
+            <select class="form-select" id="source" name="source">
+                <option value="">All</option>
+                {% for key, label in source_labels.items() %}
+                <option value="{{ key }}" {% if filters.source == key %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-1">
+            <label class="form-label" for="date_from">From</label>
+            <input type="date" class="form-control" id="date_from" name="date_from" value="{{ filters.date_from }}">
+        </div>
+        <div class="col-md-1">
+            <label class="form-label" for="date_to">To</label>
+            <input type="date" class="form-control" id="date_to" name="date_to" value="{{ filters.date_to }}">
+        </div>
+        <div class="col-12 d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-brand btn-sm"><i class="bi bi-search"></i> Apply filters</button>
+            <a href="{{ url_for('main_routes.transactions_list', type=filters.transaction_type) }}" class="btn btn-outline-light btn-sm">Clear</a>
+        </div>
+    </form>
+</div>
+
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-list-check"></i> {{ 'Projects' if is_project else 'Transactions' }}</h5>
+            <p class="section-subtitle">{{ leads|length }} matching record(s){% if leads|length >= 1000 %} (showing first 1000){% endif %}</p>
+        </div>
+    </div>
+
+    {% if leads %}
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th>Ref no.</th>
+                    <th>{{ field_labels.item_name }}</th>
+                    <th>Requested</th>
+                    <th>Aging</th>
+                    <th>Client</th>
+                    <th>Contact</th>
+                    <th>ProF (referred by)</th>
+                    <th>Status</th>
+                    <th>Action needed</th>
+                    {% if is_project %}<th>Team / contractor</th>{% elif is_product %}<th>Team / supplier</th>{% endif %}
+                    <th>{{ 'Coordinator' if is_project else ('Account officer' if is_product else 'Assigned') }}</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lead in leads %}
+                {% set status = lead.status or 'new' %}
+                <tr class="trx-row trx-{{ status }}{% if lead.lead_id in unread_ids %} is-unread{% endif %}">
+                    <td class="text-nowrap">
+                        <a href="{{ url_for('main_routes.transaction_detail', lead_id=lead.lead_id) }}" class="fw-bold">
+                            {{ lead.reference_number or ('#' ~ lead.lead_id) }}
+                        </a>
+                        {% if lead.lead_id in unread_ids %}<span class="badge bg-danger ms-1">New</span>{% endif %}
+                        <div class="text-muted small">{{ source_labels.get(lead.source, lead.source) }}</div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold">{{ lead.display_item or '—' }}</div>
+                        {% if lead.quantity %}<div class="text-muted small trx-cell-clamp">{{ lead.quantity }}</div>{% endif %}
+                        {% if lead.delivery_location %}<div class="text-muted small"><i class="bi bi-geo-alt"></i> {{ lead.delivery_location|truncate(60) }}</div>{% endif %}
+                    </td>
+                    <td class="text-nowrap">
+                        {{ lead.date_requested.strftime('%Y-%m-%d') if lead.date_requested else '—' }}
+                        {% if lead.estimated_implementation %}<div class="text-muted small">EDI: {{ lead.estimated_implementation|truncate(30) }}</div>{% endif %}
+                    </td>
+                    <td class="text-nowrap">{{ lead.aging_days }} <span class="text-muted small">d</span></td>
+                    <td>
+                        {% if lead.client_company %}<div class="fw-semibold">{{ lead.client_company|truncate(60) }}</div>{% endif %}
+                        <div class="{% if lead.client_company %}text-muted small{% endif %}">{{ lead.guest_name or ('—' if not lead.client_company else '') }}</div>
+                    </td>
+                    <td class="text-nowrap">
+                        {% if lead.client_tel %}
+                        <a href="tel:{{ lead.client_tel }}" class="btn btn-outline-light btn-sm py-0 px-1" title="Call {{ lead.guest_phone }}">
+                            <i class="bi bi-telephone"></i>
+                        </a>
+                        {% endif %}
+                        {% if lead.client_mailto %}
+                        <a href="mailto:{{ lead.client_mailto }}?subject={{ ('TBGP inquiry ' ~ (lead.reference_number or '') ~ ' - ' ~ lead.display_item)|urlencode }}"
+                           class="btn btn-outline-light btn-sm py-0 px-1" title="Email {{ lead.client_mailto }}">
+                            <i class="bi bi-envelope"></i>
+                        </a>
+                        {% endif %}
+                        {% if lead.guest_phone %}<div class="small">{{ lead.guest_phone|truncate(28) }}</div>{% endif %}
+                        {% if not lead.client_tel and not lead.client_mailto and not lead.guest_phone %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>{{ lead.referred_by_name or '—' }}</td>
+                    <td>
+                        <span class="trx-status trx-{{ status }}">{{ status_labels.get(status, status) }}</span>
+                        {% if lead.status_detail %}<div class="small text-muted trx-cell-clamp mt-1">{{ lead.status_detail }}</div>{% endif %}
+                        {% if is_project and lead.progress_percent is not none %}
+                        <div class="prj-progress mt-1" title="{{ lead.progress_percent }}% complete"><span style="width: {{ lead.progress_percent }}%"></span></div>
+                        <div class="prj-progress-label">{{ lead.progress_percent }}% complete</div>
+                        {% endif %}
+                        {% if lead.lead_id in attention %}
+                        <div class="mt-1"><span class="prj-flag" title="{{ attention[lead.lead_id]|join('; ') }}"><i class="bi bi-exclamation-triangle"></i> {{ attention[lead.lead_id][0] }}{% if attention[lead.lead_id]|length > 1 %} +{{ attention[lead.lead_id]|length - 1 }}{% endif %}</span></div>
+                        {% endif %}
+                    </td>
+                    <td class="small"><div class="trx-cell-clamp">{{ lead.action_needed or '—' }}</div></td>
+                    {% if is_project %}
+                    <td class="small">
+                        {% if lead.estimator_user %}<div title="Estimator"><i class="bi bi-calculator"></i> {{ lead.estimator_user.full_name or lead.estimator_user.username }}</div>{% endif %}
+                        {% if lead.site_engineer_user %}<div title="Site engineer"><i class="bi bi-rulers"></i> {{ lead.site_engineer_user.full_name or lead.site_engineer_user.username }}</div>{% endif %}
+                        {% if not lead.estimator_user and not lead.site_engineer_user and not lead.assigned_contractor %}<span class="text-muted">—</span>{% endif %}
+                        {% if lead.assigned_contractor %}<div class="text-muted trx-cell-clamp"><i class="bi bi-building-gear"></i> {{ lead.assigned_contractor }}{% if lead.awarded_contractor_id %} <span class="badge bg-primary" title="Registered contractor with portal access">Portal</span>{% endif %}</div>{% endif %}
+                        {% if lead.contract_amount %}<div class="text-muted"><i class="bi bi-cash-stack"></i> ₱{{ '{:,.0f}'.format(lead.contract_amount) }}</div>{% endif %}
+                    </td>
+                    {% elif is_product %}
+                    <td class="small">
+                        {% if lead.sourcing_user %}<div title="Sourcing officer"><i class="bi bi-search"></i> {{ lead.sourcing_user.full_name or lead.sourcing_user.username }}</div>{% endif %}
+                        {% if lead.estimator_user %}<div title="Pricing officer"><i class="bi bi-calculator"></i> {{ lead.estimator_user.full_name or lead.estimator_user.username }}</div>{% endif %}
+                        {% if lead.logistics_user %}<div title="Logistics coordinator"><i class="bi bi-truck"></i> {{ lead.logistics_user.full_name or lead.logistics_user.username }}</div>{% endif %}
+                        {% if lead.agent_user %}<div title="Sales agent"><i class="bi bi-person-walking"></i> {{ lead.agent_user.full_name or lead.agent_user.username }}</div>{% endif %}
+                        {% if lead.assigned_contractor %}<div class="text-muted trx-cell-clamp"><i class="bi bi-box-seam"></i> {{ lead.assigned_contractor }}{% if lead.supplier_id %} <span class="badge bg-primary" title="Registered supplier with portal access">Portal</span>{% endif %}</div>{% endif %}
+                        {% if lead.delivery_date %}<div class="text-muted" title="Scheduled delivery"><i class="bi bi-calendar-check"></i> {{ lead.delivery_date.isoformat() }}</div>{% endif %}
+                        {% if not (lead.sourcing_user or lead.estimator_user or lead.logistics_user or lead.agent_user or lead.assigned_contractor or lead.delivery_date) %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    {% endif %}
+                    <td class="text-nowrap">
+                        {% if lead.assigned_user %}
+                        {{ lead.assigned_user.full_name or lead.assigned_user.username }}
+                        {% elif is_project and lead.project_coordinator %}
+                        <div class="text-muted small" title="Coordinator name on the sheet (no portal user linked)">{{ lead.project_coordinator }}</div>
+                        {% if status not in closed_statuses %}
+                        <form method="post" action="{{ url_for('main_routes.transaction_assign_me', lead_id=lead.lead_id) }}">
+                            <button type="submit" class="btn btn-outline-warning btn-sm py-0">Take</button>
+                        </form>
+                        {% endif %}
+                        {% elif status not in closed_statuses %}
+                        <form method="post" action="{{ url_for('main_routes.transaction_assign_me', lead_id=lead.lead_id) }}">
+                            <button type="submit" class="btn btn-outline-warning btn-sm py-0">Take</button>
+                        </form>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <a href="{{ url_for('main_routes.transaction_detail', lead_id=lead.lead_id) }}" class="btn btn-outline-light btn-sm" title="Open">
+                            <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No transactions match these filters.</p>
+    {% endif %}
+</div>
+
+{% if can_import %}
+<div class="modal fade" id="transactionImportModal" tabindex="-1" aria-labelledby="transactionImportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" method="post" action="{{ url_for('main_routes.transactions_import') }}" enctype="multipart/form-data">
+            <div class="modal-header bg-brand text-white">
+                <h5 class="modal-title" id="transactionImportModalLabel"><i class="bi bi-upload"></i> Upload monitoring sheet</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted">
+                    Use the TBGP color-coded monitoring sheet layout (TRANSACTION, INQUIRY NO. / No., DATE REQUESTED … REMARKS).
+                    The sheet matching the transaction type is used (PRODUCTS or PROJECTS tab).
+                </p>
+                <ul class="small text-muted ps-3">
+                    <li><strong>Products:</strong> status from the STATUS text and row color (red = completed, black = dead).</li>
+                    <li><strong>Projects:</strong> status from the row color legend — gray = terminated, blue = quotation in process,
+                        green = for assignment of contractor, orange = on hold, yellow = for costing / quotation,
+                        fuchsia = quotation submitted.</li>
+                </ul>
+                <div class="mb-3">
+                    <label class="form-label" for="import_file">Excel file (.xlsx)</label>
+                    <input type="file" class="form-control" id="import_file" name="file" accept=".xlsx,.xlsm" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="import_type">Transaction type</label>
+                    <select class="form-select" id="import_type" name="transaction_type">
+                        {% for slug, label in transaction_types.items() %}
+                        <option value="{{ slug }}" {% if filters.transaction_type == slug %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="1" id="update_existing" name="update_existing">
+                    <label class="form-check-label" for="update_existing">
+                        Update transactions already imported with the same inquiry no.
+                    </label>
+                </div>
+                <p class="small text-muted mt-2 mb-0">
+                    Inquiry numbers already used by website or manual transactions are skipped and listed after the upload.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-brand"><i class="bi bi-upload"></i> Import</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

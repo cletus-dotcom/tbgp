@@ -1,0 +1,86 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Portal Positions{% endblock %}
+{% block topbar_title %}Portal Positions{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-diagram-2"></i> Portal Positions by Department</h5>
+            <p class="section-subtitle">
+                Create the positions available in each department, then assign them to members from
+                Members &rarr; Edit. A member can hold one position per department.
+            </p>
+        </div>
+        <a href="{{ url_for('main_routes.members') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Members
+        </a>
+    </div>
+
+    <form method="post" class="row g-2 align-items-end">
+        <input type="hidden" name="action" value="create">
+        <div class="col-md-4">
+            <label class="form-label" for="newPositionDepartment">Department</label>
+            <select id="newPositionDepartment" name="department" class="form-select" required>
+                {% for department in department_positions.keys() %}
+                <option value="{{ department }}">{{ department }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-5">
+            <label class="form-label" for="newPositionTitle">Position title</label>
+            <input type="text" id="newPositionTitle" name="title" class="form-control" maxlength="120"
+                   placeholder="e.g. Department Head, Officer, Coordinator" required>
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-brand w-100"><i class="bi bi-plus-lg"></i> Add Position</button>
+        </div>
+    </form>
+</div>
+
+<div class="row g-3">
+    {% for department, positions in department_positions.items() %}
+    <div class="col-lg-6">
+        <div class="dashboard-card section-card h-100">
+            <div class="section-header">
+                <div>
+                    <h5><i class="bi bi-building"></i> {{ department }}</h5>
+                    <p class="section-subtitle">{{ positions|length }} position(s)</p>
+                </div>
+            </div>
+            {% if positions %}
+            <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
+                {% for position in positions %}
+                {% set holders = position_counts.get(position.position_id, 0) %}
+                <li class="d-flex flex-wrap align-items-center gap-2">
+                    <form method="post" class="d-flex flex-grow-1 gap-2">
+                        <input type="hidden" name="action" value="rename">
+                        <input type="hidden" name="position_id" value="{{ position.position_id }}">
+                        <input type="text" name="title" class="form-control form-control-sm"
+                               value="{{ position.title }}" maxlength="120" required
+                               aria-label="Position title">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">Save</button>
+                    </form>
+                    <span class="badge bg-secondary" title="Members holding this position">
+                        {{ holders }} member{{ '' if holders == 1 else 's' }}
+                    </span>
+                    <form method="post"
+                          onsubmit='return confirm({{ ("Delete the position " ~ position.title ~ " from " ~ department ~ "?")|tojson }});'>
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="position_id" value="{{ position.position_id }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                {% if holders %}disabled title="Reassign members before deleting"{% endif %}>
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted mb-0">No positions yet. Add one above.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

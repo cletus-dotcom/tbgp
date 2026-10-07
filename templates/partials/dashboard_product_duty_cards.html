@@ -1,0 +1,221 @@
+{# Expects `product_cards` from product_duty_dashboard() and `product_lead_endpoint` (staff detail or My Assignments). #}
+{% set attention = product_cards['attention'] %}
+{% set status_label = product_cards['status_label'] %}
+{% set staff_view = is_staff_or_admin(session.get('role')) %}
+{% macro person(user, fallback='—') -%}
+{{ (user.full_name or user.username) if user else fallback }}
+{%- endmacro %}
+{% macro lead_list(items, meta, empty) -%}
+{% if items %}
+<ul class="list-unstyled mb-0 notice-dashboard-list">
+    {% for lead in items %}
+    {% set reasons = product_cards['attention'].get(lead.lead_id, []) %}
+    <li class="notice-dashboard-item">
+        <a href="{{ url_for(product_lead_endpoint, lead_id=lead.lead_id) }}" class="notice-dashboard-link">
+            <span class="trx-status trx-{{ lead.status or 'new' }}">{{ lead.reference_number }}</span>
+            <span class="notice-dashboard-title">
+                {{ lead.display_item|truncate(55) }}
+                {% if reasons %}<span class="d-block small fw-normal text-danger-emphasis">{{ reasons|join(' · ') }}</span>
+                {% else %}<span class="d-block small fw-normal text-muted">{{ product_cards['status_label'](lead.status) }}{% if lead.client_company %} · {{ lead.client_company|truncate(40) }}{% endif %}</span>{% endif %}
+            </span>
+            <span class="notice-dashboard-meta text-muted">
+                {% if meta == 'delivery' %}{{ lead.delivery_date.strftime('%b %d') if lead.delivery_date else 'No date' }}{% else %}{{ lead.days_in_status }}d in status{% endif %}
+            </span>
+        </a>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="text-muted small mb-0">{{ empty }}</p>
+{% endif %}
+{%- endmacro %}
+
+{% if product_cards.get('manager') %}
+{% set manager = product_cards['manager'] %}
+<div class="row g-3 mb-3">
+    <div class="col-lg-7">
+        <div class="dashboard-card section-card h-100 mb-0">
+            <div class="section-header">
+                <div>
+                    <h5><i class="bi bi-people"></i> Products team workload</h5>
+                    <p class="section-subtitle">Open product transactions per team member and slot. Give people product duties in Manage Users to list them here.</p>
+                </div>
+                {% if manager['attention_count'] %}
+                <a href="{{ url_for('main_routes.transactions_list', type='products', attention='1') }}" class="btn btn-sm btn-outline-danger"><i class="bi bi-exclamation-triangle"></i> {{ manager['attention_count'] }} need attention</a>
+                {% endif %}
+            </div>
+            {% if manager['workload'] %}
+            <div class="section-table-wrap">
+                <table class="table table-sm section-table mb-0 align-middle">
+                    <thead>
+                        <tr><th>Team member</th>{% for slot, label in product_cards['slot_labels'].items() %}<th class="text-center">{{ label }}</th>{% endfor %}<th class="text-center">Needs attention</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for row in manager['workload'] %}
+                        <tr>
+                            <td>
+                                {% if staff_view %}<a href="{{ url_for('main_routes.transactions_list', type='products', assigned=row.user.user_id, stage='open') }}">{{ person(row.user) }}</a>{% else %}{{ person(row.user) }}{% endif %}
+                                <span class="small text-muted">{{ row.user.role }}</span>
+                            </td>
+                            {% for slot in product_cards['slot_labels'] %}<td class="text-center">{{ row[slot] or '—' }}</td>{% endfor %}
+                            <td class="text-center">{% if row.attention %}<span class="badge bg-danger">{{ row.attention }}</span>{% else %}—{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted small mb-0">No team members yet. Tick product duties for Staff or Members in Manage Users.</p>
+            {% endif %}
+            {% if manager['suggestions'] %}
+            <hr>
+            <h6 class="small text-uppercase text-muted mb-2"><i class="bi bi-signpost-split"></i> Status suggestions from sales agents (14 days)</h6>
+            <ul class="list-unstyled mb-0 small">
+                {% for entry in manager['suggestions'] %}
+                <li class="mb-1">
+                    <a href="{{ url_for('main_routes.transaction_detail', lead_id=entry.lead_id) }}#history">{{ entry.lead.reference_number }}</a>
+                    · {{ entry.note }} <span class="text-muted">— {{ person(entry.created_by, 'Sales agent') }}, {{ entry.created_at.strftime('%b %d') }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="dashboard-card section-card h-100 mb-0{% if manager['unassigned_count'] %} notice-card-alert{% endif %}">
+            <div class="section-header">
+                <div>
+                    <h5>
+                        <i class="bi bi-person-exclamation"></i> Products without an account officer
+                        {% if manager['unassigned_count'] %}<span class="badge bg-danger ms-1">{{ manager['unassigned_count'] }}</span>{% endif %}
+                    </h5>
+                    <p class="section-subtitle">
+                        Also open: {{ manager['no_sourcing'] }} research / quotation inquiry(ies) without a sourcing officer,
+                        {{ manager['no_pricing'] }} without a pricing officer, and
+                        {{ manager['no_logistics'] }} confirmed order(s) without a logistics coordinator.
+                    </p>
+                </div>
+                <a href="{{ url_for('main_routes.transactions_list', type='products', assigned='unassigned', stage='open') }}" class="btn btn-sm btn-brand">View all</a>
+            </div>
+            {% if manager['unassigned'] %}
+            <ul class="list-unstyled mb-0 notice-dashboard-list">
+                {% for lead in manager['unassigned'] %}
+                <li class="notice-dashboard-item">
+                    <a href="{{ url_for('main_routes.transaction_detail', lead_id=lead.lead_id) }}" class="notice-dashboard-link">
+                        <span class="trx-status trx-{{ lead.status or 'new' }}">{{ lead.reference_number }}</span>
+                        <span class="notice-dashboard-title">
+                            {{ lead.display_item|truncate(55) }}
+                            <span class="d-block small fw-normal text-muted">{{ status_label(lead.status) }}{% if lead.client_company %} · {{ lead.client_company|truncate(40) }}{% endif %}</span>
+                        </span>
+                        <span class="notice-dashboard-meta text-muted">{{ lead.aging_days }}d</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-0">Every open product inquiry has an account officer.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% set personal = [] %}
+{% for key in ['account', 'sourcing', 'pricing', 'logistics', 'agent'] %}{% if product_cards.get(key) %}{% set _ = personal.append(key) %}{% endif %}{% endfor %}
+{% if personal %}
+{% set col = 'col-lg-6' if personal|length > 1 else 'col-12' %}
+<div class="row g-3 mb-3">
+    {% if product_cards.get('account') %}
+    {% set card = product_cards['account'] %}
+    <div class="{{ col }}">
+        <div class="dashboard-card section-card h-100 mb-0{% if card['attention_count'] %} notice-card-alert{% endif %}">
+            <div class="section-header">
+                <div>
+                    <h5>
+                        <i class="bi bi-person-gear"></i> My accounts (account officer)
+                        <span class="badge bg-secondary ms-1">{{ card['count'] }}</span>
+                        {% if card['attention_count'] %}<span class="badge bg-danger ms-1" title="Need attention">{{ card['attention_count'] }}</span>{% endif %}
+                    </h5>
+                    <p class="section-subtitle">
+                        Open product inquiries you own, those needing attention first.
+                        {% if card['followups'] %}{{ card['followups'] }} quotation(s) waiting for the client's answer.{% endif %}
+                    </p>
+                </div>
+                {% if staff_view %}<a href="{{ url_for('main_routes.transactions_list', type='products', assigned='me', stage='open') }}" class="btn btn-sm btn-outline-light">All mine</a>{% endif %}
+            </div>
+            {{ lead_list(card['items'], 'status', 'No open product inquiries assigned to you as account officer.') }}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if product_cards.get('sourcing') %}
+    {% set card = product_cards['sourcing'] %}
+    <div class="{{ col }}">
+        <div class="dashboard-card section-card h-100 mb-0">
+            <div class="section-header">
+                <div>
+                    <h5><i class="bi bi-search"></i> My sourcing queue <span class="badge bg-secondary ms-1">{{ card['count'] }}</span></h5>
+                    <p class="section-subtitle">
+                        Inquiries for research or quotation where you find the supplier, longest-waiting first.
+                        {% if card['unclaimed'] %}<span class="text-warning">{{ card['unclaimed'] }} have no sourcing officer yet.</span>{% endif %}
+                    </p>
+                </div>
+            </div>
+            {{ lead_list(card['items'], 'status', 'Nothing waiting for sourcing.') }}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if product_cards.get('pricing') %}
+    {% set card = product_cards['pricing'] %}
+    <div class="{{ col }}">
+        <div class="dashboard-card section-card h-100 mb-0">
+            <div class="section-header">
+                <div>
+                    <h5><i class="bi bi-calculator"></i> My pricing queue <span class="badge bg-secondary ms-1">{{ card['count'] }}</span></h5>
+                    <p class="section-subtitle">
+                        Inquiries waiting for costing or a client quotation where you are the pricing officer.
+                        {% if card['unclaimed'] %}<span class="text-warning">{{ card['unclaimed'] }} have no pricing officer yet.</span>{% endif %}
+                    </p>
+                </div>
+            </div>
+            {{ lead_list(card['items'], 'status', 'Nothing waiting for a quotation.') }}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if product_cards.get('logistics') %}
+    {% set card = product_cards['logistics'] %}
+    <div class="{{ col }}">
+        <div class="dashboard-card section-card h-100 mb-0">
+            <div class="section-header">
+                <div>
+                    <h5><i class="bi bi-truck"></i> My deliveries <span class="badge bg-secondary ms-1">{{ card['count'] }}</span></h5>
+                    <p class="section-subtitle">
+                        Confirmed orders and orders for delivery, earliest delivery date first.
+                        {% if card['unclaimed'] %}<span class="text-warning">{{ card['unclaimed'] }} confirmed order(s) have no logistics coordinator yet.</span>{% endif %}
+                    </p>
+                </div>
+            </div>
+            {{ lead_list(card['items'], 'delivery', 'No deliveries assigned to you.') }}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if product_cards.get('agent') %}
+    {% set card = product_cards['agent'] %}
+    <div class="{{ col }}">
+        <div class="dashboard-card section-card h-100 mb-0">
+            <div class="section-header">
+                <div>
+                    <h5><i class="bi bi-person-walking"></i> My product leads (sales agent) <span class="badge bg-secondary ms-1">{{ card['count'] }}</span></h5>
+                    <p class="section-subtitle">Open product inquiries where you follow up the client in the field.</p>
+                </div>
+                {% if not staff_view %}<a href="{{ url_for('main_routes.my_assignments') }}" class="btn btn-sm btn-outline-light">My assignments</a>{% endif %}
+            </div>
+            {{ lead_list(card['items'], 'status', 'No open product inquiries assigned to you as sales agent.') }}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}

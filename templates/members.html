@@ -23,6 +23,9 @@
             <button type="button" class="btn-import-member" data-bs-toggle="modal" data-bs-target="#addMemberModal">
                 <i class="bi bi-file-earmark-spreadsheet"></i> Import Members
             </button>
+            <a href="{{ url_for('main_routes.member_positions') }}" class="btn-import-member text-decoration-none">
+                <i class="bi bi-diagram-2"></i> Portal Positions
+            </a>
             {% endif %}
             {% if not is_own_profile_view %}
             {% with search_id='memberSearch', search_placeholder='Search members...' %}
@@ -329,6 +332,11 @@
             if (lifetimeCapAmount) {
                 lifetimeCapAmount.value = formatLifetimeCap(m.lifetime_cap_amount ?? {{ member_lifetime_earnings_cap }});
             }
+            const positions = m.positions || {};
+            editForm.querySelectorAll('.member-position-select').forEach(select => {
+                const positionId = positions[select.dataset.department];
+                select.value = positionId ? String(positionId) : '';
+            });
         };
 
         function getMemberDataFromEditButton(btn) {

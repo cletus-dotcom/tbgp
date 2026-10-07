@@ -495,6 +495,9 @@ def migrate_users_table():
             "ALTER TABLE users ADD COLUMN comfort_high_contrast BOOLEAN NOT NULL DEFAULT FALSE"
         ))
         logger.info("Added users.comfort_high_contrast")
+    if "department" not in columns:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN department VARCHAR(40)"))
+        logger.info("Added users.department")
     db.session.commit()
 
 
@@ -819,4 +822,543 @@ def migrate_gallery_tables():
         "CREATE INDEX ix_cms_gallery_folders_status ON cms_gallery_folders (status)"
     ))
     logger.info("Created cms_gallery_folders table")
+    db.session.commit()
+
+
+def migrate_portal_positions_tables():
+    inspector = inspect(db.engine)
+    tables = inspector.get_table_names()
+
+    if "portal_positions" not in tables:
+        db.session.execute(text("""
+            CREATE TABLE portal_positions (
+                position_id SERIAL PRIMARY KEY,
+                department VARCHAR(40) NOT NULL,
+                title VARCHAR(120) NOT NULL,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL,
+                CONSTRAINT uq_portal_positions_department_title UNIQUE (department, title)
+            )
+        """))
+        db.session.execute(text(
+            "CREATE INDEX ix_portal_positions_department ON portal_positions (department)"
+        ))
+        logger.info("Created portal_positions table")
+
+    if "member_positions" not in inspector.get_table_names():
+        db.session.execute(text("""
+            CREATE TABLE member_positions (
+                member_position_id SERIAL PRIMARY KEY,
+                member_id INTEGER NOT NULL REFERENCES members(member_id) ON DELETE CASCADE,
+                department VARCHAR(40) NOT NULL,
+                position_id INTEGER NOT NULL REFERENCES portal_positions(position_id) ON DELETE CASCADE,
+                assigned_at TIMESTAMP NOT NULL,
+                CONSTRAINT uq_member_positions_member_department UNIQUE (member_id, department)
+            )
+        """))
+        db.session.execute(text(
+            "CREATE INDEX ix_member_positions_member_id ON member_positions (member_id)"
+        ))
+        db.session.execute(text(
+            "CREATE INDEX ix_member_positions_position_id ON member_positions (position_id)"
+        ))
+        logger.info("Created member_positions table")
+
+    db.session.commit()
+
+
+def merge_departments():
+    """Fold retired departments into their replacement (Sales + Marketing -> Sales & Marketing); idempotent."""
+    from app.config import MERGED_DEPARTMENTS
+
+    tables = set(inspect(db.engine).get_table_names())
+
+    def scalar(sql, **params):
+        return db.session.execute(text(sql), params).scalar()
+
+    for old, new in MERGED_DEPARTMENTS.items():
+        params = {"old": old, "new": new}
+        if "users" in tables:
+            moved = db.session.execute(
+                text("UPDATE users SET department = :new WHERE department = :old"), params
+            ).rowcount
+            if moved:
+                logger.info("Moved %s user(s) from %s to %s", moved, old, new)
+
+        duplicate_positions = []
+        if "portal_positions" in tables:
+            rows = db.session.execute(text(
+                "SELECT position_id, title FROM portal_positions WHERE department = :old ORDER BY sort_order, title"
+            ), params).all()
+            next_order = scalar(
+                "SELECT COALESCE(MAX(sort_order), 0) FROM portal_positions WHERE department = :new", new=new
+            )
+            for position_id, title in rows:
+                target = scalar(
+                    "SELECT position_id FROM portal_positions WHERE department = :new AND lower(title) = lower(:title)",
+                    new=new, title=title,
+                )
+                if target:
+                    if "member_positions" in tables:
+                        db.session.execute(text(
+                            "UPDATE member_positions SET position_id = :target WHERE position_id = :source"
+                        ), {"target": target, "source": position_id})
+                    duplicate_positions.append(position_id)
+                else:
+                    next_order += 1
+                    db.session.execute(text(
+                        "UPDATE portal_positions SET department = :new, sort_order = :sort WHERE position_id = :id"
+                    ), {"new": new, "sort": next_order, "id": position_id})
+            if rows:
+                logger.info("Moved %s position(s) from %s to %s", len(rows), old, new)
+
+        if "member_positions" in tables:
+            rows = db.session.execute(text(
+                "SELECT member_position_id, member_id FROM member_positions WHERE department = :old"
+            ), params).all()
+            for member_position_id, member_id in rows:
+                taken = scalar(
+                    "SELECT 1 FROM member_positions WHERE member_id = :member AND department = :new",
+                    member=member_id, new=new,
+                )
+                if taken:
+                    logger.warning(
+                        "Member %s already holds a %s position; dropped their former %s position",
+                        member_id, new, old,
+                    )
+                    db.session.execute(text(
+                        "DELETE FROM member_positions WHERE member_position_id = :id"
+                    ), {"id": member_position_id})
+                else:
+                    db.session.execute(text(
+                        "UPDATE member_positions SET department = :new WHERE member_position_id = :id"
+                    ), {"new": new, "id": member_position_id})
+
+        for position_id in duplicate_positions:
+            db.session.execute(text("DELETE FROM portal_positions WHERE position_id = :id"), {"id": position_id})
+    db.session.commit()
+
+
+def migrate_portal_notices_tables():
+    inspector = inspect(db.engine)
+    tables = inspector.get_table_names()
+
+    if "portal_notices" not in tables:
+        db.session.execute(text("""
+            CREATE TABLE portal_notices (
+                notice_id SERIAL PRIMARY KEY,
+                notice_type VARCHAR(20) NOT NULL DEFAULT 'announcement',
+                title VARCHAR(200) NOT NULL,
+                body TEXT NOT NULL,
+                reference_number VARCHAR(60),
+                effective_date DATE,
+                issued_by VARCHAR(160),
+                issued_date DATE,
+                audience_roles JSON NOT NULL DEFAULT '[]',
+                is_published BOOLEAN NOT NULL DEFAULT TRUE,
+                created_by_user_id INTEGER REFERENCES users(user_id),
+                created_at TIMESTAMP NOT NULL,
+                updated_at TIMESTAMP NOT NULL
+            )
+        """))
+        db.session.execute(text(
+            "CREATE INDEX ix_portal_notices_notice_type ON portal_notices (notice_type)"
+        ))
+        logger.info("Created portal_notices table")
+    else:
+        notice_columns = {col["name"] for col in inspector.get_columns("portal_notices")}
+        for column, ddl in (
+            ("reference_number", "VARCHAR(60)"),
+            ("effective_date", "DATE"),
+            ("issued_by", "VARCHAR(160)"),
+            ("issued_date", "DATE"),
+        ):
+            if column not in notice_columns:
+                db.session.execute(text(f"ALTER TABLE portal_notices ADD COLUMN {column} {ddl}"))
+                logger.info("Added portal_notices.%s", column)
+
+    if "portal_notice_reads" not in inspector.get_table_names():
+        db.session.execute(text("""
+            CREATE TABLE portal_notice_reads (
+                read_id SERIAL PRIMARY KEY,
+                notice_id INTEGER NOT NULL REFERENCES portal_notices(notice_id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                read_at TIMESTAMP NOT NULL,
+                CONSTRAINT uq_portal_notice_reads_notice_user UNIQUE (notice_id, user_id)
+            )
+        """))
+        db.session.execute(text(
+            "CREATE INDEX ix_portal_notice_reads_notice_id ON portal_notice_reads (notice_id)"
+        ))
+        db.session.execute(text(
+            "CREATE INDEX ix_portal_notice_reads_user_id ON portal_notice_reads (user_id)"
+        ))
+        logger.info("Created portal_notice_reads table")
+
+    db.session.commit()
+
+
+TIMEZONE_MARKER_KEY = "stored_timestamp_timezone"
+TIMEZONE_MIGRATION_LOCK_ID = 81240001
+
+
+def migrate_timestamps_to_manila():
+    """One-time shift of stored UTC timestamps to Asia/Manila local time (+8h)."""
+    from sqlalchemy import DateTime
+
+    from app.timeutil import MANILA_UTC_OFFSET_HOURS, manila_now
+
+    if db.engine.dialect.name != "postgresql":
+        return
+
+    db.session.execute(text("""
+        CREATE TABLE IF NOT EXISTS app_meta (
+            key VARCHAR(80) PRIMARY KEY,
+            value TEXT,
+            updated_at TIMESTAMP
+        )
+    """))
+    db.session.commit()
+
+    # Serialize concurrent workers; the marker row is re-checked under the lock.
+    db.session.execute(text("SELECT pg_advisory_xact_lock(:lock_id)"), {"lock_id": TIMEZONE_MIGRATION_LOCK_ID})
+    marker = db.session.execute(
+        text("SELECT value FROM app_meta WHERE key = :key"), {"key": TIMEZONE_MARKER_KEY}
+    ).scalar()
+    if marker:
+        db.session.commit()
+        return
+
+    inspector = inspect(db.engine)
+    existing_tables = set(inspector.get_table_names())
+    shifted = 0
+    for table in db.metadata.sorted_tables:
+        if table.name not in existing_tables:
+            continue
+        db_columns = {col["name"] for col in inspector.get_columns(table.name)}
+        for column in table.columns:
+            if not isinstance(column.type, DateTime) or column.name not in db_columns:
+                continue
+            result = db.session.execute(text(
+                f'UPDATE "{table.name}" SET "{column.name}" = "{column.name}" '
+                f"+ INTERVAL '{MANILA_UTC_OFFSET_HOURS} hours' "
+                f'WHERE "{column.name}" IS NOT NULL'
+            ))
+            shifted += result.rowcount or 0
+
+    db.session.execute(
+        text("INSERT INTO app_meta (key, value, updated_at) VALUES (:key, :value, :updated_at)"),
+        {"key": TIMEZONE_MARKER_KEY, "value": "Asia/Manila", "updated_at": manila_now()},
+    )
+    db.session.commit()
+    logger.info("Shifted %s stored timestamps from UTC to Asia/Manila", shifted)
+
+
+PROJECT_DELIVERY_COLUMNS = (
+    ("status_changed_at", "TIMESTAMP"),
+    ("progress_percent", "INTEGER"),
+    (
+        "awarded_contractor_id",
+        "INTEGER REFERENCES contractors(contractor_id) ON DELETE SET NULL",
+    ),
+    ("contract_amount", "NUMERIC(14, 2)"),
+    ("contract_signed_on", "DATE"),
+    ("commission_percent", "NUMERIC(6, 2)"),
+    (
+        "commission_project_id",
+        "INTEGER REFERENCES project_commissions(project_id) ON DELETE SET NULL",
+    ),
+)
+
+
+def migrate_project_delivery():
+    """Project delivery tracking: progress, award, contract value, contractor logins."""
+    inspector = inspect(db.engine)
+    tables = set(inspector.get_table_names())
+    if "marketplace_leads" in tables:
+        columns = {col["name"] for col in inspector.get_columns("marketplace_leads")}
+        for column, ddl in PROJECT_DELIVERY_COLUMNS:
+            if column not in columns:
+                db.session.execute(text(f"ALTER TABLE marketplace_leads ADD COLUMN {column} {ddl}"))
+                logger.info("Added marketplace_leads.%s", column)
+        db.session.execute(text(
+            "UPDATE marketplace_leads SET status_changed_at = COALESCE(updated_at, created_at) "
+            "WHERE status_changed_at IS NULL"
+        ))
+        db.session.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_marketplace_leads_awarded_contractor_id "
+            "ON marketplace_leads (awarded_contractor_id)"
+        ))
+    if "users" in tables:
+        user_columns = {col["name"] for col in inspector.get_columns("users")}
+        if "contractor_id" not in user_columns:
+            db.session.execute(text(
+                "ALTER TABLE users ADD COLUMN contractor_id INTEGER "
+                "REFERENCES contractors(contractor_id) ON DELETE SET NULL"
+            ))
+            logger.info("Added users.contractor_id")
+    db.session.commit()
+
+
+PROJECT_TEAM_COLUMNS = ("estimator_user_id", "site_engineer_user_id")
+
+
+def migrate_project_team():
+    """Project team slots beside the coordinator; user duties live in user_duties (create_all)."""
+    inspector = inspect(db.engine)
+    if "marketplace_leads" not in set(inspector.get_table_names()):
+        return
+    columns = {col["name"] for col in inspector.get_columns("marketplace_leads")}
+    for column in PROJECT_TEAM_COLUMNS:
+        if column not in columns:
+            db.session.execute(text(
+                f"ALTER TABLE marketplace_leads ADD COLUMN {column} INTEGER "
+                "REFERENCES users(user_id) ON DELETE SET NULL"
+            ))
+            logger.info("Added marketplace_leads.%s", column)
+        db.session.execute(text(
+            f"CREATE INDEX IF NOT EXISTS ix_marketplace_leads_{column} ON marketplace_leads ({column})"
+        ))
+    db.session.commit()
+
+
+PRODUCT_TEAM_COLUMNS = (
+    ("sourcing_user_id", "INTEGER REFERENCES users(user_id) ON DELETE SET NULL"),
+    ("logistics_user_id", "INTEGER REFERENCES users(user_id) ON DELETE SET NULL"),
+    ("agent_user_id", "INTEGER REFERENCES users(user_id) ON DELETE SET NULL"),
+    ("supplier_id", "INTEGER REFERENCES suppliers(supplier_id) ON DELETE SET NULL"),
+    ("delivery_date", "DATE"),
+)
+
+
+def migrate_product_team():
+    """Product team slots, the assigned supplier and delivery date on transactions; supplier logins."""
+    inspector = inspect(db.engine)
+    tables = set(inspector.get_table_names())
+    if "marketplace_leads" in tables:
+        columns = {col["name"] for col in inspector.get_columns("marketplace_leads")}
+        for column, ddl in PRODUCT_TEAM_COLUMNS:
+            if column not in columns:
+                db.session.execute(text(f"ALTER TABLE marketplace_leads ADD COLUMN {column} {ddl}"))
+                logger.info("Added marketplace_leads.%s", column)
+            if ddl.startswith("INTEGER"):
+                db.session.execute(text(
+                    f"CREATE INDEX IF NOT EXISTS ix_marketplace_leads_{column} ON marketplace_leads ({column})"
+                ))
+    if "users" in tables:
+        user_columns = {col["name"] for col in inspector.get_columns("users")}
+        if "supplier_id" not in user_columns:
+            db.session.execute(text(
+                "ALTER TABLE users ADD COLUMN supplier_id INTEGER "
+                "REFERENCES suppliers(supplier_id) ON DELETE SET NULL"
+            ))
+            logger.info("Added users.supplier_id")
+    db.session.commit()
+
+
+def migrate_sanctions():
+    """Commission records remember when they were created so suspensions are judged on that date."""
+    inspector = inspect(db.engine)
+    if "project_commissions" not in set(inspector.get_table_names()):
+        return
+    columns = {col["name"] for col in inspector.get_columns("project_commissions")}
+    if "created_at" not in columns:
+        db.session.execute(text("ALTER TABLE project_commissions ADD COLUMN created_at TIMESTAMP"))
+        db.session.commit()
+        logger.info("Added project_commissions.created_at")
+
+
+def drop_project_bids_table():
+    """Contractor bidding was replaced by staff assigning the contractor; drop the table only while it is empty."""
+    if "project_bids" not in set(inspect(db.engine).get_table_names()):
+        return
+    if db.session.execute(text("SELECT EXISTS (SELECT 1 FROM project_bids)")).scalar():
+        logger.warning("project_bids still has rows; leaving the table in place")
+        return
+    db.session.execute(text("DROP TABLE project_bids"))
+    db.session.commit()
+    logger.info("Dropped empty project_bids table")
+
+
+MARKETPLACE_TRANSACTION_COLUMNS = (
+    ("transaction_type", "VARCHAR(40)"),
+    ("inquiry_no", "INTEGER"),
+    ("reference_number", "VARCHAR(30)"),
+    ("item_name", "VARCHAR(255)"),
+    ("date_requested", "DATE"),
+    ("estimated_implementation", "VARCHAR(160)"),
+    ("quantity", "TEXT"),
+    ("specifications", "TEXT"),
+    ("delivery_location", "TEXT"),
+    ("referrer_name", "VARCHAR(255)"),
+    ("referrer_phone", "VARCHAR(120)"),
+    ("referrer_email", "VARCHAR(255)"),
+    ("client_company", "TEXT"),
+    ("status_detail", "TEXT"),
+    ("action_needed", "TEXT"),
+    ("project_coordinator", "VARCHAR(160)"),
+    ("assigned_contractor", "VARCHAR(255)"),
+    ("assigned_user_id", "INTEGER REFERENCES users(user_id) ON DELETE SET NULL"),
+    ("date_completed", "DATE"),
+    ("remarks", "TEXT"),
+    ("source", "VARCHAR(20) NOT NULL DEFAULT 'web'"),
+    ("updated_at", "TIMESTAMP"),
+)
+
+# Legacy CRM workflow (status, action_required, final_result) -> transaction status.
+LEGACY_LEAD_STATUS_SQL = """
+    UPDATE {table} SET status = CASE
+        WHEN status = 'contacted' THEN 'for_follow_up'
+        WHEN status = 'in_progress' AND action_required = 'quote_for_client_submission'
+            THEN 'quotation_submitted'
+        WHEN status = 'in_progress' AND action_required = 'ordered' THEN 'completed'
+        WHEN status = 'in_progress' THEN 'for_quotation'
+        WHEN status = 'closed' AND final_result = 'bought' THEN 'completed'
+        WHEN status = 'closed' THEN 'terminated'
+        ELSE status
+    END
+    WHERE status IN ('contacted', 'in_progress', 'closed')
+"""
+
+
+def migrate_marketplace_transactions():
+    """Extend marketplace inquiries into tracked transactions (monitoring sheet fields)."""
+    inspector = inspect(db.engine)
+    if "marketplace_leads" not in inspector.get_table_names():
+        return
+
+    columns = {col["name"]: col for col in inspector.get_columns("marketplace_leads")}
+    for column, ddl in MARKETPLACE_TRANSACTION_COLUMNS:
+        if column not in columns:
+            db.session.execute(text(f"ALTER TABLE marketplace_leads ADD COLUMN {column} {ddl}"))
+            logger.info("Added marketplace_leads.%s", column)
+
+    guest_name = columns.get("guest_name")
+    if guest_name is not None and not guest_name.get("nullable", True):
+        db.session.execute(text("ALTER TABLE marketplace_leads ALTER COLUMN guest_name DROP NOT NULL"))
+    for column, size in (("guest_name", 160), ("guest_phone", 160), ("guest_email", 255), ("status", 30)):
+        current = columns.get(column)
+        length = getattr(current["type"], "length", None) if current else None
+        if length is not None and length < size:
+            db.session.execute(text(
+                f"ALTER TABLE marketplace_leads ALTER COLUMN {column} TYPE VARCHAR({size})"
+            ))
+            logger.info("Widened marketplace_leads.%s to %s", column, size)
+
+    history_columns = {
+        col["name"]: col for col in inspector.get_columns("marketplace_lead_history")
+    }
+    status_col = history_columns.get("status")
+    if status_col is not None and (getattr(status_col["type"], "length", None) or 30) < 30:
+        db.session.execute(text(
+            "ALTER TABLE marketplace_lead_history ALTER COLUMN status TYPE VARCHAR(30)"
+        ))
+    note_col = history_columns.get("note")
+    if note_col is not None and getattr(note_col["type"], "length", None):
+        db.session.execute(text("ALTER TABLE marketplace_lead_history ALTER COLUMN note TYPE TEXT"))
+
+    # Transactions must survive listing deletion.
+    for fk in inspector.get_foreign_keys("marketplace_leads"):
+        if fk.get("referred_table") != "marketplace_listings" or not fk.get("name"):
+            continue
+        if (fk.get("options") or {}).get("ondelete", "").upper() == "SET NULL":
+            continue
+        db.session.execute(text(f'ALTER TABLE marketplace_leads DROP CONSTRAINT "{fk["name"]}"'))
+        db.session.execute(text(
+            "ALTER TABLE marketplace_leads ADD CONSTRAINT marketplace_leads_listing_id_fkey "
+            "FOREIGN KEY (listing_id) REFERENCES marketplace_listings(listing_id) ON DELETE SET NULL"
+        ))
+        logger.info("marketplace_leads.listing_id now ON DELETE SET NULL")
+
+    db.session.execute(text(LEGACY_LEAD_STATUS_SQL.format(table="marketplace_leads")))
+    db.session.execute(text("""
+        UPDATE marketplace_lead_history SET status = CASE
+            WHEN status = 'contacted' THEN 'for_follow_up'
+            WHEN status = 'in_progress' THEN 'for_quotation'
+            WHEN status = 'closed' AND final_result = 'bought' THEN 'completed'
+            WHEN status = 'closed' THEN 'terminated'
+            ELSE status
+        END
+        WHERE status IN ('contacted', 'in_progress', 'closed')
+    """))
+
+    db.session.execute(text("""
+        UPDATE marketplace_leads ml SET
+            transaction_type = COALESCE(
+                (SELECT l.category FROM marketplace_listings l WHERE l.listing_id = ml.listing_id),
+                ml.interest_category,
+                'products'
+            ),
+            item_name = COALESCE(
+                ml.item_name,
+                (SELECT l.title FROM marketplace_listings l WHERE l.listing_id = ml.listing_id)
+            ),
+            date_requested = COALESCE(ml.date_requested, CAST(ml.created_at AS DATE)),
+            source = 'legacy'
+        WHERE ml.transaction_type IS NULL
+    """))
+    db.session.execute(text("""
+        WITH numbered AS (
+            SELECT lead_id, transaction_type,
+                   COALESCE((SELECT MAX(inquiry_no) FROM marketplace_leads x
+                             WHERE x.transaction_type = ml.transaction_type), 0)
+                   + ROW_NUMBER() OVER (PARTITION BY transaction_type ORDER BY created_at, lead_id)
+                   AS next_no
+            FROM marketplace_leads ml
+            WHERE inquiry_no IS NULL
+        )
+        UPDATE marketplace_leads ml SET inquiry_no = numbered.next_no
+        FROM numbered WHERE ml.lead_id = numbered.lead_id
+    """))
+    db.session.execute(text("""
+        UPDATE marketplace_leads SET reference_number =
+            CASE transaction_type
+                WHEN 'services' THEN 'SRV'
+                WHEN 'real_property' THEN 'RPT'
+                ELSE 'PRD'
+            END || '-' || LPAD(CAST(inquiry_no AS TEXT), 4, '0')
+        WHERE reference_number IS NULL AND inquiry_no IS NOT NULL
+    """))
+
+    indexes = {idx["name"] for idx in inspector.get_indexes("marketplace_leads")}
+    constraints = {
+        uc["name"] for uc in inspector.get_unique_constraints("marketplace_leads")
+    }
+    if "uq_marketplace_leads_type_inquiry_no" not in indexes | constraints:
+        db.session.execute(text(
+            "CREATE UNIQUE INDEX uq_marketplace_leads_type_inquiry_no "
+            "ON marketplace_leads (transaction_type, inquiry_no)"
+        ))
+    if not any(name and "reference_number" in name for name in indexes | constraints):
+        db.session.execute(text(
+            "CREATE UNIQUE INDEX ix_marketplace_leads_reference_number "
+            "ON marketplace_leads (reference_number)"
+        ))
+    for name, column in (
+        ("ix_marketplace_leads_transaction_type", "transaction_type"),
+        ("ix_marketplace_leads_assigned_user_id", "assigned_user_id"),
+    ):
+        if name not in indexes:
+            db.session.execute(text(
+                f"CREATE INDEX IF NOT EXISTS {name} ON marketplace_leads ({column})"
+            ))
+
+    if "marketplace_lead_reads" not in inspector.get_table_names():
+        db.session.execute(text("""
+            CREATE TABLE marketplace_lead_reads (
+                read_id SERIAL PRIMARY KEY,
+                lead_id INTEGER NOT NULL REFERENCES marketplace_leads(lead_id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                read_at TIMESTAMP NOT NULL,
+                CONSTRAINT uq_marketplace_lead_reads_lead_user UNIQUE (lead_id, user_id)
+            )
+        """))
+        db.session.execute(text(
+            "CREATE INDEX ix_marketplace_lead_reads_lead_id ON marketplace_lead_reads (lead_id)"
+        ))
+        db.session.execute(text(
+            "CREATE INDEX ix_marketplace_lead_reads_user_id ON marketplace_lead_reads (user_id)"
+        ))
+        logger.info("Created marketplace_lead_reads table")
+
     db.session.commit()

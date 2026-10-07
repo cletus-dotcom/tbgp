@@ -1,0 +1,149 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}{{ lead.reference_number }} — My Assignments{% endblock %}
+{% block topbar_title %}My Assignments{% endblock %}
+
+{% macro person(user, fallback='—') -%}
+{{ (user.full_name or user.username) if user else fallback }}
+{%- endmacro %}
+
+{% block content %}
+{% set status = lead.status or 'new' %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5 class="d-flex flex-wrap align-items-center gap-2">
+                <span class="badge bg-dark border border-warning text-warning">{{ lead.reference_number }}</span>
+                {{ lead.display_item }}
+                <span class="trx-status trx-{{ status }}">{{ status_labels.get(status, status) }}</span>
+            </h5>
+            <p class="section-subtitle mb-0">
+                You are the <strong>{{ my_roles|join(' and ')|lower }}</strong> on this product inquiry.
+                {% if lead.delivery_location %}<i class="bi bi-geo-alt"></i> {{ lead.delivery_location }} · {% endif %}
+                {% if lead.estimated_implementation %}Client needs it {{ lead.estimated_implementation }}{% endif %}
+                {% if lead.delivery_date %} · Delivery scheduled {{ lead.delivery_date.isoformat() }}{% endif %}
+            </p>
+        </div>
+        <div class="section-actions">
+            <a href="{{ url_for('main_routes.my_assignments') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> My assignments</a>
+        </div>
+    </div>
+    {% include 'partials/confidentiality_notice.html' %}
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="trx-panel h-100">
+                <div class="trx-panel-title">Client</div>
+                <div class="fw-semibold">{{ lead.client_company or '—' }}</div>
+                <div class="small">
+                    {% if lead.guest_name %}<div><i class="bi bi-person"></i> {{ lead.guest_name }}</div>{% endif %}
+                    {% if lead.guest_phone %}<div><i class="bi bi-telephone"></i> {{ lead.guest_phone }}</div>{% endif %}
+                    {% if lead.guest_email %}<div><i class="bi bi-envelope"></i> <a href="mailto:{{ lead.guest_email }}">{{ lead.guest_email }}</a></div>{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="trx-panel h-100">
+                <div class="trx-panel-title">Product team</div>
+                <div class="small">
+                    <div>Account officer: <strong>{{ person(lead.assigned_user) }}</strong></div>
+                    <div>Sourcing officer: <strong>{{ person(lead.sourcing_user) }}</strong></div>
+                    <div>Pricing officer: <strong>{{ person(lead.estimator_user) }}</strong></div>
+                    <div>Logistics coordinator: <strong>{{ person(lead.logistics_user) }}</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if lead.quantity or lead.specifications or lead.message or lead.action_needed %}
+    <div class="trx-panel mt-3">
+        {% if lead.quantity %}<div class="trx-panel-title">Qty / volume</div><div class="trx-history-note mb-2">{{ lead.quantity }}</div>{% endif %}
+        {% if lead.specifications %}<div class="trx-panel-title">Specifications</div><div class="trx-history-note mb-2">{{ lead.specifications }}</div>{% endif %}
+        {% if lead.message %}<div class="trx-panel-title">Inquiry message</div><div class="trx-history-note mb-2">{{ lead.message }}</div>{% endif %}
+        {% if lead.action_needed %}<div class="trx-panel-title">Action needed</div><div class="trx-history-note">{{ lead.action_needed }}</div>{% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="dashboard-card section-card mb-3">
+            <div class="section-header">
+                <div><h5><i class="bi bi-chat-left-text"></i> Client note</h5>
+                    <p class="section-subtitle mb-0">Client visit or call results, feedback on the quotation, buying signals, issues. The product team is notified.</p></div>
+            </div>
+            <form method="post" action="{{ url_for('main_routes.my_assignment_action', lead_id=lead.lead_id, action='note') }}" class="d-flex gap-2">
+                <textarea class="form-control" name="note" rows="2" required placeholder="What did the client say or decide?"></textarea>
+                <button class="btn btn-brand align-self-end" type="submit">Post</button>
+            </form>
+        </div>
+
+        <div class="dashboard-card section-card mb-3">
+            <div class="section-header">
+                <div><h5><i class="bi bi-signpost-split"></i> Suggest a status change</h5>
+                    <p class="section-subtitle mb-0">The account officer reviews your suggestion and updates the status.</p></div>
+            </div>
+            <form method="post" action="{{ url_for('main_routes.my_assignment_action', lead_id=lead.lead_id, action='suggest') }}" class="row g-2 align-items-end">
+                <div class="col-sm-5">
+                    <label class="form-label" for="suggest_status">New status</label>
+                    <select class="form-select" id="suggest_status" name="status" required>
+                        {% for key in lead_statuses if key != status %}<option value="{{ key }}">{{ status_labels.get(key, key) }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-sm-5">
+                    <label class="form-label" for="suggest_reason">Reason</label>
+                    <input class="form-control" id="suggest_reason" name="reason" placeholder="e.g. Client approved the quotation; PO to follow">
+                </div>
+                <div class="col-sm-2"><button class="btn btn-outline-light w-100" type="submit">Send</button></div>
+            </form>
+        </div>
+
+        <div class="dashboard-card section-card">
+            <div class="section-header"><div><h5><i class="bi bi-clock-history"></i> Activity</h5></div></div>
+            {% if history %}
+            <ul class="trx-history">
+                {% for entry in history %}
+                <li>
+                    <div class="trx-history-meta">{{ entry.created_at.strftime('%Y-%m-%d %H:%M') if entry.created_at else '' }} · {{ person(entry.created_by, 'System') }}</div>
+                    <div class="trx-history-note">{{ entry.note or status_labels.get(entry.status, entry.status) }}</div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-0">No activity yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="dashboard-card section-card">
+            <div class="section-header"><div><h5><i class="bi bi-folder2-open"></i> Files</h5>
+                <p class="section-subtitle mb-0">Supplier quotations and invoices are kept internal.</p></div></div>
+            {% if documents %}
+            <ul class="list-unstyled mb-0">
+                {% for document in documents %}
+                <li class="mb-2">
+                    <a href="{{ url_for('main_routes.project_document_download', document_id=document.document_id) }}" target="_blank" rel="noopener">
+                        <i class="bi {{ 'bi-image' if document.is_image else ('bi-link-45deg' if document.external_url else 'bi-file-earmark-text') }}"></i> {{ document.title }}
+                    </a>
+                    <div class="small text-muted">{{ document_kinds.get(document.kind, document.kind) }} · {{ document.created_at.strftime('%Y-%m-%d') if document.created_at else '' }} · {{ person(document.uploaded_by, 'TBGP') }}</div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-0">No files yet.</p>
+            {% endif %}
+            <hr>
+            <form method="post" enctype="multipart/form-data" action="{{ url_for('main_routes.my_assignment_action', lead_id=lead.lead_id, action='document') }}">
+                <div class="mb-2">
+                    <label class="form-label" for="doc_kind">Upload</label>
+                    <select class="form-select form-select-sm" id="doc_kind" name="kind">
+                        {% for key in field_document_kinds %}<option value="{{ key }}" {{ 'selected' if key == 'photo' }}>{{ document_kinds[key] }}</option>{% endfor %}
+                    </select>
+                </div>
+                <input class="form-control form-control-sm mb-2" name="title" placeholder="Title (optional)">
+                <input type="file" class="form-control form-control-sm mb-2" name="file">
+                <input type="url" class="form-control form-control-sm mb-2" name="external_url" placeholder="or a link (https://)">
+                <button class="btn btn-outline-light btn-sm w-100" type="submit"><i class="bi bi-upload"></i> Upload</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -23,6 +23,7 @@ from app.config import (
     payout_scheme_summary,
 )
 from app.models import Member, MemberLedger, OmpdFundEntry, PayoutNotification, PayoutRequest, User
+from app.timeutil import manila_now
 
 
 RESERVED_STATUSES = (
@@ -37,7 +38,7 @@ def _money(value):
 
 
 def _now():
-    return datetime.utcnow()
+    return manila_now()
 
 
 def _member_name(member):

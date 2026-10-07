@@ -1,0 +1,65 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Notices{% endblock %}
+{% block topbar_title %}Policy / Memo / Announcement{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-megaphone"></i> Policy / Memo / Announcement</h5>
+            <p class="section-subtitle">
+                {% if unread_count %}{{ unread_count }} unread · {% endif %}
+                Posts targeted to your role
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('main_routes.dashboard') }}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
+            {% if can_manage_notices(session.get('role')) %}
+            <a href="{{ url_for('main_routes.notices_manage') }}" class="btn btn-sm btn-brand">Post / Manage</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if notices %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Title</th>
+                    <th>Posted</th>
+                    <th>By</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in notices %}
+                <tr class="{% if item.is_unread %}notice-row-unread{% endif %}">
+                    <td>
+                        <span class="badge {% if item.notice_type == 'policy' %}bg-primary{% elif item.notice_type == 'memo' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                            {{ item.notice_type_label }}
+                        </span>
+                        {% if item.is_unread %}<span class="badge bg-danger">New</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if item.reference_number %}<span class="text-muted small me-1">No. {{ item.reference_number }}</span>{% endif %}
+                        {{ item.title }}
+                        {% if item.effective_date %}
+                        <div class="text-muted small">Effective {{ item.effective_date.strftime('%b %d, %Y') }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted small">{{ item.created_at.strftime('%b %d, %Y %H:%M') if item.created_at else '—' }}</td>
+                    <td class="text-muted small">{{ item.created_by_name }}</td>
+                    <td class="text-end">
+                        <a href="{{ url_for('main_routes.notice_detail', notice_id=item.notice_id) }}" class="btn btn-sm btn-outline-secondary">Open</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="mb-0 text-muted">No notices for your role yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Audit Log{% endblock %}
+{% block topbar_title %}Audit Log{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-journal-check"></i> Audit Log</h5>
+            <p class="section-subtitle">
+                Every sign-in, save, delete, upload and export in the portal and the site-content area,
+                with who did it, from which IP address, whether it went through, and which fields changed.
+                Passwords and security tokens are never recorded.
+            </p>
+        </div>
+    </div>
+    {% include 'partials/audit_log_table.html' %}
+</div>
+{% endblock %}

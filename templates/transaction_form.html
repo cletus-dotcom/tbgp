@@ -1,0 +1,54 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}{{ 'New project' if is_project else 'New transaction' }}{% endblock %}
+{% block topbar_title %}{{ 'Project Monitoring' if is_project else 'Transaction Monitoring' }}{% endblock %}
+
+{% block content %}
+<form method="post" class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-plus-square"></i> {{ 'New project' if is_project else 'New transaction' }}</h5>
+            <p class="section-subtitle">Log an inquiry received by phone, chat, or walk-in. A reference number is assigned on save.</p>
+        </div>
+        <div class="section-actions">
+            <a href="{{ url_for('main_routes.transactions_list', type=selected_type) }}" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Back to list
+            </a>
+        </div>
+    </div>
+
+    <div class="trx-panel">
+        <div class="row g-2">
+            <div class="col-md-4">
+                <label class="form-label" for="transaction_type">Transaction type</label>
+                <select class="form-select" id="transaction_type" name="transaction_type"
+                        onchange="if (!document.getElementById('item_name').value) { window.location = '?transaction_type=' + this.value; }">
+                    {% for slug, label in transaction_types.items() %}
+                    <option value="{{ slug }}" {% if selected_type == slug %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Reference no.</label>
+                <div class="trx-readonly">{{ reference_preview }} <span class="text-muted small fw-normal">(assigned on save)</span></div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="listing_id">Marketplace listing (optional)</label>
+                <select class="form-select" id="listing_id" name="listing_id">
+                    <option value="">— None —</option>
+                    {% for item in listing_options %}
+                    <option value="{{ item.listing_id }}" {% if form_values and form_values.get('listing_id') == item.listing_id|string %}selected{% endif %}>
+                        {{ transaction_types.get(item.category, item.category) }} · {{ item.title }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    {% include 'partials/transaction_fields.html' %}
+
+    <div class="d-flex justify-content-end mt-3">
+        <button type="submit" class="btn btn-brand"><i class="bi bi-save"></i> Create transaction</button>
+    </div>
+</form>
+{% endblock %}

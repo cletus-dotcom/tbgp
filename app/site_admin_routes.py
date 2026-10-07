@@ -5,6 +5,7 @@ from app.config import (
     MARKETPLACE_CATEGORIES,
     MARKETPLACE_CATEGORY_SLUGS,
     MARKETPLACE_FUNNEL_CATEGORY_SLUGS,
+    can_manage_site_content,
     is_portal_admin_role,
     is_site_admin_role,
     normalize_role,
@@ -12,6 +13,8 @@ from app.config import (
     supabase_storage_configured,
 )
 from app.gallery_service import (
+    GALLERY_STATUS_DRAFT,
+    GALLERY_STATUS_PUBLISHED,
     GALLERY_STATUSES,
     delete_folder,
     get_folder,
@@ -19,6 +22,7 @@ from app.gallery_service import (
     parse_folder_form,
     save_folder,
 )
+from app.notice_service import dashboard_notices
 from app.marketplace_service import (
     delete_listing,
     get_listing,
@@ -124,6 +128,8 @@ def home():
     published_count = sum(1 for row in listings if row.status == "published")
     folders = list_folders_for_admin()
     gallery_published = sum(1 for row in folders if row.status == "published")
+    role = normalize_role(session.get("role"))
+    notices = dashboard_notices(session.get("user_id"), role)
     return render_template(
         "site_admin/home.html",
         active_page="home",
@@ -136,6 +142,7 @@ def home():
         marketplace_published=published_count,
         gallery_count=len(folders),
         gallery_published=gallery_published,
+        notices=notices,
     )
 
 
@@ -571,6 +578,7 @@ def _gallery_edit_context(folder, is_new=False):
         "folder": payload,
         "is_new": is_new,
         "gallery_statuses": GALLERY_STATUSES,
+        "can_publish": can_manage_site_content(session.get("role")),
         "partner_image_upload_enabled": supabase_storage_configured(),
         "partner_image_upload_url": url_for("site_admin.upload_gallery_image"),
         "image_key": image_key,
@@ -596,6 +604,8 @@ def gallery_new():
     if request.method == "POST":
         try:
             data = parse_folder_form(request.form)
+            if not can_manage_site_content(session.get("role")):
+                data["status"] = GALLERY_STATUS_DRAFT
             folder = save_folder(data)
             flash("Gallery folder created.", "success")
             return redirect(url_for("site_admin.gallery_edit", folder_id=folder.folder_id))
@@ -638,12 +648,18 @@ def gallery_edit(folder_id):
         return redirect(url_for("site_admin.gallery_list"))
 
     if request.method == "POST":
+        can_publish = can_manage_site_content(session.get("role"))
+        if not can_publish and folder.status == GALLERY_STATUS_PUBLISHED:
+            flash("Only a Site Admin or Admin can change or delete a published gallery folder.", "danger")
+            return redirect(url_for("site_admin.gallery_edit", folder_id=folder_id))
         if request.form.get("_action") == "delete":
             delete_folder(folder_id)
             flash("Gallery folder deleted.", "success")
             return redirect(url_for("site_admin.gallery_list"))
         try:
             data = parse_folder_form(request.form, existing=folder)
+            if not can_publish:
+                data["status"] = GALLERY_STATUS_DRAFT
             save_folder(data, folder=folder)
             flash("Gallery folder updated.", "success")
             return redirect(url_for("site_admin.gallery_edit", folder_id=folder_id))

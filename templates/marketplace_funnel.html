@@ -57,6 +57,11 @@
                     <li><i class="bi bi-check2-circle" aria-hidden="true"></i> {{ item }}</li>
                     {% endfor %}
                 </ul>
+                {% if category == 'services' %}
+                <a href="{{ url_for('main_routes.project_inquiry') }}" class="btn btn-brand mp-funnel-project-cta">
+                    <i class="bi bi-cone-striped" aria-hidden="true"></i> Request a project
+                </a>
+                {% endif %}
             </header>
 
             <div class="mp-funnel-panel" id="featured-listings">
@@ -93,6 +98,5 @@
     </section>
 </section>
 
-{% include 'partials/landing_disclaimer.html' %}
 {% include 'partials/landing_footer.html' %}
 {% endblock %}

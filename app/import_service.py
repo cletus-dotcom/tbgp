@@ -244,6 +244,8 @@ def clear_members_and_dependents(*, commit=True):
         Contractor,
         MarketplaceLead,
         MemberLedger,
+        MemberPosition,
+        MemberSanction,
         OmpdFundEntry,
         PayoutNotification,
         PayoutRequest,
@@ -272,6 +274,8 @@ def clear_members_and_dependents(*, commit=True):
     ProductCommissionShare.query.delete(synchronize_session=False)
     ProductCommission.query.delete(synchronize_session=False)
     AdSplitMember.query.delete(synchronize_session=False)
+    MemberPosition.query.delete(synchronize_session=False)
+    MemberSanction.query.delete(synchronize_session=False)
     MemberLedger.query.delete(synchronize_session=False)
     PayoutNotification.query.delete(synchronize_session=False)
     OmpdFundEntry.query.delete(synchronize_session=False)

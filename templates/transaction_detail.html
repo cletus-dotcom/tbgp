@@ -1,0 +1,195 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}{{ lead.reference_number }} — Transaction{% endblock %}
+{% block topbar_title %}{{ 'Project Monitoring' if is_project else 'Transaction Monitoring' }}{% endblock %}
+
+{% block content %}
+{% set status = lead.status or 'new' %}
+{% set mail_subject = (('TBGP project ' if is_project else 'TBGP inquiry ') ~ (lead.reference_number or '') ~ ' - ' ~ lead.display_item)|urlencode %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5 class="d-flex flex-wrap align-items-center gap-2">
+                <span class="badge bg-dark border border-warning text-warning">{{ lead.reference_number }}</span>
+                {{ lead.display_item or 'Transaction' }}
+                <span class="trx-status trx-{{ status }}">{{ status_labels.get(status, status) }}</span>
+            </h5>
+            <p class="section-subtitle mb-0">
+                {{ transaction_types.get(lead.transaction_type, lead.transaction_type) }} ·
+                {{ source_labels.get(lead.source, lead.source) }} ·
+                Requested {{ lead.date_requested.strftime('%Y-%m-%d') if lead.date_requested else '—' }} ·
+                Aging <strong>{{ lead.aging_days }}</strong> day(s)
+                {% set owner_label = 'Coordinator' if is_project else ('Account officer' if is_product else 'Assigned to') %}
+                {% if lead.assigned_user %} · {{ owner_label }} <strong>{{ lead.assigned_user.full_name or lead.assigned_user.username }}</strong>{% else %} · <span class="text-warning">{{ 'No coordinator' if is_project else ('No account officer' if is_product else 'Unassigned') }}</span>{% endif %}
+                {% if is_project and lead.estimator_user %} · Estimator <strong>{{ lead.estimator_user.full_name or lead.estimator_user.username }}</strong>{% endif %}
+                {% if is_project and lead.site_engineer_user %} · Site engineer <strong>{{ lead.site_engineer_user.full_name or lead.site_engineer_user.username }}</strong>{% endif %}
+                {% if is_product and lead.agent_user %} · Sales agent <strong>{{ lead.agent_user.full_name or lead.agent_user.username }}</strong>{% endif %}
+            </p>
+        </div>
+        <div class="section-actions d-flex flex-wrap gap-2">
+            <a href="{{ url_for('main_routes.transactions_list', type=lead.transaction_type) }}" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Back to list
+            </a>
+            {% if lead.assigned_user_id != session.get('user_id') %}
+            <form method="post" action="{{ url_for('main_routes.transaction_assign_me', lead_id=lead.lead_id) }}">
+                <button type="submit" class="btn btn-outline-warning btn-sm"><i class="bi bi-person-check"></i> {{ 'Coordinate this' if is_project else ('Take as account officer' if is_product else 'Assign to me') }}</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="trx-panel h-100">
+                <div class="trx-panel-title"><i class="bi bi-person-lines-fill"></i> Contact the client</div>
+                <div class="fw-semibold">{{ lead.guest_name or '—' }}</div>
+                {% if lead.client_company %}<div class="text-muted small">{{ lead.client_company }}</div>{% endif %}
+                <div class="small mt-1">{{ lead.guest_phone or 'No contact number' }} · {{ lead.guest_email or 'No email' }}</div>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    {% if lead.client_tel %}
+                    <a href="tel:{{ lead.client_tel }}" class="btn btn-brand btn-sm"><i class="bi bi-telephone"></i> Call {{ lead.client_tel }}</a>
+                    {% endif %}
+                    {% if lead.client_mailto %}
+                    <a href="mailto:{{ lead.client_mailto }}?subject={{ mail_subject }}" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-envelope"></i> Email client
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="trx-panel h-100">
+                <div class="trx-panel-title"><i class="bi bi-person-badge"></i> Referred by (ProF)</div>
+                {% if lead.referred_by_name %}
+                <div class="fw-semibold">
+                    {{ lead.referred_by_name }}
+                    {% if lead.attributed_member_id %}<span class="text-muted small">#{{ lead.attributed_member_id }}</span>{% endif %}
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    {% if lead.referrer_tel %}
+                    <a href="tel:{{ lead.referrer_tel }}" class="btn btn-outline-light btn-sm"><i class="bi bi-telephone"></i> Call ProF</a>
+                    {% endif %}
+                    {% if lead.referrer_mailto %}
+                    <a href="mailto:{{ lead.referrer_mailto }}?subject={{ mail_subject }}" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-envelope"></i> Email ProF
+                    </a>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="text-muted small mb-0">Direct inquiry — no referring member.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% if lead.message %}
+        <div class="col-12">
+            <div class="trx-panel">
+                <div class="trx-panel-title"><i class="bi bi-chat-left-text"></i> Inquiry message</div>
+                <div class="trx-history-note">{{ lead.message }}</div>
+                {% if lead.listing %}
+                <div class="small text-muted mt-2">
+                    From listing: <a href="{{ url_for('main_routes.marketplace_detail', category=lead.listing.category, listing_id=lead.listing_id) }}" target="_blank" rel="noopener">{{ lead.listing.title }}</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if is_project %}
+{% include 'partials/project_workspace.html' %}
+{% elif is_product %}
+{% include 'partials/product_order_panel.html' %}
+{% endif %}
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <form method="post" class="dashboard-card section-card">
+            <div class="section-header">
+                <div>
+                    <h5><i class="bi bi-pencil-square"></i> {{ 'Update project' if is_project else 'Update transaction' }}</h5>
+                    <p class="section-subtitle">Every change is recorded in the transaction history.</p>
+                </div>
+            </div>
+            {% include 'partials/transaction_fields.html' %}
+            <div class="trx-panel">
+                <label class="form-label" for="note">Update note (optional)</label>
+                <textarea class="form-control" id="note" name="note" rows="2" placeholder="What changed and why"></textarea>
+            </div>
+            <div class="d-flex justify-content-end mt-3">
+                <button type="submit" class="btn btn-brand"><i class="bi bi-save"></i> Save changes</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="dashboard-card section-card mb-3">
+            <div class="section-header">
+                <div>
+                    <h5><i class="bi bi-telephone-outbound"></i> Log follow-up</h5>
+                    <p class="section-subtitle">Record calls, emails, and notes.</p>
+                </div>
+            </div>
+            <form method="post" action="{{ url_for('main_routes.transaction_add_note', lead_id=lead.lead_id) }}">
+                <div class="mb-2">
+                    <label class="form-label" for="kind">Type</label>
+                    <select class="form-select" id="kind" name="kind">
+                        {% for key, label in note_kinds.items() %}
+                        <option value="{{ key }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label" for="followup_note">Details</label>
+                    <textarea class="form-control" id="followup_note" name="note" rows="3"
+                              placeholder="e.g. Client asked for revised quotation by Friday"></textarea>
+                </div>
+                <button type="submit" class="btn btn-outline-light btn-sm w-100"><i class="bi bi-plus-lg"></i> Add to history</button>
+            </form>
+        </div>
+
+        <div class="dashboard-card section-card" id="history">
+            <div class="section-header">
+                <div>
+                    <h5><i class="bi bi-clock-history"></i> Transaction history</h5>
+                    <p class="section-subtitle">{{ history|length }} entr{{ 'y' if history|length == 1 else 'ies' }}, newest first</p>
+                </div>
+            </div>
+            {% if history %}
+            <ul class="trx-history">
+                {% for entry in history %}
+                <li>
+                    <div class="trx-history-meta">
+                        {{ entry.created_at.strftime('%Y-%m-%d %H:%M') if entry.created_at else '' }} ·
+                        {{ (entry.created_by.full_name or entry.created_by.username) if entry.created_by else 'System' }} ·
+                        {{ note_kinds.get(entry.event_type, entry.event_type|replace('_', ' ')|capitalize) }}
+                    </div>
+                    {% if entry.status %}
+                    <span class="trx-status trx-{{ entry.status }} my-1">{{ status_labels.get(entry.status, entry.status) }}</span>
+                    {% endif %}
+                    {% if entry.note %}<div class="trx-history-note">{{ entry.note }}</div>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-0">No history yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if is_project %}
+<script>
+(function () {
+    var hash = window.location.hash;
+    if (!hash || hash.indexOf('#tab-') !== 0) return;
+    var trigger = document.querySelector('[data-bs-target="' + hash + '"]');
+    if (trigger && window.bootstrap) {
+        bootstrap.Tab.getOrCreateInstance(trigger).show();
+        document.getElementById('project-workspace').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Projects — Trends & Analysis{% endblock %}
+{% block topbar_title %}Trends & Analysis · Projects{% endblock %}
+
+{% macro bar_table(rows, empty='No data yet.', show_won=True) -%}
+{% if rows %}
+{% for row in rows %}
+<div class="prj-bar-row">
+    <span class="prj-bar-label" title="{{ row.label }}">{{ row.label }}</span>
+    <span class="prj-bar"><span style="width: {{ row.pct }}%"></span></span>
+    <span class="prj-bar-value">{{ row.total }}<span class="text-muted small fw-normal"> · {{ row.open }} open{% if show_won %} · {{ row.won }} won{% endif %}</span></span>
+</div>
+{% endfor %}
+{% else %}
+<p class="text-muted small mb-0">{{ empty }}</p>
+{% endif %}
+{%- endmacro %}
+
+{% block content %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-bar-chart-line"></i> Project analytics</h5>
+            <p class="section-subtitle mb-0">Pipeline, win rate, time per stage, and workload. Filter by the date the project was requested.</p>
+        </div>
+        <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+            <div><label class="form-label small mb-0" for="date_from">From</label><input type="date" class="form-control form-control-sm" id="date_from" name="date_from" value="{{ date_from }}"></div>
+            <div><label class="form-label small mb-0" for="date_to">To</label><input type="date" class="form-control form-control-sm" id="date_to" name="date_to" value="{{ date_to }}"></div>
+            <button class="btn btn-brand btn-sm" type="submit">Apply</button>
+            {% if date_from or date_to %}<a class="btn btn-outline-light btn-sm" href="{{ url_for('main_routes.trends_projects') }}">Clear</a>{% endif %}
+        </form>
+    </div>
+    <div class="row g-2">
+        <div class="col-6 col-md-4 col-xl-2"><div class="prj-kpi"><div class="prj-kpi-label">Projects</div><div class="prj-kpi-value">{{ analytics.total }}</div></div></div>
+        <div class="col-6 col-md-4 col-xl-2"><div class="prj-kpi"><div class="prj-kpi-label">Open</div><div class="prj-kpi-value">{{ analytics.open }}</div></div></div>
+        <div class="col-6 col-md-4 col-xl-2"><div class="prj-kpi"><div class="prj-kpi-label">Won / lost</div><div class="prj-kpi-value">{{ analytics.won }} / {{ analytics.lost }}</div></div></div>
+        <div class="col-6 col-md-4 col-xl-2"><div class="prj-kpi"><div class="prj-kpi-label">Win rate</div><div class="prj-kpi-value">{{ (analytics.win_rate ~ '%') if analytics.win_rate is not none else '—' }}</div><div class="small text-muted">won ÷ (won + terminated)</div></div></div>
+        <div class="col-6 col-md-4 col-xl-2"><div class="prj-kpi"><div class="prj-kpi-label">Avg. open aging</div><div class="prj-kpi-value">{{ analytics.avg_open_aging }} d</div></div></div>
+        <div class="col-6 col-md-4 col-xl-2"><div class="prj-kpi"><div class="prj-kpi-label">Won contract value</div><div class="prj-kpi-value" style="font-size: 1.1rem;">{{ format_peso(analytics.contract_value) }}</div></div></div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="dashboard-card section-card h-100">
+            <div class="section-header"><div><h5><i class="bi bi-funnel"></i> Pipeline by status</h5></div></div>
+            {% for row in analytics.pipeline %}
+            <div class="prj-bar-row">
+                <a class="prj-bar-label" href="{{ url_for('main_routes.transactions_list', type='projects', status=row.status) }}">{{ row.label }}</a>
+                <span class="prj-bar trx-{{ row.status }}"><span style="width: {{ row.pct }}%"></span></span>
+                <span class="prj-bar-value">{{ row.count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="dashboard-card section-card h-100">
+            <div class="section-header"><div><h5><i class="bi bi-hourglass-split"></i> Average days per stage</h5>
+                <p class="section-subtitle mb-0">From status changes in the project history (open projects count time to date).</p></div></div>
+            {% if analytics.stage_durations %}
+            {% for row in analytics.stage_durations %}
+            <div class="prj-bar-row">
+                <span class="prj-bar-label">{{ row.label }}</span>
+                <span class="prj-bar trx-{{ row.status }}"><span style="width: {{ row.pct }}%"></span></span>
+                <span class="prj-bar-value">{{ row.avg_days }} d <span class="text-muted small fw-normal">· {{ row.count }}</span></span>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="text-muted small mb-0">No status history yet.</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="dashboard-card section-card h-100">
+            <div class="section-header"><div><h5><i class="bi bi-person-gear"></i> Workload per project coordinator</h5></div></div>
+            {{ bar_table(analytics.coordinators) }}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="dashboard-card section-card h-100">
+            <div class="section-header"><div><h5><i class="bi bi-building-gear"></i> Workload per contractor</h5>
+                <p class="section-subtitle mb-0">Registered contractor assigned on the portal, or the contractor name(s) typed on the project. Top 15.</p></div></div>
+            {{ bar_table(analytics.contractors, 'No contractors assigned yet.') }}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="dashboard-card section-card h-100">
+            <div class="section-header"><div><h5><i class="bi bi-diagram-3"></i> Projects by scope</h5>
+                <p class="section-subtitle mb-0">Grouped from the project name (bored piling, micropiling, slope protection…).</p></div></div>
+            {{ bar_table(analytics.scopes) }}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="dashboard-card section-card h-100">
+            <div class="section-header"><div><h5><i class="bi bi-geo-alt"></i> Projects by location</h5>
+                <p class="section-subtitle mb-0">Last part of the project location (city / province). Top 12.</p></div></div>
+            {{ bar_table(analytics.locations, 'No locations recorded.') }}
+        </div>
+    </div>
+</div>
+{% endblock %}

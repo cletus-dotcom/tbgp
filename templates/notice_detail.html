@@ -1,0 +1,40 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}{{ notice.notice_type_label }}{% endblock %}
+{% block topbar_title %}{{ notice.notice_type_label }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5>
+                <span class="badge {% if notice.notice_type == 'policy' %}bg-primary{% elif notice.notice_type == 'memo' %}bg-warning text-dark{% else %}bg-success{% endif %} me-1">
+                    {{ notice.notice_type_label }}
+                </span>
+                {{ notice.title }}
+            </h5>
+        </div>
+        <a href="{{ url_for('main_routes.notices_list') }}" class="btn btn-sm btn-outline-secondary">Back to list</a>
+    </div>
+    <div class="detail-grid mb-3">
+        <div class="detail-item">
+            <label>{{ notice.notice_type_label }} No.</label>
+            <span>{{ notice.reference_number or '—' }}</span>
+        </div>
+        <div class="detail-item">
+            <label>Effectivity</label>
+            <span>{{ notice.effective_date.strftime('%B %d, %Y') if notice.effective_date else '—' }}</span>
+        </div>
+    </div>
+    <div class="notice-body" style="white-space: pre-wrap;">{{ notice.body }}</div>
+    <div class="detail-grid notice-issued-block">
+        <div class="detail-item">
+            <label>Issued by</label>
+            <span>{{ notice.issued_by or '—' }}</span>
+        </div>
+        <div class="detail-item">
+            <label>Date issued</label>
+            <span>{{ notice.issued_date.strftime('%B %d, %Y') if notice.issued_date else '—' }}</span>
+        </div>
+    </div>
+</div>
+{% endblock %}

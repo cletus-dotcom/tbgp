@@ -1,3 +1,20 @@
+{% macro duty_checkboxes(prefix) %}
+<div class="mb-3 d-none" id="{{ prefix }}DutiesWrap">
+    <input type="hidden" name="duties_present" value="1">
+    <label class="form-label">Duties</label>
+    {% for group, keys in duty_groups.items() %}
+    <div class="small text-uppercase text-muted mt-1 mb-1" data-duty-group="{{ group }}">{{ group }}</div>
+    {% for key in keys %}
+    <div class="form-check" data-duty="{{ key }}" data-group="{{ group }}">
+        <input class="form-check-input" type="checkbox" name="duties" value="{{ key }}" id="{{ prefix }}Duty_{{ key }}">
+        <label class="form-check-label" for="{{ prefix }}Duty_{{ key }}">{{ duty_labels[key] }} <span class="text-muted small">— {{ duty_descriptions[key] }}</span></label>
+    </div>
+    {% endfor %}
+    {% endfor %}
+    <p class="text-muted small mb-0 mt-1">Duties decide who is offered in the project and product team pickers and which dashboard cards the user sees. Members with a field duty or the Sales Agent duty work their assignments under My Assignments.</p>
+</div>
+{% endmacro %}
+
 <div class="modal fade" id="listUsersModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -16,11 +33,13 @@
                                 <th>Username</th>
                                 <th>Full Name</th>
                                 <th>Role</th>
+                                <th>Department</th>
+                                <th>Duties</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
-                            <tr><td colspan="4" class="text-muted">Loading users...</td></tr>
+                            <tr><td colspan="6" class="text-muted">Loading users...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -58,11 +77,35 @@
                             {% endfor %}
                         </select>
                     </div>
+                    <div class="mb-3" id="addUserDepartmentWrap">
+                        <label class="form-label">Department</label>
+                        <select name="department" id="addUserDepartment" class="form-select">
+                            <option value="">— None —</option>
+                            {% for department in departments %}
+                            <option value="{{ department }}">{{ department }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     <div class="mb-3 d-none" id="addUserMemberIdWrap">
                         <label class="form-label">Linked Member ID</label>
                         <input type="number" name="member_id" id="addUserMemberId" class="form-control" min="1" placeholder="Required for Member; optional for Staff">
                         <p class="text-muted small mb-0 mt-1">Required for Member logins. Optional for Staff so they can use My Marketplace share links and attributed leads.</p>
                     </div>
+                    <div class="mb-3 d-none" id="addUserContractorWrap">
+                        <label class="form-label">Linked contractor</label>
+                        <select name="contractor_id" id="addUserContractor" class="form-select user-contractor-select">
+                            <option value="">— Not linked —</option>
+                        </select>
+                        <p class="text-muted small mb-0 mt-1">The contractor sees projects assigned to this company under My Projects.</p>
+                    </div>
+                    <div class="mb-3 d-none" id="addUserSupplierWrap">
+                        <label class="form-label">Linked supplier</label>
+                        <select name="supplier_id" id="addUserSupplier" class="form-select user-supplier-select">
+                            <option value="">— Not linked —</option>
+                        </select>
+                        <p class="text-muted small mb-0 mt-1">The supplier sees product orders assigned to this company under My Orders.</p>
+                    </div>
+                    {{ duty_checkboxes('addUser') }}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -103,11 +146,35 @@
                             {% endfor %}
                         </select>
                     </div>
+                    <div class="mb-3" id="editUserDepartmentWrap">
+                        <label class="form-label">Department</label>
+                        <select name="department" id="editUserDepartment" class="form-select">
+                            <option value="">— None —</option>
+                            {% for department in departments %}
+                            <option value="{{ department }}">{{ department }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     <div class="mb-3 d-none" id="editUserMemberIdWrap">
                         <label class="form-label">Linked Member ID</label>
                         <input type="number" name="member_id" id="editUserMemberId" class="form-control" min="1" placeholder="Required for Member; optional for Staff">
                         <p class="text-muted small mb-0 mt-1">Required for Member. Optional for Staff (My Marketplace attribution).</p>
                     </div>
+                    <div class="mb-3 d-none" id="editUserContractorWrap">
+                        <label class="form-label">Linked contractor</label>
+                        <select name="contractor_id" id="editUserContractor" class="form-select user-contractor-select">
+                            <option value="">— Not linked —</option>
+                        </select>
+                        <p class="text-muted small mb-0 mt-1">The contractor sees projects assigned to this company under My Projects.</p>
+                    </div>
+                    <div class="mb-3 d-none" id="editUserSupplierWrap">
+                        <label class="form-label">Linked supplier</label>
+                        <select name="supplier_id" id="editUserSupplier" class="form-select user-supplier-select">
+                            <option value="">— Not linked —</option>
+                        </select>
+                        <p class="text-muted small mb-0 mt-1">The supplier sees product orders assigned to this company under My Orders.</p>
+                    </div>
+                    {{ duty_checkboxes('editUser') }}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -128,28 +195,122 @@
         const editUserRole = document.getElementById('editRole');
         const editUserMemberIdWrap = document.getElementById('editUserMemberIdWrap');
 
+        const addUserDepartmentWrap = document.getElementById('addUserDepartmentWrap');
+        const editUserDepartmentWrap = document.getElementById('editUserDepartmentWrap');
+        const departmentRoles = {{ department_roles | list | tojson }};
+
         function toggleMemberIdField(roleSelect, wrapEl) {
             if (!roleSelect || !wrapEl) return;
             const show = roleSelect.value === 'Member' || roleSelect.value === 'Staff';
             wrapEl.classList.toggle('d-none', !show);
         }
 
-        addUserRole?.addEventListener('change', () => toggleMemberIdField(addUserRole, addUserMemberIdWrap));
-        editUserRole?.addEventListener('change', () => toggleMemberIdField(editUserRole, editUserMemberIdWrap));
+        const addUserContractorWrap = document.getElementById('addUserContractorWrap');
+        const editUserContractorWrap = document.getElementById('editUserContractorWrap');
+
+        const addUserSupplierWrap = document.getElementById('addUserSupplierWrap');
+        const editUserSupplierWrap = document.getElementById('editUserSupplierWrap');
+
+        function toggleLinkField(roleSelect, wrapEl, roleName) {
+            if (!roleSelect || !wrapEl) return;
+            const show = roleSelect.value === roleName;
+            wrapEl.classList.toggle('d-none', !show);
+            if (!show) {
+                const select = wrapEl.querySelector('select');
+                if (select) select.value = '';
+            }
+        }
+
+        function toggleContractorField(roleSelect, wrapEl) {
+            toggleLinkField(roleSelect, wrapEl, 'Contractor');
+        }
+
+        function toggleSupplierField(roleSelect, wrapEl) {
+            toggleLinkField(roleSelect, wrapEl, 'Supplier');
+        }
+
+        function fillLinkOptions(selector, rows) {
+            document.querySelectorAll(selector).forEach(select => {
+                const current = select.value;
+                select.replaceChildren(new Option('— Not linked —', ''));
+                (rows || []).forEach(c => select.appendChild(new Option(c.name, String(c.id))));
+                select.value = current;
+            });
+        }
+
+        function toggleDepartmentField(roleSelect, wrapEl) {
+            if (!roleSelect || !wrapEl) return;
+            const show = departmentRoles.includes(roleSelect.value);
+            wrapEl.classList.toggle('d-none', !show);
+            if (!show) {
+                const select = wrapEl.querySelector('select');
+                if (select) select.value = '';
+            }
+        }
+
+        const addUserDutiesWrap = document.getElementById('addUserDutiesWrap');
+        const editUserDutiesWrap = document.getElementById('editUserDutiesWrap');
+        const dutiesByRole = {{ duties_by_role | tojson }};
+        const dutyLabels = {{ duty_labels | tojson }};
+
+        function toggleDutiesField(roleSelect, wrapEl) {
+            if (!roleSelect || !wrapEl) return;
+            const allowed = dutiesByRole[roleSelect.value] || [];
+            wrapEl.classList.toggle('d-none', !allowed.length);
+            wrapEl.querySelectorAll('[data-duty]').forEach(row => {
+                const ok = allowed.includes(row.dataset.duty);
+                row.classList.toggle('d-none', !ok);
+                if (!ok) row.querySelector('input').checked = false;
+            });
+            wrapEl.querySelectorAll('[data-duty-group]').forEach(heading => {
+                const group = heading.dataset.dutyGroup;
+                const visible = [...wrapEl.querySelectorAll('[data-duty]')].some(
+                    row => row.dataset.group === group && !row.classList.contains('d-none')
+                );
+                heading.classList.toggle('d-none', !visible);
+            });
+        }
+
+        function setDuties(wrapEl, duties) {
+            wrapEl?.querySelectorAll('input[name="duties"]').forEach(input => {
+                input.checked = (duties || []).includes(input.value);
+            });
+        }
+
+        addUserRole?.addEventListener('change', () => {
+            toggleMemberIdField(addUserRole, addUserMemberIdWrap);
+            toggleDepartmentField(addUserRole, addUserDepartmentWrap);
+            toggleContractorField(addUserRole, addUserContractorWrap);
+            toggleSupplierField(addUserRole, addUserSupplierWrap);
+            toggleDutiesField(addUserRole, addUserDutiesWrap);
+        });
+        editUserRole?.addEventListener('change', () => {
+            toggleMemberIdField(editUserRole, editUserMemberIdWrap);
+            toggleDepartmentField(editUserRole, editUserDepartmentWrap);
+            toggleContractorField(editUserRole, editUserContractorWrap);
+            toggleSupplierField(editUserRole, editUserSupplierWrap);
+            toggleDutiesField(editUserRole, editUserDutiesWrap);
+        });
         toggleMemberIdField(addUserRole, addUserMemberIdWrap);
+        toggleDepartmentField(addUserRole, addUserDepartmentWrap);
+        toggleContractorField(addUserRole, addUserContractorWrap);
+        toggleSupplierField(addUserRole, addUserSupplierWrap);
+        toggleDutiesField(addUserRole, addUserDutiesWrap);
 
         listUsersModal?.addEventListener('shown.bs.modal', async () => {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Loading...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-muted">Loading...</td></tr>';
             try {
                 const res = await fetch('/list_users');
                 const data = await res.json();
+                fillLinkOptions('.user-contractor-select', data.contractors);
+                fillLinkOptions('.user-supplier-select', data.suppliers);
                 if (data.users?.length) {
                     renderUsers(data.users);
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-muted">No users found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-muted">No users found</td></tr>';
                 }
             } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-danger">Error: ${err.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-danger">Error: ${err.message}</td></tr>`;
             }
         });
 
@@ -166,7 +327,10 @@
                 const row = document.createElement('tr');
                 appendCell(row, user.username);
                 appendCell(row, user.full_name);
-                appendCell(row, user.role);
+                const linkedCompany = user.contractor_name || user.supplier_name;
+                appendCell(row, linkedCompany ? `${user.role} (${linkedCompany})` : user.role);
+                appendCell(row, user.department);
+                appendCell(row, (user.duties || []).map(duty => dutyLabels[duty] || duty).join(', '));
 
                 const actionsCell = document.createElement('td');
                 if (user.can_manage) {
@@ -210,7 +374,15 @@
             document.getElementById('editFullname').value = user.full_name || '';
             document.getElementById('editRole').value = user.role || 'Staff';
             document.getElementById('editUserMemberId').value = user.member_id || '';
+            document.getElementById('editUserDepartment').value = user.department || '';
             toggleMemberIdField(editUserRole, editUserMemberIdWrap);
+            toggleDepartmentField(editUserRole, editUserDepartmentWrap);
+            toggleContractorField(editUserRole, editUserContractorWrap);
+            toggleSupplierField(editUserRole, editUserSupplierWrap);
+            setDuties(editUserDutiesWrap, user.duties);
+            toggleDutiesField(editUserRole, editUserDutiesWrap);
+            document.getElementById('editUserContractor').value = user.contractor_id ? String(user.contractor_id) : '';
+            document.getElementById('editUserSupplier').value = user.supplier_id ? String(user.supplier_id) : '';
             new bootstrap.Modal(document.getElementById('editUserModal')).show();
         }
 
@@ -223,6 +395,7 @@
                 bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide();
                 bootstrap.Modal.getInstance(document.getElementById('listUsersModal')).show();
                 this.reset();
+                toggleDutiesField(addUserRole, addUserDutiesWrap);
             }
         });
 

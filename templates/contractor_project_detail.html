@@ -1,0 +1,132 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}{{ lead.reference_number }} — My Projects{% endblock %}
+{% block topbar_title %}My Projects{% endblock %}
+
+{% block content %}
+{% set status = lead.status or 'new' %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5 class="d-flex flex-wrap align-items-center gap-2">
+                <span class="badge bg-dark border border-warning text-warning">{{ lead.reference_number }}</span>
+                {{ lead.display_item }}
+                <span class="trx-status trx-{{ status }}">{{ status_labels.get(status, status) }}</span>
+            </h5>
+            <p class="section-subtitle mb-0">
+                {% if lead.delivery_location %}<i class="bi bi-geo-alt"></i> {{ lead.delivery_location }} · {% endif %}
+                {% if lead.client_company %}{{ lead.client_company }} · {% endif %}
+                {% if lead.estimated_implementation %}Target implementation {{ lead.estimated_implementation }} · {% endif %}
+                TBGP coordinator: {{ (lead.assigned_user.full_name or lead.assigned_user.username) if lead.assigned_user else (lead.project_coordinator or 'TBGP projects team') }}
+            </p>
+        </div>
+        <div class="section-actions">
+            <a href="{{ url_for('main_routes.contractor_projects_list') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> My projects</a>
+        </div>
+    </div>
+    {% if lead.message %}
+    <div class="trx-panel"><div class="trx-panel-title">Project scope</div><div class="trx-history-note">{{ lead.message }}</div></div>
+    {% endif %}
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="dashboard-card section-card mb-3">
+            <div class="section-header">
+                <div><h5><i class="bi bi-graph-up-arrow"></i> Report progress</h5>
+                    <p class="section-subtitle mb-0">Your update is recorded in the project history and the TBGP coordinator is notified.</p></div>
+                {% if lead.progress_percent is not none %}
+                <div style="min-width: 10rem;"><div class="prj-progress-label mb-1">{{ lead.progress_percent }}% complete</div><div class="prj-progress"><span style="width: {{ lead.progress_percent }}%"></span></div></div>
+                {% endif %}
+            </div>
+            <form method="post" action="{{ url_for('main_routes.contractor_report_progress', lead_id=lead.lead_id) }}" class="row g-2 align-items-end">
+                <div class="col-sm-3">
+                    <label class="form-label" for="progress_percent">Percent complete</label>
+                    <input type="number" min="0" max="100" class="form-control" id="progress_percent" name="progress_percent" value="{{ lead.progress_percent if lead.progress_percent is not none else '' }}" required>
+                </div>
+                <div class="col-sm-7">
+                    <label class="form-label" for="progress_note">Site update</label>
+                    <input class="form-control" id="progress_note" name="note" placeholder="Work done, issues, next steps">
+                </div>
+                <div class="col-sm-2"><button class="btn btn-brand w-100" type="submit">Report</button></div>
+            </form>
+        </div>
+
+        {% if stage_plan %}
+        <div class="dashboard-card section-card mb-3">
+            <div class="section-header"><div><h5><i class="bi bi-flag"></i> Delivery stages</h5></div></div>
+            {% for row in stage_plan if row.stage not in ['for_quotation', 'quotation_submitted', 'for_contractor'] %}
+            <div class="prj-stage state-{{ row.state }} mb-2">
+                <span class="prj-stage-label">{{ row.label }}{% if row.state == 'current' %} <span class="badge bg-warning text-dark">Current</span>{% endif %}{% if row.state == 'overdue' %} <span class="prj-flag">{{ row.days_late }}d late</span>{% endif %}</span>
+                <span class="small text-muted">Target {{ row.target_date.isoformat() if row.target_date else '—' }}</span>
+                <span class="small text-muted">Reached {{ row.reached_on.isoformat() if row.reached_on else '—' }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if events %}
+        <div class="dashboard-card section-card mb-3">
+            <div class="section-header"><div><h5><i class="bi bi-calendar-event"></i> Site visits &amp; meetings</h5></div></div>
+            <ul class="list-unstyled mb-0">
+                {% for event in events %}
+                <li class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                    <div>
+                        <div class="fw-semibold">{{ event.starts_at.strftime('%a %b %d, %Y %I:%M %p') }} — {{ event.title }}</div>
+                        <div class="small text-muted">{{ event_kinds.get(event.kind, event.kind) }}{% if event.location %} · {{ event.location }}{% endif %}{% if event.meeting_link %} · <a href="{{ event.meeting_link }}" target="_blank" rel="noopener">Join link</a>{% endif %}{% if event.status == 'done' %} · Done{% endif %}</div>
+                    </div>
+                    <a class="btn btn-outline-light btn-sm" href="{{ url_for('main_routes.project_event_ics', event_id=event.event_id) }}" title="Add to calendar"><i class="bi bi-calendar-plus"></i></a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-5">
+        <div class="dashboard-card section-card mb-3">
+            <div class="section-header"><div><h5><i class="bi bi-folder2-open"></i> Project files</h5></div></div>
+            {% if documents %}
+            <ul class="list-unstyled mb-0">
+                {% for document in documents %}
+                <li class="mb-2">
+                    <a href="{{ url_for('main_routes.project_document_download', document_id=document.document_id) }}" target="_blank" rel="noopener">
+                        <i class="bi {{ 'bi-image' if document.is_image else ('bi-link-45deg' if document.external_url else 'bi-file-earmark-text') }}"></i> {{ document.title }}
+                    </a>
+                    <div class="small text-muted">{{ document_kinds.get(document.kind, document.kind) }} · {{ document.created_at.strftime('%Y-%m-%d') if document.created_at else '' }}</div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-0">No files shared yet.</p>
+            {% endif %}
+            <hr>
+            <form method="post" enctype="multipart/form-data" action="{{ url_for('main_routes.contractor_upload_document', lead_id=lead.lead_id) }}">
+                <div class="mb-2">
+                    <label class="form-label" for="doc_kind">Upload</label>
+                    <select class="form-select form-select-sm" id="doc_kind" name="kind">
+                        {% for key in contractor_document_kinds %}<option value="{{ key }}" {{ 'selected' if key == 'progress_photo' }}>{{ document_kinds[key] }}</option>{% endfor %}
+                    </select>
+                </div>
+                <input class="form-control form-control-sm mb-2" name="title" placeholder="Title (optional)">
+                <input type="file" class="form-control form-control-sm mb-2" name="file">
+                <input type="url" class="form-control form-control-sm mb-2" name="external_url" placeholder="or a link (https://)">
+                <button class="btn btn-outline-light btn-sm w-100" type="submit"><i class="bi bi-upload"></i> Upload</button>
+            </form>
+        </div>
+
+        {% if updates %}
+        <div class="dashboard-card section-card">
+            <div class="section-header"><div><h5><i class="bi bi-clock-history"></i> Progress history</h5></div></div>
+            <ul class="trx-history">
+                {% for entry in updates %}
+                <li>
+                    <div class="trx-history-meta">{{ entry.created_at.strftime('%Y-%m-%d %H:%M') if entry.created_at else '' }} · {{ (entry.created_by.full_name or entry.created_by.username) if entry.created_by else 'TBGP' }}</div>
+                    <div class="trx-history-note">{{ entry.note }}</div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

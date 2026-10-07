@@ -225,47 +225,236 @@ MARKETPLACE_STATUSES = (MARKETPLACE_STATUS_DRAFT, MARKETPLACE_STATUS_PUBLISHED)
 MARKETPLACE_ATTRIBUTION_COOKIE = "tbgp_mp_ref"
 MARKETPLACE_ATTRIBUTION_DAYS = 30
 
-# Marketplace inquiry CRM follow-up statuses.
+# Marketplace inquiry / transaction monitoring statuses (TBGP color-coded monitoring sheet).
 MARKETPLACE_LEAD_STATUS_NEW = "new"
-MARKETPLACE_LEAD_STATUS_CONTACTED = "contacted"
-MARKETPLACE_LEAD_STATUS_IN_PROGRESS = "in_progress"
-MARKETPLACE_LEAD_STATUS_CLOSED = "closed"
+MARKETPLACE_LEAD_STATUS_FOR_RESEARCH = "for_research"
+MARKETPLACE_LEAD_STATUS_FOR_QUOTATION = "for_quotation"
+MARKETPLACE_LEAD_STATUS_QUOTATION_IN_PROCESS = "quotation_in_process"
+MARKETPLACE_LEAD_STATUS_QUOTATION_SUBMITTED = "quotation_submitted"
+MARKETPLACE_LEAD_STATUS_FOR_FOLLOW_UP = "for_follow_up"
+MARKETPLACE_LEAD_STATUS_FOR_CONTRACTOR = "for_contractor"
+MARKETPLACE_LEAD_STATUS_ON_HOLD = "on_hold"
+MARKETPLACE_LEAD_STATUS_COMPLETED = "completed"
+MARKETPLACE_LEAD_STATUS_TERMINATED = "terminated"
 MARKETPLACE_LEAD_STATUSES = (
     MARKETPLACE_LEAD_STATUS_NEW,
-    MARKETPLACE_LEAD_STATUS_CONTACTED,
-    MARKETPLACE_LEAD_STATUS_IN_PROGRESS,
-    MARKETPLACE_LEAD_STATUS_CLOSED,
+    MARKETPLACE_LEAD_STATUS_FOR_RESEARCH,
+    MARKETPLACE_LEAD_STATUS_FOR_QUOTATION,
+    MARKETPLACE_LEAD_STATUS_QUOTATION_IN_PROCESS,
+    MARKETPLACE_LEAD_STATUS_QUOTATION_SUBMITTED,
+    MARKETPLACE_LEAD_STATUS_FOR_FOLLOW_UP,
+    MARKETPLACE_LEAD_STATUS_FOR_CONTRACTOR,
+    MARKETPLACE_LEAD_STATUS_ON_HOLD,
+    MARKETPLACE_LEAD_STATUS_COMPLETED,
+    MARKETPLACE_LEAD_STATUS_TERMINATED,
 )
 MARKETPLACE_LEAD_STATUS_LABELS = {
-    MARKETPLACE_LEAD_STATUS_NEW: "New",
-    MARKETPLACE_LEAD_STATUS_CONTACTED: "Contacted",
-    MARKETPLACE_LEAD_STATUS_IN_PROGRESS: "In progress",
-    MARKETPLACE_LEAD_STATUS_CLOSED: "Closed",
+    MARKETPLACE_LEAD_STATUS_NEW: "New inquiry",
+    MARKETPLACE_LEAD_STATUS_FOR_RESEARCH: "For research",
+    MARKETPLACE_LEAD_STATUS_FOR_QUOTATION: "For costing / quotation",
+    MARKETPLACE_LEAD_STATUS_QUOTATION_IN_PROCESS: "Quotation in process",
+    MARKETPLACE_LEAD_STATUS_QUOTATION_SUBMITTED: "Quotation submitted",
+    MARKETPLACE_LEAD_STATUS_FOR_FOLLOW_UP: "For follow-up",
+    MARKETPLACE_LEAD_STATUS_FOR_CONTRACTOR: "For assignment of contractor",
+    MARKETPLACE_LEAD_STATUS_ON_HOLD: "On hold",
+    MARKETPLACE_LEAD_STATUS_COMPLETED: "Completed",
+    MARKETPLACE_LEAD_STATUS_TERMINATED: "Dead / terminated",
 }
-
-MARKETPLACE_LEAD_ACTION_QUOTATION_APPROVAL = "quotation_for_approval"
-MARKETPLACE_LEAD_ACTION_QUOTE_CLIENT = "quote_for_client_submission"
-MARKETPLACE_LEAD_ACTION_ORDERED = "ordered"
-MARKETPLACE_LEAD_ACTIONS = (
-    MARKETPLACE_LEAD_ACTION_QUOTATION_APPROVAL,
-    MARKETPLACE_LEAD_ACTION_QUOTE_CLIENT,
-    MARKETPLACE_LEAD_ACTION_ORDERED,
+MARKETPLACE_LEAD_CLOSED_STATUSES = (
+    MARKETPLACE_LEAD_STATUS_COMPLETED,
+    MARKETPLACE_LEAD_STATUS_TERMINATED,
 )
-MARKETPLACE_LEAD_ACTION_LABELS = {
-    MARKETPLACE_LEAD_ACTION_QUOTATION_APPROVAL: "Quotation for Approval",
-    MARKETPLACE_LEAD_ACTION_QUOTE_CLIENT: "Quote for Client Submission",
-    MARKETPLACE_LEAD_ACTION_ORDERED: "Ordered",
+
+# Project delivery stages (after the quotation is won). Offered on project transactions only.
+PROJECT_STATUS_AWARDED = "awarded"
+PROJECT_STATUS_MOBILIZATION = "mobilization"
+PROJECT_STATUS_ONGOING = "ongoing"
+PROJECT_STATUS_TURNOVER = "turnover"
+PROJECT_DELIVERY_STATUSES = (
+    PROJECT_STATUS_AWARDED,
+    PROJECT_STATUS_MOBILIZATION,
+    PROJECT_STATUS_ONGOING,
+    PROJECT_STATUS_TURNOVER,
+)
+MARKETPLACE_LEAD_STATUS_LABELS.update({
+    PROJECT_STATUS_AWARDED: "Awarded / contract signed",
+    PROJECT_STATUS_MOBILIZATION: "Mobilization",
+    PROJECT_STATUS_ONGOING: "Ongoing implementation",
+    PROJECT_STATUS_TURNOVER: "For turnover",
+})
+PROJECT_LEAD_STATUSES = (
+    MARKETPLACE_LEAD_STATUS_NEW,
+    MARKETPLACE_LEAD_STATUS_FOR_RESEARCH,
+    MARKETPLACE_LEAD_STATUS_FOR_QUOTATION,
+    MARKETPLACE_LEAD_STATUS_QUOTATION_IN_PROCESS,
+    MARKETPLACE_LEAD_STATUS_QUOTATION_SUBMITTED,
+    MARKETPLACE_LEAD_STATUS_FOR_FOLLOW_UP,
+    MARKETPLACE_LEAD_STATUS_FOR_CONTRACTOR,
+    *PROJECT_DELIVERY_STATUSES,
+    MARKETPLACE_LEAD_STATUS_ON_HOLD,
+    MARKETPLACE_LEAD_STATUS_COMPLETED,
+    MARKETPLACE_LEAD_STATUS_TERMINATED,
+)
+# Product order-to-delivery stages (after the client accepts the quotation). Offered on product transactions only.
+PRODUCT_STATUS_ORDER_CONFIRMED = "order_confirmed"
+PRODUCT_STATUS_FOR_DELIVERY = "for_delivery"
+PRODUCT_STATUS_DELIVERED = "delivered"
+PRODUCT_ORDER_STATUSES = (
+    PRODUCT_STATUS_ORDER_CONFIRMED,
+    PRODUCT_STATUS_FOR_DELIVERY,
+    PRODUCT_STATUS_DELIVERED,
+)
+MARKETPLACE_LEAD_STATUS_LABELS.update({
+    PRODUCT_STATUS_ORDER_CONFIRMED: "PO / order confirmed",
+    PRODUCT_STATUS_FOR_DELIVERY: "For delivery",
+    PRODUCT_STATUS_DELIVERED: "Delivered",
+})
+PRODUCT_LEAD_STATUSES = (
+    MARKETPLACE_LEAD_STATUS_NEW,
+    MARKETPLACE_LEAD_STATUS_FOR_RESEARCH,
+    MARKETPLACE_LEAD_STATUS_FOR_QUOTATION,
+    MARKETPLACE_LEAD_STATUS_QUOTATION_IN_PROCESS,
+    MARKETPLACE_LEAD_STATUS_QUOTATION_SUBMITTED,
+    MARKETPLACE_LEAD_STATUS_FOR_FOLLOW_UP,
+    MARKETPLACE_LEAD_STATUS_FOR_CONTRACTOR,
+    *PRODUCT_ORDER_STATUSES,
+    MARKETPLACE_LEAD_STATUS_ON_HOLD,
+    MARKETPLACE_LEAD_STATUS_COMPLETED,
+    MARKETPLACE_LEAD_STATUS_TERMINATED,
+)
+# Work queues per product duty.
+PRODUCT_SOURCING_STATUSES = (MARKETPLACE_LEAD_STATUS_FOR_RESEARCH, MARKETPLACE_LEAD_STATUS_FOR_QUOTATION)
+PRODUCT_PRICING_STATUSES = (MARKETPLACE_LEAD_STATUS_FOR_QUOTATION, MARKETPLACE_LEAD_STATUS_QUOTATION_IN_PROCESS)
+PRODUCT_LOGISTICS_STATUSES = (PRODUCT_STATUS_ORDER_CONFIRMED, PRODUCT_STATUS_FOR_DELIVERY)
+
+ALL_LEAD_STATUSES = (
+    *PROJECT_LEAD_STATUSES[: PROJECT_LEAD_STATUSES.index(MARKETPLACE_LEAD_STATUS_ON_HOLD)],
+    *PRODUCT_ORDER_STATUSES,
+    *PROJECT_LEAD_STATUSES[PROJECT_LEAD_STATUSES.index(MARKETPLACE_LEAD_STATUS_ON_HOLD):],
+)
+# Won = quotation accepted (delivery stage or completed); lost = dead / terminated.
+PROJECT_WON_STATUSES = (*PROJECT_DELIVERY_STATUSES, MARKETPLACE_LEAD_STATUS_COMPLETED)
+# Estimator work queue.
+PROJECT_QUOTE_STATUSES = (
+    MARKETPLACE_LEAD_STATUS_FOR_RESEARCH,
+    MARKETPLACE_LEAD_STATUS_FOR_QUOTATION,
+    MARKETPLACE_LEAD_STATUS_QUOTATION_IN_PROCESS,
+)
+# Stages that get a target date on the project stage plan.
+PROJECT_PLAN_STAGES = (
+    MARKETPLACE_LEAD_STATUS_FOR_QUOTATION,
+    MARKETPLACE_LEAD_STATUS_QUOTATION_SUBMITTED,
+    MARKETPLACE_LEAD_STATUS_FOR_CONTRACTOR,
+    *PROJECT_DELIVERY_STATUSES,
+    MARKETPLACE_LEAD_STATUS_COMPLETED,
+)
+
+PROJECT_DOCUMENT_KINDS = {
+    "layout": "Layout",
+    "boq": "BOQ",
+    "plan": "Plans / drawings",
+    "quotation": "Quotation",
+    "contract": "Contract",
+    "site_photo": "Site photo",
+    "progress_photo": "Progress photo",
+    "other": "Other",
 }
-
-MARKETPLACE_LEAD_RESULT_BOUGHT = "bought"
-MARKETPLACE_LEAD_RESULT_INQUIRED_ONLY = "inquired_only"
-MARKETPLACE_LEAD_RESULTS = (
-    MARKETPLACE_LEAD_RESULT_BOUGHT,
-    MARKETPLACE_LEAD_RESULT_INQUIRED_ONLY,
+# Document types the assigned contractor may upload (always shared with them).
+PROJECT_DOCUMENT_CONTRACTOR_KINDS = ("layout", "boq", "plan", "site_photo", "progress_photo")
+# Member field agents see / upload every document type except the signed contract.
+PROJECT_FIELD_DOCUMENT_KINDS = tuple(kind for kind in PROJECT_DOCUMENT_KINDS if kind != "contract")
+PRODUCT_DOCUMENT_KINDS = {
+    "supplier_quote": "Supplier quotation",
+    "quotation": "Client quotation",
+    "purchase_order": "Purchase order (PO)",
+    "spec_sheet": "Spec sheet / catalog",
+    "supplier_invoice": "Supplier invoice",
+    "delivery_receipt": "Delivery receipt (DR)",
+    "proof_of_delivery": "Proof of delivery",
+    "photo": "Photo",
+    "other": "Other",
+}
+# Document types the assigned supplier may upload (always shared with them).
+PRODUCT_DOCUMENT_SUPPLIER_KINDS = (
+    "supplier_quote", "spec_sheet", "supplier_invoice", "delivery_receipt", "proof_of_delivery", "photo",
 )
-MARKETPLACE_LEAD_RESULT_LABELS = {
-    MARKETPLACE_LEAD_RESULT_BOUGHT: "Bought",
-    MARKETPLACE_LEAD_RESULT_INQUIRED_ONLY: "Inquired Only",
+# Sales agents (members) never see supplier costs.
+PRODUCT_FIELD_DOCUMENT_KINDS = tuple(
+    kind for kind in PRODUCT_DOCUMENT_KINDS if kind not in ("supplier_quote", "supplier_invoice")
+)
+PROJECT_DOCUMENT_MAX_BYTES = 10 * 1024 * 1024
+PROJECT_DOCUMENT_EXTENSIONS = (
+    ".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".doc", ".docx", ".xls", ".xlsx",
+    ".csv", ".ppt", ".pptx", ".dwg", ".dxf", ".zip",
+)
+PROJECT_EVENT_KINDS = {
+    "site_visit": "Site ocular / visit",
+    "meeting": "Meeting",
+    "zoom": "Zoom / online meeting",
+    "other": "Other",
+}
+PROJECT_EVENT_STATUS_LABELS = {
+    "scheduled": "Scheduled",
+    "done": "Done",
+    "cancelled": "Cancelled",
+}
+PROJECT_DEFAULT_COMMISSION_PERCENT = Decimal(os.getenv("PROJECT_DEFAULT_COMMISSION_PERCENT", "5"))
+# Overdue alerts: open projects with no update / stuck in one status longer than this.
+PROJECT_STALE_DAYS = int(os.getenv("PROJECT_STALE_DAYS", "7"))
+PROJECT_STUCK_DAYS = int(os.getenv("PROJECT_STUCK_DAYS", "14"))
+PROJECT_REMINDER_DAYS = int(os.getenv("PROJECT_REMINDER_DAYS", "7"))
+# Product alerts: idle, stuck, quotation awaiting the client's answer, unassigned inquiries.
+PRODUCT_STALE_DAYS = int(os.getenv("PRODUCT_STALE_DAYS", "5"))
+PRODUCT_STUCK_DAYS = int(os.getenv("PRODUCT_STUCK_DAYS", "10"))
+PRODUCT_QUOTE_FOLLOWUP_DAYS = int(os.getenv("PRODUCT_QUOTE_FOLLOWUP_DAYS", "3"))
+PRODUCT_UNASSIGNED_DAYS = int(os.getenv("PRODUCT_UNASSIGNED_DAYS", "1"))
+
+# Transaction type is the marketplace category slug (or "projects"); reference numbers use these prefixes.
+TRANSACTION_TYPE_PROJECTS = "projects"
+TRANSACTION_TYPE_LABELS = {
+    "products": "Product",
+    TRANSACTION_TYPE_PROJECTS: "Project",
+    "services": "Service",
+    "real_property": "Real Property",
+}
+TRANSACTION_REF_PREFIXES = {
+    "products": "PRD",
+    TRANSACTION_TYPE_PROJECTS: "PRJ",
+    "services": "SRV",
+    "real_property": "RPT",
+}
+# Scope-of-work suggestions on the public project inquiry form (from the PROJECTS monitoring sheet).
+PROJECT_SCOPE_SUGGESTIONS = (
+    "Bored piling",
+    "Micropiling",
+    "Sheet piling",
+    "Push pile",
+    "Soil nailing & shotcreting",
+    "Rock anchoring",
+    "Rock fall netting",
+    "Slope protection",
+    "Excavation",
+    "Retrofitting",
+    "Site development / pipelaying",
+    "Clearing services",
+    "Design and build",
+    "Building / warehouse construction",
+    "Glass & aluminum works",
+)
+TRANSACTION_SOURCE_WEB = "web"
+TRANSACTION_SOURCE_MANUAL = "manual"
+TRANSACTION_SOURCE_IMPORT = "import"
+TRANSACTION_SOURCE_LEGACY = "legacy"
+TRANSACTION_SOURCE_LABELS = {
+    TRANSACTION_SOURCE_WEB: "Web inquiry",
+    TRANSACTION_SOURCE_MANUAL: "Manual entry",
+    TRANSACTION_SOURCE_IMPORT: "Excel import",
+    TRANSACTION_SOURCE_LEGACY: "Legacy CRM inquiry",
+}
+TRANSACTION_NOTE_KINDS = {
+    "call": "Call",
+    "email": "Email",
+    "note": "Note",
 }
 
 # Ref-Seller / Ref-Buyer pool level table (levels 1–6 upline, level 7 Mandate).
@@ -332,13 +521,45 @@ USER_ROLE_SITE_ADMIN = "SiteAdmin"
 USER_ROLE_ADMIN = "Admin"
 USER_ROLE_STAFF = "Staff"
 USER_ROLE_MEMBER = "Member"
+USER_ROLE_SUPPLIER = "Supplier"
+USER_ROLE_CONTRACTOR = "Contractor"
 USER_ROLES = [
     USER_ROLE_PORTAL_ADMIN,
     USER_ROLE_SITE_ADMIN,
     USER_ROLE_ADMIN,
     USER_ROLE_STAFF,
     USER_ROLE_MEMBER,
+    USER_ROLE_SUPPLIER,
+    USER_ROLE_CONTRACTOR,
 ]
+
+
+DEPARTMENT_ADMIN = "Admin"
+DEPARTMENT_PROJECTS = "Projects"
+DEPARTMENT_SALES_MARKETING = "Sales & Marketing"
+DEPARTMENT_ACCOUNTING = "Accounting"
+DEPARTMENTS = [
+    DEPARTMENT_ADMIN,
+    DEPARTMENT_PROJECTS,
+    DEPARTMENT_SALES_MARKETING,
+    DEPARTMENT_ACCOUNTING,
+]
+# Former department names still accepted on input (forms, imports) and rewritten by the migration.
+MERGED_DEPARTMENTS = {
+    "Sales": DEPARTMENT_SALES_MARKETING,
+    "Marketing": DEPARTMENT_SALES_MARKETING,
+}
+
+
+def normalize_department(department):
+    """Return the canonical department name, or None when blank or unknown."""
+    value = (department or "").strip().lower()
+    if not value:
+        return None
+    department_map = {item.lower(): item for item in DEPARTMENTS}
+    department_map.update({old.lower(): new for old, new in MERGED_DEPARTMENTS.items()})
+    department_map["sales and marketing"] = DEPARTMENT_SALES_MARKETING
+    return department_map.get(value)
 
 
 def normalize_role(role):
@@ -416,8 +637,139 @@ def is_member_role(role=None):
     return normalize_role(role) == USER_ROLE_MEMBER
 
 
+def is_supplier_role(role=None):
+    return normalize_role(role) == USER_ROLE_SUPPLIER
+
+
+def is_contractor_role(role=None):
+    return normalize_role(role) == USER_ROLE_CONTRACTOR
+
+
 def is_staff_or_admin(role=None):
     return normalize_role(role) in (USER_ROLE_PORTAL_ADMIN, USER_ROLE_ADMIN, USER_ROLE_STAFF)
+
+
+DEPARTMENT_ROLES = (
+    USER_ROLE_PORTAL_ADMIN,
+    USER_ROLE_SITE_ADMIN,
+    USER_ROLE_ADMIN,
+    USER_ROLE_STAFF,
+)
+
+
+def role_uses_department(role=None):
+    """Internal accounts belong to a department; Member, Supplier, and Contractor do not."""
+    return normalize_role(role) in DEPARTMENT_ROLES
+
+
+# Duties: work assignments held on top of the login role (several per user).
+DUTY_PROJECTS_MANAGER = "projects_manager"
+DUTY_PROJECT_COORDINATOR = "project_coordinator"
+DUTY_ESTIMATOR = "estimator"
+DUTY_SITE_ENGINEER = "site_engineer"
+DUTY_PRODUCTS_MANAGER = "products_manager"
+DUTY_ACCOUNT_OFFICER = "account_officer"
+DUTY_SOURCING_OFFICER = "sourcing_officer"
+DUTY_PRICING_OFFICER = "pricing_officer"
+DUTY_LOGISTICS_COORDINATOR = "logistics_coordinator"
+DUTY_SALES_AGENT = "sales_agent"
+DUTY_LABELS = {
+    DUTY_PROJECTS_MANAGER: "Projects Manager",
+    DUTY_PROJECT_COORDINATOR: "Project Coordinator",
+    DUTY_ESTIMATOR: "Estimator / Quantity Surveyor",
+    DUTY_SITE_ENGINEER: "Site Engineer / Inspector",
+    DUTY_PRODUCTS_MANAGER: "Products Manager",
+    DUTY_ACCOUNT_OFFICER: "Account Officer / Sales Coordinator",
+    DUTY_SOURCING_OFFICER: "Sourcing / Purchasing Officer",
+    DUTY_PRICING_OFFICER: "Pricing / Quotation Officer",
+    DUTY_LOGISTICS_COORDINATOR: "Logistics / Delivery Coordinator",
+    DUTY_SALES_AGENT: "Sales Agent",
+}
+DUTY_DESCRIPTIONS = {
+    DUTY_PROJECTS_MANAGER: "Team lead: sees team workload and unassigned projects.",
+    DUTY_PROJECT_COORDINATOR: "Owns projects from inquiry to turnover.",
+    DUTY_ESTIMATOR: "Prepares costing and quotations.",
+    DUTY_SITE_ENGINEER: "Handles site visits, inspections, and progress checks.",
+    DUTY_PRODUCTS_MANAGER: "Team lead: sees product team workload, unassigned inquiries, and alerts.",
+    DUTY_ACCOUNT_OFFICER: "Owns product inquiries: client contact, follow-up, and closing.",
+    DUTY_SOURCING_OFFICER: "Finds suppliers, checks specs and stock, and gets supplier prices.",
+    DUTY_PRICING_OFFICER: "Prepares product costing, margin, and the client quotation.",
+    DUTY_LOGISTICS_COORDINATOR: "Schedules delivery and collects the DR and proof of delivery.",
+    DUTY_SALES_AGENT: "Member in the field who follows up assigned product inquiries.",
+}
+DUTIES = tuple(DUTY_LABELS)
+DUTY_GROUPS = {
+    "Projects": (DUTY_PROJECTS_MANAGER, DUTY_PROJECT_COORDINATOR, DUTY_ESTIMATOR, DUTY_SITE_ENGINEER),
+    "Products": (
+        DUTY_PRODUCTS_MANAGER, DUTY_ACCOUNT_OFFICER, DUTY_SOURCING_OFFICER, DUTY_PRICING_OFFICER,
+        DUTY_LOGISTICS_COORDINATOR, DUTY_SALES_AGENT,
+    ),
+}
+PROJECT_MEMBER_DUTIES = (DUTY_PROJECT_COORDINATOR, DUTY_ESTIMATOR, DUTY_SITE_ENGINEER)
+PRODUCT_MEMBER_DUTIES = (DUTY_SALES_AGENT,)
+MEMBER_FIELD_DUTIES = (*PROJECT_MEMBER_DUTIES, *PRODUCT_MEMBER_DUTIES)
+# Team slot (lead column) -> duty whose holders are offered for it.
+PROJECT_TEAM_SLOTS = {
+    "assigned_user_id": DUTY_PROJECT_COORDINATOR,
+    "estimator_user_id": DUTY_ESTIMATOR,
+    "site_engineer_user_id": DUTY_SITE_ENGINEER,
+}
+PROJECT_TEAM_SLOT_LABELS = {
+    "assigned_user_id": "Project coordinator",
+    "estimator_user_id": "Estimator",
+    "site_engineer_user_id": "Site engineer",
+}
+# The pricing officer reuses the estimator column.
+PRODUCT_TEAM_SLOTS = {
+    "assigned_user_id": DUTY_ACCOUNT_OFFICER,
+    "sourcing_user_id": DUTY_SOURCING_OFFICER,
+    "estimator_user_id": DUTY_PRICING_OFFICER,
+    "logistics_user_id": DUTY_LOGISTICS_COORDINATOR,
+    "agent_user_id": DUTY_SALES_AGENT,
+}
+PRODUCT_TEAM_SLOT_LABELS = {
+    "assigned_user_id": "Account officer",
+    "sourcing_user_id": "Sourcing officer",
+    "estimator_user_id": "Pricing officer",
+    "logistics_user_id": "Logistics coordinator",
+    "agent_user_id": "Sales agent",
+}
+TEAM_SLOT_COLUMNS = tuple(dict.fromkeys((*PROJECT_TEAM_SLOTS, *PRODUCT_TEAM_SLOTS)))
+
+
+def team_slots_for_type(transaction_type):
+    """Team slot -> duty for a transaction type (other types only have the assigned staff)."""
+    if transaction_type == "projects":
+        return PROJECT_TEAM_SLOTS
+    if transaction_type == "products":
+        return PRODUCT_TEAM_SLOTS
+    return {"assigned_user_id": None}
+
+
+def team_slot_labels_for_type(transaction_type):
+    if transaction_type == "projects":
+        return PROJECT_TEAM_SLOT_LABELS
+    if transaction_type == "products":
+        return PRODUCT_TEAM_SLOT_LABELS
+    return {"assigned_user_id": "Assigned staff"}
+
+
+def member_duties_for_type(transaction_type):
+    if transaction_type == "projects":
+        return PROJECT_MEMBER_DUTIES
+    if transaction_type == "products":
+        return PRODUCT_MEMBER_DUTIES
+    return ()
+
+
+def duties_allowed_for_role(role=None):
+    """Staff and admins may hold any duty; Members only the field duties."""
+    normalized = normalize_role(role)
+    if normalized in (USER_ROLE_PORTAL_ADMIN, USER_ROLE_ADMIN, USER_ROLE_STAFF):
+        return DUTIES
+    if normalized == USER_ROLE_MEMBER:
+        return MEMBER_FIELD_DUTIES
+    return ()
 
 
 def can_manage_data(role=None):
@@ -453,8 +805,14 @@ def assignable_user_roles(actor_role=None):
     if is_portal_admin_role(actor_role):
         return list(USER_ROLES)
     if is_admin_role(actor_role):
-        return [USER_ROLE_ADMIN, USER_ROLE_STAFF, USER_ROLE_MEMBER]
-    return [USER_ROLE_STAFF, USER_ROLE_MEMBER]
+        return [
+            USER_ROLE_ADMIN,
+            USER_ROLE_STAFF,
+            USER_ROLE_MEMBER,
+            USER_ROLE_SUPPLIER,
+            USER_ROLE_CONTRACTOR,
+        ]
+    return [USER_ROLE_STAFF, USER_ROLE_MEMBER, USER_ROLE_SUPPLIER, USER_ROLE_CONTRACTOR]
 
 
 def post_login_redirect(role, next_param=""):
@@ -587,3 +945,37 @@ def can_view_payout_reports(role=None):
 
 def can_view_payout_scheme(role=None):
     return is_staff_or_admin(role)
+
+
+NOTICE_TYPE_POLICY = "policy"
+NOTICE_TYPE_MEMO = "memo"
+NOTICE_TYPE_ANNOUNCEMENT = "announcement"
+NOTICE_TYPES = (
+    NOTICE_TYPE_POLICY,
+    NOTICE_TYPE_MEMO,
+    NOTICE_TYPE_ANNOUNCEMENT,
+)
+NOTICE_TYPE_LABELS = {
+    NOTICE_TYPE_POLICY: "Policy",
+    NOTICE_TYPE_MEMO: "Memorandum",
+    NOTICE_TYPE_ANNOUNCEMENT: "Announcement",
+}
+
+
+def can_manage_notices(role=None):
+    """Staff, Admin, and PortalAdmin can post policies, memos, and announcements."""
+    return is_staff_or_admin(role)
+
+
+SANCTION_DEFAULT_DAYS = 30
+SANCTION_MAX_DAYS = 365
+
+
+def can_view_sanctions(role=None):
+    """Staff see suspensions so they know who cannot be credited for ads or contractor endorsements."""
+    return is_staff_or_admin(role)
+
+
+def can_manage_sanctions(role=None):
+    """Only Admin and PortalAdmin (program management) issue or lift member suspensions."""
+    return is_admin_role(role)

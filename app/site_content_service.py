@@ -8,6 +8,7 @@ from app import db
 from app.ecosystem_content import ECOSYSTEM_PAGES, ECOSYSTEM_SLUGS
 from app.models import CmsEcosystemPage, CmsLandingSection, CmsRegistryPartner
 from app.partners_registry import ALL_PARTNERS, CONTRACTORS, SUPPLIERS
+from app.timeutil import manila_now
 
 LANDING_ECOSYSTEM_KEY = "ecosystem_pillars"
 SERVICES_CONTACT_CTA_KEY = "services_contact_cta"
@@ -145,7 +146,7 @@ def save_landing_ecosystem_section(data):
     if row is None:
         row = CmsLandingSection(section_key=LANDING_ECOSYSTEM_KEY)
     row.data = data
-    row.updated_at = datetime.utcnow()
+    row.updated_at = manila_now()
     db.session.add(row)
     db.session.commit()
     return row.data
@@ -190,7 +191,7 @@ def save_services_contact_cta(data):
     if row is None:
         row = CmsLandingSection(section_key=SERVICES_CONTACT_CTA_KEY)
     row.data = payload
-    row.updated_at = datetime.utcnow()
+    row.updated_at = manila_now()
     db.session.add(row)
     db.session.commit()
     return payload
@@ -242,7 +243,7 @@ def save_marketplace_summaries(form_or_data):
     if row is None:
         row = CmsLandingSection(section_key=MARKETPLACE_SUMMARIES_KEY)
     row.data = payload
-    row.updated_at = datetime.utcnow()
+    row.updated_at = manila_now()
     db.session.add(row)
     db.session.commit()
     return payload
@@ -275,7 +276,7 @@ def save_marketplace_products_page(form_or_data):
     if row is None:
         row = CmsLandingSection(section_key=MARKETPLACE_PRODUCTS_PAGE_KEY)
     row.data = payload
-    row.updated_at = datetime.utcnow()
+    row.updated_at = manila_now()
     db.session.add(row)
     db.session.commit()
     return payload
@@ -308,7 +309,7 @@ def save_marketplace_services_page(form_or_data):
     if row is None:
         row = CmsLandingSection(section_key=MARKETPLACE_SERVICES_PAGE_KEY)
     row.data = payload
-    row.updated_at = datetime.utcnow()
+    row.updated_at = manila_now()
     db.session.add(row)
     db.session.commit()
     return payload
@@ -351,7 +352,7 @@ def save_ecosystem_page(slug, data):
     payload = copy.deepcopy(data)
     payload["slug"] = slug
     row.data = payload
-    row.updated_at = datetime.utcnow()
+    row.updated_at = manila_now()
     db.session.add(row)
     db.session.commit()
     return row.data
@@ -601,7 +602,7 @@ def save_registry_partner(slug, data, partner_type, sort_order=None):
         row.sort_order = sort_order
     elif row.sort_order is None:
         row.sort_order = CmsRegistryPartner.query.filter_by(partner_type=partner_type).count()
-    row.updated_at = datetime.utcnow()
+    row.updated_at = manila_now()
     db.session.add(row)
     db.session.commit()
     return payload

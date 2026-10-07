@@ -1,0 +1,14 @@
+{% extends "site_admin/base.html" %}
+{% block page_title %}Audit Log{% endblock %}
+{% block topbar_title %}Audit Log{% endblock %}
+
+{% block content %}
+<div class="site-admin-page">
+    <p class="site-admin-lead">
+        Full audit trail of the portal and the site-content area: sign-ins, users, members, suspensions,
+        income, payouts, transactions, notices, site content, and exports. Use the Area filter to narrow it,
+        for example to Site content. Passwords and security tokens are never recorded.
+    </p>
+    {% include 'partials/audit_log_table.html' %}
+</div>
+{% endblock %}

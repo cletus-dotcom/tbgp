@@ -1,0 +1,46 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}My Orders{% endblock %}
+{% block topbar_title %}My Orders{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-box-seam"></i> Orders for {{ supplier.company_name if supplier else 'your company' }}</h5>
+            <p class="section-subtitle mb-0">Product orders TBGP assigned to you. Open an order to see shared files, send your quotation or delivery updates, and upload the DR and proof of delivery.</p>
+        </div>
+    </div>
+    {% if not supplier %}
+    <div class="alert alert-warning mb-0">
+        Your account is not linked to a supplier record yet. Ask the TBGP administrator to link it in <strong>Manage Users</strong>.
+    </div>
+    {% elif rows %}
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0 align-middle">
+            <thead>
+                <tr><th>Ref no.</th><th>Product</th><th>Qty / volume</th><th>Deliver to</th><th>Status</th><th>Delivery date</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for lead in rows %}
+                {% set status = lead.status or 'new' %}
+                <tr class="trx-row trx-{{ status }}">
+                    <td class="fw-bold text-nowrap">{{ lead.reference_number }}</td>
+                    <td class="fw-semibold">{{ lead.display_item }}</td>
+                    <td class="small"><div class="trx-cell-clamp">{{ lead.quantity or '—' }}</div></td>
+                    <td class="small">{{ lead.delivery_location or '—' }}</td>
+                    <td><span class="trx-status trx-{{ status }}">{{ status_labels.get(status, status) }}</span></td>
+                    <td class="small text-nowrap">
+                        {{ lead.delivery_date.isoformat() if lead.delivery_date else '—' }}
+                        {% if lead.delivery_date and lead.delivery_date < today and status not in ['delivered', 'completed', 'terminated'] %}<span class="prj-flag">Overdue</span>{% endif %}
+                    </td>
+                    <td class="text-end"><a class="btn btn-outline-light btn-sm" href="{{ url_for('main_routes.supplier_order_detail', lead_id=lead.lead_id) }}">Open</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No orders assigned to you yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

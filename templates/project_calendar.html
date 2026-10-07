@@ -1,0 +1,50 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Project Calendar{% endblock %}
+{% block topbar_title %}Project Calendar{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-calendar3"></i> Site visits &amp; meetings — {{ month_start.strftime('%B %Y') }}</h5>
+            <p class="section-subtitle mb-0">Ocular inspections, Zoom calls, and client meetings scheduled on projects. Click an entry to open the project.</p>
+        </div>
+        <div class="section-actions d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-light btn-sm" href="{{ url_for('main_routes.project_calendar', month=prev_month, mine='1' if mine else None) }}"><i class="bi bi-chevron-left"></i></a>
+            <a class="btn btn-outline-light btn-sm" href="{{ url_for('main_routes.project_calendar', mine='1' if mine else None) }}">Today</a>
+            <a class="btn btn-outline-light btn-sm" href="{{ url_for('main_routes.project_calendar', month=next_month, mine='1' if mine else None) }}"><i class="bi bi-chevron-right"></i></a>
+            <a class="btn btn-sm {{ 'btn-brand' if mine else 'btn-outline-light' }}"
+               href="{{ url_for('main_routes.project_calendar', month=month_start.strftime('%Y-%m'), mine=None if mine else '1') }}">
+                <i class="bi bi-person"></i> {{ 'Showing mine' if mine else 'Only mine' }}
+            </a>
+            <a class="btn btn-outline-light btn-sm" href="{{ url_for('main_routes.transactions_list', type='projects') }}"><i class="bi bi-cone-striped"></i> Projects</a>
+        </div>
+    </div>
+
+    <div class="prj-calendar">
+        {% for name in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] %}
+        <div class="prj-calendar-head">{{ name }}</div>
+        {% endfor %}
+        {% for week in weeks %}
+        {% for day in week %}
+        <div class="prj-calendar-day{% if day.month != month_start.month %} is-other{% endif %}{% if day == today %} is-today{% endif %}">
+            <div class="prj-calendar-date">{{ day.day }}</div>
+            {% for event in by_day.get(day, []) %}
+            <a class="prj-calendar-event is-{{ event.status }}{% if event.is_overdue %} is-overdue{% endif %}"
+               href="{{ url_for('main_routes.transaction_detail', lead_id=event.lead_id) }}#tab-schedule"
+               title="{{ event.starts_at.strftime('%I:%M %p') }} · {{ event_kinds.get(event.kind, event.kind) }} · {{ event.title }}{% if event.assigned_user %} · {{ event.assigned_user.full_name or event.assigned_user.username }}{% endif %}{% if event.location %} · {{ event.location }}{% endif %}">
+                <strong>{{ event.starts_at.strftime('%H:%M') }}</strong> {{ event.lead.reference_number }} {{ event.title }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        {% endfor %}
+    </div>
+    <div class="d-flex flex-wrap gap-3 small text-muted mt-2">
+        <span><span class="prj-calendar-event d-inline-block">&nbsp;</span> Scheduled</span>
+        <span><span class="prj-calendar-event is-done d-inline-block">&nbsp;</span> Done</span>
+        <span><span class="prj-calendar-event is-overdue d-inline-block">&nbsp;</span> Past, not marked done</span>
+        <span>Add schedules from a project's <strong>Site visits &amp; meetings</strong> tab. Each entry can be downloaded as an .ics reminder.</span>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}My Assignments{% endblock %}
+{% block topbar_title %}My Assignments{% endblock %}
+
+{% block content %}
+{% include 'partials/confidentiality_notice.html' %}
+{% if has_product_duty or product_leads %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-box-seam"></i> Product inquiries assigned to you</h5>
+            <p class="section-subtitle mb-0">
+                Product inquiries where TBGP named you as the sales agent. Visit or call the client, post notes and files,
+                and suggest status changes; the account officer handles the quotation, supplier, and delivery.
+            </p>
+        </div>
+    </div>
+    {% if product_leads %}
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0 align-middle">
+            <thead>
+                <tr><th>Ref no.</th><th>Product</th><th>Your role</th><th>Client</th><th>Status</th><th>Delivery</th><th>Account officer</th></tr>
+            </thead>
+            <tbody>
+                {% for lead in product_leads %}
+                {% set status = lead.status or 'new' %}
+                <tr class="trx-row trx-{{ status }}{% if lead.lead_id in unread_ids %} is-unread{% endif %}">
+                    <td class="fw-bold text-nowrap">
+                        <a href="{{ url_for('main_routes.my_assignment_detail', lead_id=lead.lead_id) }}">{{ lead.reference_number }}</a>
+                        {% if lead.lead_id in unread_ids %}<span class="badge bg-danger ms-1">New</span>{% endif %}
+                    </td>
+                    <td>
+                        <a class="fw-semibold text-reset" href="{{ url_for('main_routes.my_assignment_detail', lead_id=lead.lead_id) }}">{{ lead.display_item }}</a>
+                        {% if lead.quantity %}<div class="small text-muted trx-cell-clamp">{{ lead.quantity }}</div>{% endif %}
+                    </td>
+                    <td class="small">{{ roles.get(lead.lead_id, [])|join(', ') }}</td>
+                    <td class="small">{{ lead.client_company or lead.guest_name or '—' }}</td>
+                    <td><span class="trx-status trx-{{ status }}">{{ status_labels.get(status, status) }}</span></td>
+                    <td class="small text-nowrap">{{ lead.delivery_date.isoformat() if lead.delivery_date else '—' }}</td>
+                    <td class="small">{{ (lead.assigned_user.full_name or lead.assigned_user.username) if lead.assigned_user else '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No product inquiries assigned to you yet. TBGP staff will name you as the sales agent on a product inquiry.</p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if has_project_duty or leads %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-person-workspace"></i> Projects assigned to you</h5>
+            <p class="section-subtitle mb-0">
+                Projects where TBGP named you on the project team{% if duties %} ({{ duties|join(', ') }}){% endif %}.
+                Post site notes, progress, and files; the project coordinator handles status changes, the contractor, and payments.
+            </p>
+        </div>
+    </div>
+    {% if leads %}
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0 align-middle">
+            <thead>
+                <tr><th>Ref no.</th><th>Project</th><th>Your role</th><th>Client</th><th>Status</th><th>Progress</th><th>Coordinator</th></tr>
+            </thead>
+            <tbody>
+                {% for lead in leads %}
+                {% set status = lead.status or 'new' %}
+                <tr class="trx-row trx-{{ status }}{% if lead.lead_id in unread_ids %} is-unread{% endif %}">
+                    <td class="fw-bold text-nowrap">
+                        <a href="{{ url_for('main_routes.my_assignment_detail', lead_id=lead.lead_id) }}">{{ lead.reference_number }}</a>
+                        {% if lead.lead_id in unread_ids %}<span class="badge bg-danger ms-1">New</span>{% endif %}
+                    </td>
+                    <td>
+                        <a class="fw-semibold text-reset" href="{{ url_for('main_routes.my_assignment_detail', lead_id=lead.lead_id) }}">{{ lead.display_item }}</a>
+                        {% if lead.delivery_location %}<div class="small text-muted"><i class="bi bi-geo-alt"></i> {{ lead.delivery_location|truncate(60) }}</div>{% endif %}
+                    </td>
+                    <td class="small">{{ roles.get(lead.lead_id, [])|join(', ') }}</td>
+                    <td class="small">{{ lead.client_company or lead.guest_name or '—' }}</td>
+                    <td><span class="trx-status trx-{{ status }}">{{ status_labels.get(status, status) }}</span></td>
+                    <td style="min-width: 7rem;">
+                        {% if lead.progress_percent is not none %}
+                        <div class="prj-progress"><span style="width: {{ lead.progress_percent }}%"></span></div>
+                        <div class="prj-progress-label">{{ lead.progress_percent }}%</div>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="small">{{ (lead.assigned_user.full_name or lead.assigned_user.username) if lead.assigned_user else (lead.project_coordinator or '—') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No projects assigned to you yet. TBGP staff will add you to a project team as coordinator, estimator, or site engineer.</p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if has_project_duty or leads or events %}
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div><h5><i class="bi bi-calendar-event"></i> Your site visits &amp; meetings</h5>
+            <p class="section-subtitle mb-0">Scheduled items assigned to you, including overdue ones not yet marked done.</p></div>
+    </div>
+    {% if events %}
+    <ul class="list-unstyled mb-0">
+        {% for event in events %}
+        <li class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+            <div>
+                <div class="fw-semibold">
+                    {{ event.starts_at.strftime('%a %b %d, %Y %I:%M %p') }} — {{ event.title }}
+                    {% if event.starts_at < now %}<span class="prj-flag">Overdue</span>{% endif %}
+                </div>
+                <div class="small text-muted">
+                    {{ event_kinds.get(event.kind, event.kind) }}{% if event.location %} · {{ event.location }}{% endif %}
+                    · <a href="{{ url_for('main_routes.my_assignment_detail', lead_id=event.lead_id) }}">{{ event.lead.reference_number }}</a>
+                    {% if event.meeting_link %} · <a href="{{ event.meeting_link }}" target="_blank" rel="noopener">Join link</a>{% endif %}
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-light btn-sm" href="{{ url_for('main_routes.project_event_ics', event_id=event.event_id) }}" title="Add to calendar"><i class="bi bi-calendar-plus"></i></a>
+                <form method="post" action="{{ url_for('main_routes.my_assignment_event_done', event_id=event.event_id) }}" class="d-flex gap-1">
+                    <input type="hidden" name="next" value="list">
+                    <input class="form-control form-control-sm" name="outcome" placeholder="Outcome (optional)">
+                    <button class="btn btn-outline-success btn-sm text-nowrap" type="submit"><i class="bi bi-check2"></i> Done</button>
+                </form>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-muted mb-0">Nothing scheduled for you in the next few days.</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

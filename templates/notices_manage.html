@@ -1,0 +1,216 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Manage Notices{% endblock %}
+{% block topbar_title %}Post Policy / Memo / Announcement{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-pencil-square"></i> Post a notice</h5>
+            <p class="section-subtitle">Visible on dashboards for the selected audience. Leave roles unchecked to post to everyone.</p>
+        </div>
+        <a href="{{ url_for('main_routes.notices_list') }}" class="btn btn-sm btn-outline-secondary">View as user</a>
+    </div>
+
+    <form method="post" class="row g-3">
+        <input type="hidden" name="action" value="create">
+        <div class="col-md-4">
+            <label class="form-label" for="noticeType">Type</label>
+            <select name="notice_type" id="noticeType" class="form-select" required>
+                {% for t in notice_types %}
+                <option value="{{ t }}">{{ notice_type_labels[t] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-8">
+            <label class="form-label" for="noticeTitle">Title</label>
+            <input type="text" name="title" id="noticeTitle" class="form-control" maxlength="200" required>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="noticeReferenceNumber">Policy / Memo No.</label>
+            <input type="text" name="reference_number" id="noticeReferenceNumber" class="form-control"
+                   maxlength="60" placeholder="e.g. 2026-014">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="noticeEffectiveDate">Effectivity</label>
+            <input type="date" name="effective_date" id="noticeEffectiveDate" class="form-control">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="noticeIssuedBy">Issued by</label>
+            <input type="text" name="issued_by" id="noticeIssuedBy" class="form-control"
+                   maxlength="160" value="{{ default_issued_by }}">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="noticeIssuedDate">Date issued</label>
+            <input type="date" name="issued_date" id="noticeIssuedDate" class="form-control"
+                   value="{{ today.isoformat() }}">
+        </div>
+        <div class="col-12">
+            <label class="form-label" for="noticeBody">Body</label>
+            <textarea name="body" id="noticeBody" class="form-control" rows="5" required></textarea>
+        </div>
+        <div class="col-12">
+            <label class="form-label d-block">Audience roles</label>
+            <div class="d-flex flex-wrap gap-3">
+                {% for r in audience_role_choices %}
+                <label class="form-check">
+                    <input class="form-check-input" type="checkbox" name="audience_roles" value="{{ r }}">
+                    <span class="form-check-label">{{ r }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <p class="text-muted small mb-0 mt-1">Unchecked = all roles</p>
+        </div>
+        <div class="col-12">
+            <label class="form-check">
+                <input class="form-check-input" type="checkbox" name="is_published" value="1" checked>
+                <span class="form-check-label">Publish immediately (notify dashboards)</span>
+            </label>
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-brand">Post notice</button>
+        </div>
+    </form>
+</div>
+
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-list-ul"></i> All notices</h5>
+            <p class="section-subtitle">Edit, unpublish, or delete</p>
+        </div>
+    </div>
+
+    {% if notices %}
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>No.</th>
+                    <th>Title</th>
+                    <th>Issued</th>
+                    <th>Effectivity</th>
+                    <th>Audience</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in notices %}
+                <tr>
+                    <td>
+                        <span class="badge {% if item.notice_type == 'policy' %}bg-primary{% elif item.notice_type == 'memo' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                            {{ item.notice_type_label }}
+                        </span>
+                    </td>
+                    <td class="small text-nowrap">{{ item.reference_number or '—' }}</td>
+                    <td>
+                        <strong>{{ item.title }}</strong>
+                        <div class="text-muted small text-truncate" style="max-width: 280px;">{{ item.body }}</div>
+                    </td>
+                    <td class="small text-muted">
+                        {{ item.issued_date.strftime('%b %d, %Y') if item.issued_date else '—' }}
+                        <div>{{ item.issued_by or '—' }}</div>
+                    </td>
+                    <td class="small text-nowrap">
+                        {{ item.effective_date.strftime('%b %d, %Y') if item.effective_date else '—' }}
+                    </td>
+                    <td class="small">{{ item.audience_label }}</td>
+                    <td>
+                        {% if item.is_published %}
+                        <span class="badge bg-success">Published</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Draft</span>
+                        {% endif %}
+                        <div class="small text-muted mt-1" title="Posted on the portal">
+                            Posted {{ item.created_at.strftime('%b %d, %Y') if item.created_at else '—' }}
+                        </div>
+                    </td>
+                    <td class="text-end text-nowrap">
+                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                data-bs-toggle="collapse" data-bs-target="#editNotice{{ item.notice_id }}">
+                            Edit
+                        </button>
+                        <form method="post" class="d-inline" onsubmit="return confirm('Delete this notice?');">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="notice_id" value="{{ item.notice_id }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr class="collapse" id="editNotice{{ item.notice_id }}">
+                    <td colspan="8">
+                        <form method="post" class="row g-3 notice-edit-panel">
+                            <input type="hidden" name="action" value="update">
+                            <input type="hidden" name="notice_id" value="{{ item.notice_id }}">
+                            <div class="col-md-3">
+                                <label class="form-label">Type</label>
+                                <select name="notice_type" class="form-select" required>
+                                    {% for t in notice_types %}
+                                    <option value="{{ t }}" {% if item.notice_type == t %}selected{% endif %}>{{ notice_type_labels[t] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-9">
+                                <label class="form-label">Title</label>
+                                <input type="text" name="title" class="form-control" value="{{ item.title }}" maxlength="200" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Policy / Memo No.</label>
+                                <input type="text" name="reference_number" class="form-control"
+                                       value="{{ item.reference_number }}" maxlength="60">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Effectivity</label>
+                                <input type="date" name="effective_date" class="form-control"
+                                       value="{{ item.effective_date.isoformat() if item.effective_date else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Issued by</label>
+                                <input type="text" name="issued_by" class="form-control"
+                                       value="{{ item.issued_by }}" maxlength="160">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Date issued</label>
+                                <input type="date" name="issued_date" class="form-control"
+                                       value="{{ item.issued_date.isoformat() if item.issued_date else '' }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Body</label>
+                                <textarea name="body" class="form-control" rows="4" required>{{ item.body }}</textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label d-block">Audience</label>
+                                <div class="d-flex flex-wrap gap-3">
+                                    {% for r in audience_role_choices %}
+                                    <label class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="audience_roles" value="{{ r }}"
+                                               {% if r in item.audience_roles %}checked{% endif %}>
+                                        <span class="form-check-label">{{ r }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="is_published" value="1"
+                                           {% if item.is_published %}checked{% endif %}>
+                                    <span class="form-check-label">Published</span>
+                                </label>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-brand btn-sm">Save changes</button>
+                            </div>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="mb-0 text-muted">No notices posted yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

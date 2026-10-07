@@ -45,7 +45,9 @@
         {% set sidebar_help_open = active_page in help_pages %}
         {% set sidebar_payouts_open = active_page in payout_pages or payout_pending > 0 %}
         {% set sidebar_income_open = active_page and active_page.startswith('prof_') %}
-        {% set sidebar_admin_open = active_page == 'site_admin' or active_page == 'marketplace' or active_page == 'marketplace_crm' %}
+        {% set trends_pages = ['trends_analysis', 'trends_suppliers', 'trends_buyers', 'trends_projects'] %}
+        {% set sidebar_trends_open = active_page in trends_pages %}
+        {% set sidebar_admin_open = active_page == 'site_admin' or active_page == 'marketplace' or active_page == 'marketplace_crm' or active_page == 'notices_manage' or active_page == 'gallery' or active_page == 'audit_log' %}
 
         <p class="sidebar-label">Navigation</p>
         <ul class="sidebar-nav">
@@ -54,6 +56,40 @@
                     <i class="bi bi-speedometer2"></i> Dashboard
                 </a>
             </li>
+            <li>
+                <a href="{{ url_for('main_routes.notices_list') }}"
+                   class="{% if active_page in ['notices', 'notices_manage'] %}active{% endif %}{% if notice_unread_count %} sidebar-section-alert{% endif %}">
+                    <i class="bi bi-megaphone"></i> Notices
+                    {% if notice_unread_count %}
+                    <span class="badge bg-danger ms-auto" title="Unread notices">{{ notice_unread_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            {% if is_staff_or_admin(session.get('role')) %}
+            <li>
+                <a href="{{ url_for('main_routes.transactions_list') }}"
+                   class="{% if active_page == 'transactions' %}active{% endif %}{% if transaction_unread_count %} sidebar-section-alert{% endif %}">
+                    <i class="bi bi-clipboard-data"></i> Transactions
+                    {% if transaction_unread_count %}
+                    <span class="badge bg-danger ms-auto" title="New inquiries / transactions">{{ transaction_unread_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main_routes.transactions_list', type='projects') }}"
+                   class="{% if active_page == 'projects' %}active{% endif %}{% if project_unread_count %} sidebar-section-alert{% endif %}">
+                    <i class="bi bi-cone-striped"></i> Projects
+                    {% if project_unread_count %}
+                    <span class="badge bg-danger ms-auto" title="New project inquiries / assigned projects">{{ project_unread_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main_routes.project_calendar') }}" class="{% if active_page == 'project_calendar' %}active{% endif %}">
+                    <i class="bi bi-calendar3"></i> Project Calendar
+                </a>
+            </li>
+            {% endif %}
             {% if is_member_role(session.get('role')) %}
             <li>
                 <a href="{{ url_for('main_routes.members') }}" class="{% if active_page == 'members' %}active{% endif %}">
@@ -93,6 +129,34 @@
                     <i class="bi bi-shop"></i> My Marketplace
                 </a>
             </li>
+            <li>
+                <a href="{{ url_for('main_routes.my_projects') }}" class="{% if active_page == 'my_projects' %}active{% endif %}">
+                    <i class="bi bi-cone-striped"></i> My Referred Projects
+                </a>
+            </li>
+            {% if is_field_agent %}
+            <li>
+                <a href="{{ url_for('main_routes.my_assignments') }}"
+                   class="{% if active_page == 'my_assignments' %}active{% endif %}{% if assignment_unread_count %} sidebar-section-alert{% endif %}">
+                    <i class="bi bi-person-workspace"></i> My Assignments
+                    {% if assignment_unread_count %}
+                    <span class="badge bg-danger ms-auto" title="New or updated assignments">{{ assignment_unread_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            {% endif %}
+            {% elif is_contractor_role(session.get('role')) %}
+            <li>
+                <a href="{{ url_for('main_routes.contractor_projects_list') }}" class="{% if active_page == 'contractor_projects' %}active{% endif %}">
+                    <i class="bi bi-building-gear"></i> My Projects
+                </a>
+            </li>
+            {% elif is_supplier_role(session.get('role')) %}
+            <li>
+                <a href="{{ url_for('main_routes.supplier_orders_list') }}" class="{% if active_page == 'supplier_orders' %}active{% endif %}">
+                    <i class="bi bi-box-seam"></i> My Orders
+                </a>
+            </li>
             {% else %}
             <li>
                 <a href="{{ url_for('main_routes.members') }}" class="{% if active_page == 'members' %}active{% endif %}">
@@ -104,6 +168,16 @@
                     <i class="bi bi-journal-text"></i> Member Ledger
                 </a>
             </li>
+            {% if is_staff_or_admin(session.get('role')) %}
+            <li>
+                <a href="{{ url_for('main_routes.member_suspensions') }}" class="{% if active_page == 'member_suspensions' %}active{% endif %}">
+                    <i class="bi bi-slash-circle"></i> Suspensions
+                    {% if suspension_count %}
+                    <span class="badge bg-danger ms-auto" title="Members currently suspended">{{ suspension_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            {% endif %}
             <li class="sidebar-nav-divider" aria-hidden="true">
                 <hr class="sidebar-divider">
             </li>
@@ -229,6 +303,31 @@
             </span>
         </div>
 
+        <ul class="sidebar-nav sidebar-nav-section">
+            <li>
+                <button class="sidebar-link sidebar-section-toggle" type="button"
+                        data-target="trendsAnalysisSubMenu" data-chevron="trendsAnalysisChevron"
+                        aria-expanded="{{ 'true' if sidebar_trends_open else 'false' }}">
+                    <i class="bi bi-graph-up-arrow"></i> Trends &amp; Analysis
+                    <i class="bi {{ 'bi-chevron-up' if sidebar_trends_open else 'bi-chevron-down' }} ms-auto sidebar-chevron" id="trendsAnalysisChevron"></i>
+                </button>
+            </li>
+        </ul>
+        <div id="trendsAnalysisSubMenu" class="sidebar-submenu{% if not sidebar_trends_open %} d-none{% endif %}">
+            <a href="{{ url_for('main_routes.trends_suppliers') }}"
+               class="sidebar-sublink {% if active_page == 'trends_suppliers' %}active{% endif %}">
+                Suppliers
+            </a>
+            <a href="{{ url_for('main_routes.trends_buyers') }}"
+               class="sidebar-sublink {% if active_page == 'trends_buyers' %}active{% endif %}">
+                Buyers
+            </a>
+            <a href="{{ url_for('main_routes.trends_projects') }}"
+               class="sidebar-sublink {% if active_page == 'trends_projects' %}active{% endif %}">
+                Projects
+            </a>
+        </div>
+
         <hr class="sidebar-divider" aria-hidden="true">
         {% endif %}
 
@@ -260,6 +359,16 @@
             {% if can_access_marketplace_crm(session.get('role')) %}
             <a href="{{ url_for('main_routes.marketplace_crm') }}" class="sidebar-sublink {% if active_page == 'marketplace_crm' %}active{% endif %}">
                 Marketplace CRM
+            </a>
+            {% endif %}
+            {% if can_manage_notices(session.get('role')) %}
+            <a href="{{ url_for('main_routes.notices_manage') }}" class="sidebar-sublink {% if active_page == 'notices_manage' %}active{% endif %}">
+                Post Notices
+            </a>
+            {% endif %}
+            {% if is_admin_role(session.get('role')) %}
+            <a href="{{ url_for('main_routes.audit_log') }}" class="sidebar-sublink {% if active_page == 'audit_log' %}active{% endif %}">
+                Audit Log
             </a>
             {% endif %}
             {% if can_access_admin_options(session.get('role')) %}
@@ -333,6 +442,19 @@
     </aside>
 
     <main class="main-content">
+        {% if member_sanction %}
+        <div class="alert alert-danger d-flex gap-2 mt-2" role="alert">
+            <i class="bi bi-slash-circle-fill fs-5"></i>
+            <div>
+                <strong>You are suspended from {{ member_sanction.scope_labels|join(' and ')|lower }}
+                    until {{ member_sanction.end_date.strftime('%b %d, %Y') }}.</strong>
+                {% if member_sanction.memo_number %}Memorandum {{ member_sanction.memo_number }}.{% endif %}
+                {{ member_sanction.reason }}
+                {% if member_sanction.blocks_ads %}Your marketplace share links do not credit inquiries to you during this period.{% endif %}
+                {% if member_sanction.blocks_endorsement %}You cannot endorse any contractor during this period.{% endif %}
+            </div>
+        </div>
+        {% endif %}
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         <div class="container-fluid px-0 pt-2">

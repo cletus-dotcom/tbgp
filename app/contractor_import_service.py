@@ -6,6 +6,7 @@ from app import db
 from app.config import CONTRACTORS_SHEET, MEMBERS_XLSX
 from app.import_service import _clean_str, _parse_date, _read_excel
 from app.models import Contractor, Member
+from app.sanction_service import ensure_can_endorse
 
 REQUIRED_COLUMNS = {
     "contractor_id",
@@ -74,13 +75,22 @@ def preview_contractors_dataframe(df, limit=5):
 
 
 def import_contractors_dataframe(df, replace=False):
+    previous_referrers = dict(db.session.query(Contractor.contractor_id, Contractor.member_referrer_id).all())
+    rows = sorted(df.to_dict("records"), key=lambda r: (int(r["batch"]), int(r["contractor_id"])))
+    for row in rows:
+        contractor_id, payload = _row_payload(row)
+        if previous_referrers.get(contractor_id) != payload["member_referrer_id"]:
+            try:
+                ensure_can_endorse(payload["member_referrer_id"])
+            except ValueError as exc:
+                raise ValueError(f"Row with contractor_id {contractor_id}: {exc}") from exc
+
     if replace:
         Contractor.query.delete()
         db.session.commit()
 
     imported = 0
     updated = 0
-    rows = sorted(df.to_dict("records"), key=lambda r: (int(r["batch"]), int(r["contractor_id"])))
 
     for row in rows:
         contractor_id, payload = _row_payload(row)

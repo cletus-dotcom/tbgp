@@ -1,0 +1,184 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}Member Suspensions{% endblock %}
+{% block topbar_title %}Member Suspensions{% endblock %}
+
+{% macro sanction_scope(s) -%}
+{% for label in s.scope_labels %}<span class="badge bg-danger-subtle text-danger-emphasis me-1">{{ label }}</span>{% endfor %}
+{%- endmacro %}
+
+{% block content %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-slash-circle"></i> Member Suspensions</h5>
+            <p class="section-subtitle">
+                Policy sanctions such as the 30-day suspension for posting confidential project details.
+                While suspended, the member's marketplace share links no longer credit inquiries to them,
+                they cannot be set as the member referrer of a contractor, and new project commissions
+                credit their contractor endorsements to the admin member. Suspensions end automatically.
+            </p>
+        </div>
+        <a href="{{ url_for('main_routes.members') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Members
+        </a>
+    </div>
+
+    {% if can_manage %}
+    <form method="post" class="row g-2 align-items-end">
+        <input type="hidden" name="action" value="issue">
+        <div class="col-md-4">
+            <label class="form-label" for="sanctionMember">Member</label>
+            <select id="sanctionMember" name="member_id" class="form-select" required>
+                <option value="">Select a member…</option>
+                {% for member in members %}
+                <option value="{{ member.member_id }}">#{{ member.member_id }} — {{ member.last_name }}, {{ member.first_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="sanctionMemo">Memorandum no.</label>
+            <input type="text" id="sanctionMemo" name="memo_number" class="form-control" maxlength="80"
+                   placeholder="e.g. TBGP-51026-1">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="sanctionStart">Start date</label>
+            <input type="date" id="sanctionStart" name="start_date" class="form-control" value="{{ today.isoformat() }}" required>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" for="sanctionDays">Days</label>
+            <input type="number" id="sanctionDays" name="days" class="form-control" min="1" max="{{ max_days }}"
+                   value="{{ default_days }}" required>
+        </div>
+        <div class="col-md-8">
+            <label class="form-label" for="sanctionReason">Reason</label>
+            <input type="text" id="sanctionReason" name="reason" class="form-control" required
+                   placeholder="e.g. Publicly posted complete project details (client, location) in an advertisement">
+        </div>
+        <div class="col-md-4">
+            <span class="form-label d-block">Suspend</span>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="sanctionAds" name="blocks_ads" value="1" checked>
+                <label class="form-check-label" for="sanctionAds">Posting ads</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="sanctionEndorse" name="blocks_endorsement" value="1" checked>
+                <label class="form-check-label" for="sanctionEndorse">Endorsing contractors</label>
+            </div>
+        </div>
+        <div class="col-12 text-end">
+            <button type="submit" class="btn btn-danger"><i class="bi bi-slash-circle"></i> Issue suspension</button>
+        </div>
+    </form>
+    {% else %}
+    <p class="text-muted small mb-0">Only Admin can issue or lift suspensions.</p>
+    {% endif %}
+</div>
+
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-hourglass-split"></i> Active and scheduled</h5>
+            <p class="section-subtitle">{{ active_sanctions|length }} suspension(s)</p>
+        </div>
+    </div>
+    {% if active_sanctions %}
+    <div class="table-responsive">
+        <table class="table table-sm section-table mb-0">
+            <thead>
+                <tr>
+                    <th>Member</th>
+                    <th>Memo / reason</th>
+                    <th>Suspended from</th>
+                    <th>Period</th>
+                    <th>Status</th>
+                    {% if can_manage %}<th class="text-end">Lift early</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in active_sanctions %}
+                {% set status = s.status_on(today) %}
+                <tr>
+                    <td>
+                        <div class="fw-semibold">{{ s.member.full_name if s.member else '#' ~ s.member_id }}</div>
+                        <div class="small text-muted">#{{ s.member_id }}{% if violation_counts[s.member_id] > 1 %} · {{ violation_counts[s.member_id] }} violations on record{% endif %}</div>
+                    </td>
+                    <td class="small">
+                        {% if s.memo_number %}<div class="fw-semibold">{{ s.memo_number }}</div>{% endif %}
+                        {{ s.reason }}
+                    </td>
+                    <td>{{ sanction_scope(s) }}</td>
+                    <td class="small text-nowrap">
+                        {{ format_day(s.start_date) }} – {{ format_day(s.end_date) }}
+                        <div class="text-muted">{{ s.total_days }} days{% if status == 'active' %} · {{ (s.end_date - today).days + 1 }} left{% endif %}</div>
+                    </td>
+                    <td><span class="badge {{ 'bg-danger' if status == 'active' else 'bg-secondary' }}">{{ status_labels[status] }}</span></td>
+                    {% if can_manage %}
+                    <td class="text-end">
+                        <form method="post" class="d-flex gap-1 justify-content-end">
+                            <input type="hidden" name="action" value="lift">
+                            <input type="hidden" name="sanction_id" value="{{ s.sanction_id }}">
+                            <input type="text" name="lift_reason" class="form-control form-control-sm" placeholder="Reason" required
+                                   aria-label="Reason for lifting early" style="max-width: 12rem;">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">Lift</button>
+                        </form>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No member is currently suspended.</p>
+    {% endif %}
+</div>
+
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-journal-x"></i> Violation history</h5>
+            <p class="section-subtitle">Served and lifted suspensions stay on record for repeat-violation decisions.</p>
+        </div>
+    </div>
+    {% if past_sanctions %}
+    <div class="table-responsive">
+        <table class="table table-sm section-table mb-0">
+            <thead>
+                <tr>
+                    <th>Member</th>
+                    <th>Memo / reason</th>
+                    <th>Suspended from</th>
+                    <th>Period</th>
+                    <th>Outcome</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in past_sanctions %}
+                {% set status = s.status_on(today) %}
+                <tr>
+                    <td>
+                        <div class="fw-semibold">{{ s.member.full_name if s.member else '#' ~ s.member_id }}</div>
+                        <div class="small text-muted">#{{ s.member_id }}</div>
+                    </td>
+                    <td class="small">
+                        {% if s.memo_number %}<div class="fw-semibold">{{ s.memo_number }}</div>{% endif %}
+                        {{ s.reason }}
+                    </td>
+                    <td>{{ sanction_scope(s) }}</td>
+                    <td class="small text-nowrap">{{ format_day(s.start_date) }} – {{ format_day(s.end_date) }}</td>
+                    <td class="small">
+                        <span class="badge bg-secondary">{{ status_labels[status] }}</span>
+                        {% if status == 'lifted' %}
+                        <div class="text-muted">{{ s.lifted_at.strftime('%b %d, %Y') }}{% if s.lifted_by %} by {{ s.lifted_by.full_name or s.lifted_by.username }}{% endif %}: {{ s.lift_reason }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">No past suspensions.</p>
+    {% endif %}
+</div>
+{% endblock %}

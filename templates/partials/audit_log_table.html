@@ -1,0 +1,178 @@
+{% set outcome_badges = {'success': 'bg-success', 'failed': 'bg-warning text-dark', 'denied': 'bg-danger'} %}
+<form method="get" action="{{ url_for(list_endpoint) }}" class="row g-2 align-items-end mb-3 audit-filters">
+    <div class="col-6 col-md-2">
+        <label class="form-label small" for="auditFrom">From</label>
+        <input type="date" id="auditFrom" name="date_from" class="form-control form-control-sm" value="{{ filters.date_from }}">
+    </div>
+    <div class="col-6 col-md-2">
+        <label class="form-label small" for="auditTo">To</label>
+        <input type="date" id="auditTo" name="date_to" class="form-control form-control-sm" value="{{ filters.date_to }}">
+    </div>
+    <div class="col-6 col-md-2">
+        <label class="form-label small" for="auditUser">User</label>
+        <input type="text" id="auditUser" name="user" class="form-control form-control-sm" value="{{ filters.user }}" placeholder="Username or name">
+    </div>
+    <div class="col-6 col-md-2">
+        <label class="form-label small" for="auditCategory">Area</label>
+        <select id="auditCategory" name="category" class="form-select form-select-sm">
+            <option value="">All areas</option>
+            {% for key, label in category_choices.items() %}
+            <option value="{{ key }}" {% if filters.category == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-6 col-md-2">
+        <label class="form-label small" for="auditOutcome">Outcome</label>
+        <select id="auditOutcome" name="outcome" class="form-select form-select-sm">
+            <option value="">Any outcome</option>
+            {% for key, label in outcome_labels.items() %}
+            <option value="{{ key }}" {% if filters.outcome == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-6 col-md-2">
+        <label class="form-label small" for="auditIp">IP address</label>
+        <input type="text" id="auditIp" name="ip" class="form-control form-control-sm" value="{{ filters.ip }}">
+    </div>
+    <div class="col-6 col-md-2">
+        <label class="form-label small" for="auditTargetType">Record type</label>
+        <select id="auditTargetType" name="target_type" class="form-select form-select-sm">
+            <option value="">Any record</option>
+            {% for target_type in target_types %}
+            <option value="{{ target_type }}" {% if filters.target_type == target_type %}selected{% endif %}>{{ target_type }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-6 col-md-2">
+        <label class="form-label small" for="auditTargetId">Record id</label>
+        <input type="text" id="auditTargetId" name="target_id" class="form-control form-control-sm" value="{{ filters.target_id }}">
+    </div>
+    <div class="col-12 col-md-4">
+        <label class="form-label small" for="auditQ">Search</label>
+        <input type="search" id="auditQ" name="q" class="form-control form-control-sm" value="{{ filters.q }}" placeholder="Action, message, record or page">
+    </div>
+    <div class="col-12 col-md-4 d-flex gap-2 justify-content-md-end">
+        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Filter</button>
+        <a href="{{ url_for(list_endpoint) }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+        <a href="{{ url_for(export_endpoint, **query_filters) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-download"></i> CSV</a>
+    </div>
+</form>
+
+<p class="small text-muted mb-2">{{ total }} entr{{ 'y' if total == 1 else 'ies' }} · newest first · times are Manila time</p>
+
+{% if rows %}
+<div class="table-responsive">
+    <table class="table table-sm section-table align-middle mb-0 audit-table">
+        <thead>
+            <tr>
+                <th>When</th>
+                <th>Who</th>
+                <th>Action</th>
+                <th>Record</th>
+                <th>Outcome</th>
+                <th class="text-end">Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            {% set change_lines = describe_changes(row.changes) %}
+            <tr>
+                <td class="small text-nowrap">
+                    {{ row.created_at.strftime('%b %d, %Y') }}
+                    <div class="text-muted">{{ row.created_at.strftime('%I:%M:%S %p') }}</div>
+                </td>
+                <td class="small">
+                    {% if row.username %}
+                    <div class="fw-semibold">{{ row.full_name or row.username }}</div>
+                    <div class="text-muted">{{ row.username }}{% if row.role %} · {{ row.role }}{% endif %}</div>
+                    {% else %}
+                    <span class="text-muted">Guest</span>
+                    {% endif %}
+                    {% if row.ip_address %}<div class="text-muted">{{ row.ip_address }}</div>{% endif %}
+                </td>
+                <td class="small">
+                    <span class="badge bg-secondary-subtle text-secondary-emphasis me-1">{{ category_labels.get(row.category, row.category) }}</span>
+                    <span class="fw-semibold">{{ row.action }}</span>
+                    {% if row.summary %}<div class="text-muted">{{ row.summary }}</div>{% endif %}
+                </td>
+                <td class="small">
+                    {% if row.target_type %}
+                    {{ row.target_type }} #{{ row.target_id }}
+                    {% if row.target_label %}<div class="text-muted">{{ row.target_label }}</div>{% endif %}
+                    {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td>
+                    <span class="badge {{ outcome_badges.get(row.outcome, 'bg-secondary') }}">{{ outcome_labels.get(row.outcome, row.outcome) }}</span>
+                    {% if row.status_code %}<div class="small text-muted">HTTP {{ row.status_code }}</div>{% endif %}
+                </td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#auditDetail{{ row.log_id }}" aria-expanded="false"
+                            aria-controls="auditDetail{{ row.log_id }}">
+                        {% if change_lines %}{{ change_lines|length }} change{{ '' if change_lines|length == 1 else 's' }}{% else %}View{% endif %}
+                    </button>
+                </td>
+            </tr>
+            <tr class="collapse audit-detail-row" id="auditDetail{{ row.log_id }}">
+                <td colspan="6" class="small bg-body-tertiary">
+                    <div class="row g-3">
+                        <div class="col-lg-6">
+                            <div class="fw-semibold mb-1">Request</div>
+                            <div><code>{{ row.method }} {{ row.path }}</code></div>
+                            {% if row.endpoint %}<div class="text-muted">Endpoint: {{ row.endpoint }}</div>{% endif %}
+                            {% if row.user_agent %}<div class="text-muted text-break">Browser: {{ row.user_agent }}</div>{% endif %}
+                            {% for section, label in [('view_args', 'URL values'), ('query', 'Query'), ('form', 'Submitted values'), ('files', 'Files')] %}
+                            {% set values = (row.details or {}).get(section) %}
+                            {% if values %}
+                            <div class="fw-semibold mt-2">{{ label }}</div>
+                            <dl class="row mb-0">
+                                {% if values is mapping %}
+                                {% for key, value in values.items() %}
+                                <dt class="col-sm-4 text-muted fw-normal text-break">{{ key }}</dt>
+                                <dd class="col-sm-8 mb-0 text-break">{{ value|join(', ') if value is iterable and value is not string else value }}</dd>
+                                {% endfor %}
+                                {% else %}
+                                <dd class="col-12 mb-0 text-break">{{ values|join(', ') if values is iterable and values is not string else values }}</dd>
+                                {% endif %}
+                            </dl>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="fw-semibold mb-1">Saved changes</div>
+                            {% if change_lines %}
+                            <ul class="mb-0 ps-3">
+                                {% for line in change_lines %}<li class="text-break">{{ line }}</li>{% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="text-muted mb-0">No database records were changed.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if pages > 1 %}
+<nav class="mt-3" aria-label="Audit log pages">
+    <ul class="pagination pagination-sm mb-0 flex-wrap">
+        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for(list_endpoint, page=page - 1, **query_filters) }}">Previous</a>
+        </li>
+        {% for p in range([1, page - 3]|max, [pages, page + 3]|min + 1) %}
+        <li class="page-item {% if p == page %}active{% endif %}">
+            <a class="page-link" href="{{ url_for(list_endpoint, page=p, **query_filters) }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+        <li class="page-item {% if page >= pages %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for(list_endpoint, page=page + 1, **query_filters) }}">Next</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+{% else %}
+<p class="text-muted mb-0">No audit entries match these filters.</p>
+{% endif %}

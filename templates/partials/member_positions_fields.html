@@ -1,0 +1,25 @@
+{# Expects `position_field_prefix` (e.g. 'edit' / 'manual') and `department_positions` from the view. #}
+<p class="text-muted small fw-semibold text-uppercase mb-2">Portal Positions</p>
+<input type="hidden" name="positions_submitted" value="1">
+<div class="row g-3 mb-3">
+    {% for department, positions in department_positions.items() %}
+    <div class="col-md-6">
+        <label for="{{ position_field_prefix }}Position{{ loop.index }}" class="form-label">{{ department }}</label>
+        <select id="{{ position_field_prefix }}Position{{ loop.index }}"
+                name="position_{{ department }}"
+                class="form-select member-position-select"
+                data-department="{{ department }}">
+            <option value="">— No position —</option>
+            {% for position in positions %}
+            <option value="{{ position.position_id }}">{{ position.title }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endfor %}
+    <div class="col-12">
+        <p class="text-muted small mb-0">
+            One position per department.
+            <a href="{{ url_for('main_routes.member_positions') }}">Manage positions</a>
+        </p>
+    </div>
+</div>

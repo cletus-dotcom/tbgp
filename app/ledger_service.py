@@ -6,7 +6,8 @@ from sqlalchemy.orm import joinedload
 
 from app import db
 from app.config import LEDGER_TRANSACTION_CREDIT, LEDGER_TRANSACTION_DEBIT
-from app.models import Member, MemberLedger, SharingBatch, SharingEntry
+from app.models import MarketplaceLead, Member, MemberLedger, SharingBatch, SharingEntry
+from app.timeutil import manila_now
 
 
 def _ledger_description(entry, project_title):
@@ -43,7 +44,7 @@ def record_ledger_for_batch(batch):
         .filter(SharingEntry.share_amount > 0)
         .all()
     )
-    created_at = batch.generated_at or datetime.utcnow()
+    created_at = batch.generated_at or manila_now()
     for entry in entries:
         project_title = entry.project.project_title if entry.project else "Project"
         db.session.add(MemberLedger(
@@ -126,17 +127,44 @@ def member_ledger_stats(member_id=None):
     return stats
 
 
-def member_ledger_rows(member_id=None, limit=None):
+def member_ledger_rows(member_id=None, limit=None, member_view=False):
+    """Ledger rows; member_view hides project titles so members never receive a project list."""
     query = member_ledger_query(member_id)
     if limit:
         query = query.limit(limit)
     rows = query.all()
-    return [_ledger_row_dict(row) for row in rows]
+    references = _project_references(rows) if member_view else {}
+    return [_ledger_row_dict(row, references if member_view else None) for row in rows]
 
 
-def _ledger_row_dict(row):
+def _project_references(rows):
+    project_ids = {row.project_id for row in rows if row.project_id}
+    if not project_ids:
+        return {}
+    return dict(
+        db.session.query(MarketplaceLead.commission_project_id, MarketplaceLead.reference_number)
+        .filter(MarketplaceLead.commission_project_id.in_(project_ids))
+        .all()
+    )
+
+
+def _member_safe_title(row, references):
+    if row.project_id:
+        return references.get(row.project_id) or f"Project no. {row.project_id}"
+    if row.product_commission_id:
+        return f"Products commission no. {row.product_commission_id}"
+    return row.project_title
+
+
+def _ledger_row_dict(row, references=None):
     amount = float(row.share_amount or 0)
     is_debit = (row.transaction_type or LEDGER_TRANSACTION_CREDIT) == LEDGER_TRANSACTION_DEBIT
+    title = row.project_title
+    description = row.description
+    if references is not None and not is_debit:
+        title = _member_safe_title(row, references)
+        if description and row.project_title and description.endswith(row.project_title):
+            description = description[: -len(row.project_title)] + title
     return {
         "ledger_id": row.ledger_id,
         "member_id": row.member_id,
@@ -145,13 +173,13 @@ def _ledger_row_dict(row):
         "batch_id": row.batch_id,
         "billing_date": row.billing_date.isoformat() if row.billing_date else None,
         "project_id": row.project_id,
-        "project_title": row.project_title or ("Fund Release" if is_debit else "—"),
+        "project_title": title or ("Fund Release" if is_debit else "—"),
         "recipient_type": row.recipient_type,
         "share_scheme": row.share_scheme,
         "level": row.level,
         "share_amount": amount,
         "signed_amount": -amount if is_debit else amount,
-        "description": row.description,
+        "description": description,
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "payout_request_id": row.payout_request_id,
     }

@@ -1,0 +1,222 @@
+{# Expects `duty_cards` from duty_dashboard() and `duty_lead_endpoint` (staff detail or My Assignments). #}
+{% set attention = duty_cards['attention'] %}
+{% set status_label = duty_cards['status_label'] %}
+{% set staff_view = is_staff_or_admin(session.get('role')) %}
+{% macro person(user, fallback='—') -%}
+{{ (user.full_name or user.username) if user else fallback }}
+{%- endmacro %}
+{% macro lead_link(lead) -%}
+{{ url_for(duty_lead_endpoint, lead_id=lead.lead_id) }}
+{%- endmacro %}
+
+{% if duty_cards.get('manager') %}
+{% set manager = duty_cards['manager'] %}
+<div class="row g-3 mb-3">
+    <div class="col-lg-7">
+        <div class="dashboard-card section-card h-100 mb-0">
+            <div class="section-header">
+                <div>
+                    <h5><i class="bi bi-people"></i> Projects team workload</h5>
+                    <p class="section-subtitle">Open projects per team member and slot. Give people duties in Manage Users to list them here.</p>
+                </div>
+            </div>
+            {% if manager['workload'] %}
+            <div class="section-table-wrap">
+                <table class="table table-sm section-table mb-0 align-middle">
+                    <thead>
+                        <tr><th>Team member</th>{% for slot, label in duty_cards['slot_labels'].items() %}<th class="text-center">{{ label }}</th>{% endfor %}<th class="text-center">Needs attention</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for row in manager['workload'] %}
+                        <tr>
+                            <td>
+                                {% if staff_view %}<a href="{{ url_for('main_routes.transactions_list', type='projects', assigned=row.user.user_id, stage='open') }}">{{ person(row.user) }}</a>{% else %}{{ person(row.user) }}{% endif %}
+                                <span class="small text-muted">{{ row.user.role }}</span>
+                            </td>
+                            {% for slot in duty_cards['slot_labels'] %}<td class="text-center">{{ row[slot] or '—' }}</td>{% endfor %}
+                            <td class="text-center">{% if row.attention %}<span class="badge bg-danger">{{ row.attention }}</span>{% else %}—{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted small mb-0">No team members yet. Tick project duties for Staff or Members in Manage Users.</p>
+            {% endif %}
+            {% if manager['suggestions'] %}
+            <hr>
+            <h6 class="small text-uppercase text-muted mb-2"><i class="bi bi-signpost-split"></i> Status suggestions from the field (14 days)</h6>
+            <ul class="list-unstyled mb-0 small">
+                {% for entry in manager['suggestions'] %}
+                <li class="mb-1">
+                    <a href="{{ url_for('main_routes.transaction_detail', lead_id=entry.lead_id) }}#history">{{ entry.lead.reference_number }}</a>
+                    · {{ entry.note }} <span class="text-muted">— {{ person(entry.created_by, 'Field agent') }}, {{ entry.created_at.strftime('%b %d') }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="dashboard-card section-card h-100 mb-0{% if manager['unassigned_count'] %} notice-card-alert{% endif %}">
+            <div class="section-header">
+                <div>
+                    <h5>
+                        <i class="bi bi-person-exclamation"></i> Projects without a coordinator
+                        {% if manager['unassigned_count'] %}<span class="badge bg-danger ms-1">{{ manager['unassigned_count'] }}</span>{% endif %}
+                    </h5>
+                    <p class="section-subtitle">
+                        Also open: {{ manager['no_estimator'] }} quotation-stage project(s) without an estimator,
+                        {{ manager['no_site_engineer'] }} delivery project(s) without a site engineer.
+                    </p>
+                </div>
+                <a href="{{ url_for('main_routes.transactions_list', type='projects', assigned='unassigned', stage='open') }}" class="btn btn-sm btn-brand">View all</a>
+            </div>
+            {% if manager['unassigned'] %}
+            <ul class="list-unstyled mb-0 notice-dashboard-list">
+                {% for lead in manager['unassigned'] %}
+                <li class="notice-dashboard-item">
+                    <a href="{{ url_for('main_routes.transaction_detail', lead_id=lead.lead_id) }}" class="notice-dashboard-link">
+                        <span class="trx-status trx-{{ lead.status or 'new' }}">{{ lead.reference_number }}</span>
+                        <span class="notice-dashboard-title">
+                            {{ lead.display_item|truncate(55) }}
+                            <span class="d-block small fw-normal text-muted">{{ status_label(lead.status) }}{% if lead.project_coordinator %} · sheet: {{ lead.project_coordinator }}{% endif %}</span>
+                        </span>
+                        <span class="notice-dashboard-meta text-muted">{{ lead.aging_days }}d</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-0">Every open project has a coordinator.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% set personal = [] %}
+{% if duty_cards.get('coordinator') %}{% set _ = personal.append('coordinator') %}{% endif %}
+{% if duty_cards.get('estimator') %}{% set _ = personal.append('estimator') %}{% endif %}
+{% if duty_cards.get('site_engineer') %}{% set _ = personal.append('site_engineer') %}{% endif %}
+{% if personal %}
+<div class="row g-3 mb-3">
+    {% if duty_cards.get('coordinator') %}
+    {% set card = duty_cards['coordinator'] %}
+    <div class="{{ 'col-lg-6' if personal|length > 1 else 'col-12' }}">
+        <div class="dashboard-card section-card h-100 mb-0{% if card['attention_count'] %} notice-card-alert{% endif %}">
+            <div class="section-header">
+                <div>
+                    <h5>
+                        <i class="bi bi-person-gear"></i> My projects (coordinator)
+                        <span class="badge bg-secondary ms-1">{{ card['count'] }}</span>
+                        {% if card['attention_count'] %}<span class="badge bg-danger ms-1" title="Need attention">{{ card['attention_count'] }}</span>{% endif %}
+                    </h5>
+                    <p class="section-subtitle">Open projects you coordinate, those needing attention first.</p>
+                </div>
+                {% if staff_view %}<a href="{{ url_for('main_routes.transactions_list', type='projects', assigned='me', stage='open') }}" class="btn btn-sm btn-outline-light">All mine</a>{% else %}<a href="{{ url_for('main_routes.my_assignments') }}" class="btn btn-sm btn-outline-light">My assignments</a>{% endif %}
+            </div>
+            {% if card['items'] %}
+            <ul class="list-unstyled mb-0 notice-dashboard-list">
+                {% for lead in card['items'] %}
+                {% set reasons = attention.get(lead.lead_id, []) %}
+                <li class="notice-dashboard-item">
+                    <a href="{{ lead_link(lead) }}" class="notice-dashboard-link">
+                        <span class="trx-status trx-{{ lead.status or 'new' }}">{{ lead.reference_number }}</span>
+                        <span class="notice-dashboard-title">
+                            {{ lead.display_item|truncate(55) }}
+                            {% if reasons %}<span class="d-block small fw-normal text-danger-emphasis">{{ reasons|join(' · ') }}</span>
+                            {% else %}<span class="d-block small fw-normal text-muted">{{ status_label(lead.status) }}</span>{% endif %}
+                        </span>
+                        <span class="notice-dashboard-meta text-muted">{{ lead.days_in_status }}d in status</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-0">No open projects assigned to you as coordinator.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if duty_cards.get('estimator') %}
+    {% set card = duty_cards['estimator'] %}
+    <div class="{{ 'col-lg-6' if personal|length > 1 else 'col-12' }}">
+        <div class="dashboard-card section-card h-100 mb-0">
+            <div class="section-header">
+                <div>
+                    <h5><i class="bi bi-calculator"></i> My quotation queue <span class="badge bg-secondary ms-1">{{ card['count'] }}</span></h5>
+                    <p class="section-subtitle">
+                        Projects for research, costing, or quotation where you are the estimator, longest-waiting first.
+                        {% if card['unclaimed'] %}<span class="text-warning">{{ card['unclaimed'] }} quotation-stage project(s) have no estimator yet.</span>{% endif %}
+                    </p>
+                </div>
+            </div>
+            {% if card['items'] %}
+            <ul class="list-unstyled mb-0 notice-dashboard-list">
+                {% for lead in card['items'] %}
+                <li class="notice-dashboard-item">
+                    <a href="{{ lead_link(lead) }}" class="notice-dashboard-link">
+                        <span class="trx-status trx-{{ lead.status or 'new' }}">{{ lead.reference_number }}</span>
+                        <span class="notice-dashboard-title">
+                            {{ lead.display_item|truncate(55) }}
+                            <span class="d-block small fw-normal text-muted">{{ status_label(lead.status) }}{% if lead.client_company %} · {{ lead.client_company|truncate(40) }}{% endif %}</span>
+                        </span>
+                        <span class="notice-dashboard-meta {{ 'text-danger' if lead.days_in_status > 7 else 'text-muted' }}">{{ lead.days_in_status }}d</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-0">Nothing waiting for costing.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if duty_cards.get('site_engineer') %}
+    {% set card = duty_cards['site_engineer'] %}
+    <div class="{{ 'col-lg-6' if personal|length > 1 else 'col-12' }}">
+        <div class="dashboard-card section-card h-100 mb-0">
+            <div class="section-header">
+                <div>
+                    <h5><i class="bi bi-rulers"></i> My sites <span class="badge bg-secondary ms-1">{{ card['count'] }}</span></h5>
+                    <p class="section-subtitle">Your scheduled visits and the delivery projects you inspect, least progress first.</p>
+                </div>
+            </div>
+            {% if card['events'] %}
+            <h6 class="small text-uppercase text-muted mb-2">Visits &amp; meetings</h6>
+            <ul class="list-unstyled mb-3 notice-dashboard-list">
+                {% for event in card['events'] %}
+                <li class="notice-dashboard-item">
+                    <a href="{{ url_for(duty_lead_endpoint, lead_id=event.lead_id) }}{{ '#tab-schedule' if staff_view }}" class="notice-dashboard-link">
+                        <span class="notice-dashboard-title">
+                            {{ event.title|truncate(55) }}
+                            <span class="d-block small fw-normal text-muted">{{ event.lead.reference_number }}{% if event.location %} · {{ event.location|truncate(40) }}{% endif %}</span>
+                        </span>
+                        <span class="notice-dashboard-meta {{ 'text-danger' if event.is_overdue else 'text-muted' }}">{{ event.starts_at.strftime('%b %d %I:%M %p') }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% if card['delivery'] %}
+            <h6 class="small text-uppercase text-muted mb-2">Delivery progress</h6>
+            <ul class="list-unstyled mb-0">
+                {% for lead in card['delivery'] %}
+                <li class="mb-2">
+                    <a href="{{ lead_link(lead) }}" class="fw-semibold">{{ lead.reference_number }}</a> {{ lead.display_item|truncate(45) }}
+                    <div class="prj-progress mt-1"><span style="width: {{ lead.progress_percent or 0 }}%"></span></div>
+                    <div class="prj-progress-label">{{ lead.progress_percent or 0 }}% · {{ status_label(lead.status) }}</div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% elif not card['events'] %}
+            <p class="text-muted small mb-0">No visits scheduled and no delivery projects assigned to you.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}

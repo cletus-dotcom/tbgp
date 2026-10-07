@@ -1,0 +1,54 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}My Referred Projects{% endblock %}
+{% block topbar_title %}My Referred Projects{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-cone-striped"></i> Projects you referred</h5>
+            <p class="section-subtitle mb-0">Project inquiries submitted through your share link or credited to you by TBGP, with their current status.</p>
+        </div>
+        <div class="section-actions">
+            <a href="{{ url_for('main_routes.my_marketplace') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-share"></i> My share links</a>
+        </div>
+    </div>
+    {% include 'partials/confidentiality_notice.html' %}
+    {% if leads %}
+    <div class="section-table-wrap">
+        <table class="table table-hover section-table mb-0 align-middle">
+            <thead>
+                <tr><th>Ref no.</th><th>Project</th><th>Client</th><th>Requested</th><th>Status</th><th>Progress</th><th>Contractor</th></tr>
+            </thead>
+            <tbody>
+                {% for lead in leads %}
+                {% set status = lead.status or 'new' %}
+                <tr class="trx-row trx-{{ status }}">
+                    <td class="fw-bold text-nowrap">{{ lead.reference_number }}</td>
+                    <td><div class="fw-semibold">{{ lead.display_item }}</div>{% if lead.delivery_location %}<div class="small text-muted"><i class="bi bi-geo-alt"></i> {{ lead.delivery_location|truncate(60) }}</div>{% endif %}</td>
+                    <td class="small">{{ lead.client_company or lead.guest_name or '—' }}</td>
+                    <td class="small text-nowrap">{{ lead.date_requested.strftime('%Y-%m-%d') if lead.date_requested else lead.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        <span class="trx-status trx-{{ status }}">{{ status_labels.get(status, status) }}</span>
+                        {% if lead.date_completed and lead.is_closed %}<div class="small text-muted">{{ lead.date_completed.strftime('%Y-%m-%d') }}</div>{% endif %}
+                    </td>
+                    <td style="min-width: 7rem;">
+                        {% if lead.progress_percent is not none %}
+                        <div class="prj-progress"><span style="width: {{ lead.progress_percent }}%"></span></div>
+                        <div class="prj-progress-label">{{ lead.progress_percent }}%</div>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="small">{{ lead.awarded_contractor.company_name if lead.awarded_contractor else (lead.assigned_contractor or '—') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">
+        No referred projects yet. Share your project inquiry link from
+        <a href="{{ url_for('main_routes.my_marketplace') }}">My Marketplace</a> so clients can request a project through you.
+    </p>
+    {% endif %}
+</div>
+{% endblock %}

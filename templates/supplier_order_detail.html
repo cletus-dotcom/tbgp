@@ -1,0 +1,97 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}{{ lead.reference_number }} — My Orders{% endblock %}
+{% block topbar_title %}My Orders{% endblock %}
+
+{% block content %}
+{% set status = lead.status or 'new' %}
+<div class="dashboard-card section-card mb-3">
+    <div class="section-header">
+        <div>
+            <h5 class="d-flex flex-wrap align-items-center gap-2">
+                <span class="badge bg-dark border border-warning text-warning">{{ lead.reference_number }}</span>
+                {{ lead.display_item }}
+                <span class="trx-status trx-{{ status }}">{{ status_labels.get(status, status) }}</span>
+            </h5>
+            <p class="section-subtitle mb-0">
+                {% if lead.delivery_location %}<i class="bi bi-geo-alt"></i> Deliver to {{ lead.delivery_location }} · {% endif %}
+                {% if lead.delivery_date %}Delivery scheduled <strong>{{ lead.delivery_date.isoformat() }}</strong>{% if lead.delivery_date < today and status not in ['delivered', 'completed', 'terminated'] %} <span class="prj-flag">Overdue</span>{% endif %} · {% endif %}
+                TBGP account officer: {{ (lead.assigned_user.full_name or lead.assigned_user.username) if lead.assigned_user else 'TBGP products team' }}
+                {% if lead.logistics_user %} · Logistics: {{ lead.logistics_user.full_name or lead.logistics_user.username }}{% endif %}
+            </p>
+        </div>
+        <div class="section-actions">
+            <a href="{{ url_for('main_routes.supplier_orders_list') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> My orders</a>
+        </div>
+    </div>
+    {% if lead.quantity or lead.specifications %}
+    <div class="row g-3">
+        {% if lead.quantity %}<div class="col-md-6"><div class="trx-panel h-100"><div class="trx-panel-title">Qty / volume</div><div class="trx-history-note">{{ lead.quantity }}</div></div></div>{% endif %}
+        {% if lead.specifications %}<div class="col-md-6"><div class="trx-panel h-100"><div class="trx-panel-title">Specifications</div><div class="trx-history-note">{{ lead.specifications }}</div></div></div>{% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="dashboard-card section-card mb-3">
+            <div class="section-header">
+                <div><h5><i class="bi bi-chat-left-text"></i> Send an update</h5>
+                    <p class="section-subtitle mb-0">Price and availability, lead time, dispatch, or delivery issues. The TBGP product team is notified.</p></div>
+            </div>
+            <form method="post" action="{{ url_for('main_routes.supplier_post_update', lead_id=lead.lead_id) }}" class="d-flex gap-2">
+                <textarea class="form-control" name="note" rows="2" required placeholder="e.g. Stock available; can deliver on Oct 12"></textarea>
+                <button class="btn btn-brand align-self-end" type="submit">Send</button>
+            </form>
+        </div>
+
+        <div class="dashboard-card section-card">
+            <div class="section-header"><div><h5><i class="bi bi-clock-history"></i> Updates</h5></div></div>
+            {% if updates %}
+            <ul class="trx-history">
+                {% for entry in updates %}
+                <li>
+                    <div class="trx-history-meta">{{ entry.created_at.strftime('%Y-%m-%d %H:%M') if entry.created_at else '' }} · {{ (entry.created_by.full_name or entry.created_by.username) if entry.created_by else 'TBGP' }}</div>
+                    <div class="trx-history-note">{{ entry.note }}</div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-0">No updates yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="dashboard-card section-card">
+            <div class="section-header"><div><h5><i class="bi bi-folder2-open"></i> Order files</h5></div></div>
+            {% if documents %}
+            <ul class="list-unstyled mb-0">
+                {% for document in documents %}
+                <li class="mb-2">
+                    <a href="{{ url_for('main_routes.project_document_download', document_id=document.document_id) }}" target="_blank" rel="noopener">
+                        <i class="bi {{ 'bi-image' if document.is_image else ('bi-link-45deg' if document.external_url else 'bi-file-earmark-text') }}"></i> {{ document.title }}
+                    </a>
+                    <div class="small text-muted">{{ document_kinds.get(document.kind, document.kind) }} · {{ document.created_at.strftime('%Y-%m-%d') if document.created_at else '' }}</div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-0">No files shared yet.</p>
+            {% endif %}
+            <hr>
+            <form method="post" enctype="multipart/form-data" action="{{ url_for('main_routes.supplier_upload_document', lead_id=lead.lead_id) }}">
+                <div class="mb-2">
+                    <label class="form-label" for="doc_kind">Upload</label>
+                    <select class="form-select form-select-sm" id="doc_kind" name="kind">
+                        {% for key in supplier_document_kinds %}<option value="{{ key }}" {{ 'selected' if key == ('delivery_receipt' if status in product_order_statuses else 'supplier_quote') }}>{{ document_kinds[key] }}</option>{% endfor %}
+                    </select>
+                </div>
+                <input class="form-control form-control-sm mb-2" name="title" placeholder="Title (optional)">
+                <input type="file" class="form-control form-control-sm mb-2" name="file">
+                <input type="url" class="form-control form-control-sm mb-2" name="external_url" placeholder="or a link (https://)">
+                <button class="btn btn-outline-light btn-sm w-100" type="submit"><i class="bi bi-upload"></i> Upload</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

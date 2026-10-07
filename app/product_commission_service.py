@@ -43,6 +43,7 @@ from app.models import (
     ProductCommissionShare,
 )
 from app.prof_sharing_service import build_sharing_chain, get_admin_member
+from app.timeutil import manila_now
 
 
 def _quantize_money(value):
@@ -694,7 +695,7 @@ def compute_product_commission(
 
 def record_ledger_for_product_commission(product):
     """Credit member / PLATFORM ledger rows for a saved products commission."""
-    created_at = product.created_at or datetime.utcnow()
+    created_at = product.created_at or manila_now()
     title = product.product_title or "Products Commission"
     for share in product.shares:
         if share.share_amount <= 0:
@@ -781,7 +782,7 @@ def save_product_commission(
         bonus_amount=_quantize_money(result["bonus_amount"]),
         total_shared=_quantize_money(result["total_shared"]),
         total_mandate=_quantize_money(result["total_mandate"]),
-        created_at=datetime.utcnow(),
+        created_at=manila_now(),
         created_by_user_id=created_by_user_id,
     )
     db.session.add(product)

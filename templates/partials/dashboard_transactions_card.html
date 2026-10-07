@@ -1,0 +1,43 @@
+{# Expects `transaction_alerts` from dashboard_transaction_alerts() (Admin/Staff only). #}
+{% if transaction_alerts %}
+{% set unread = transaction_alerts['unread_count'] %}
+<div class="dashboard-card section-card{% if unread %} notice-card-alert{% endif %}">
+    <div class="section-header">
+        <div>
+            <h5>
+                <i class="bi bi-clipboard-data"></i> New inquiries / transactions
+                {% if unread %}<span class="badge bg-danger ms-1">{{ unread }} new</span>{% endif %}
+            </h5>
+            <p class="section-subtitle">
+                {% if unread %}
+                Unassigned web inquiries and transactions assigned to you that you have not opened yet.
+                {% else %}
+                You're all caught up on new inquiries.
+                {% endif %}
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('main_routes.transactions_list') }}" class="btn btn-sm btn-brand">Open monitoring</a>
+        </div>
+    </div>
+    {% if transaction_alerts['items'] %}
+    <ul class="list-unstyled mb-0 notice-dashboard-list">
+        {% for lead in transaction_alerts['items'] %}
+        <li class="notice-dashboard-item is-unread">
+            <a href="{{ url_for('main_routes.transaction_detail', lead_id=lead.lead_id) }}" class="notice-dashboard-link">
+                <span class="trx-status trx-{{ lead.status or 'new' }}">{{ lead.reference_number }}</span>
+                <span class="notice-dashboard-title">
+                    {{ lead.display_item or 'Inquiry' }}
+                    <span class="text-muted small fw-normal">
+                        — {{ lead.client_company or lead.guest_name or 'Client' }}
+                        {% if lead.referred_by_name %} · ProF: {{ lead.referred_by_name }}{% endif %}
+                    </span>
+                </span>
+                <span class="notice-dashboard-meta text-muted">{{ lead.created_at.strftime('%Y-%m-%d %H:%M') if lead.created_at else '' }}</span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</div>
+{% endif %}

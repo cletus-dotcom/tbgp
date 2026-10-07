@@ -121,6 +121,21 @@
         <label>Separation Type</label>
         <span>{{ m.termination_type or '—' }}</span>
     </div>
+    <div class="detail-item" style="grid-column: 1 / -1;">
+        <label>Portal Positions</label>
+        {% set member_positions = m.positions_by_department() %}
+        {% if member_positions %}
+        <div class="d-flex flex-wrap gap-2">
+            {% for department in departments if member_positions.get(department) %}
+            <span class="badge bg-secondary">
+                {{ department }} — {{ member_positions[department].position.title }}
+            </span>
+            {% endfor %}
+        </div>
+        {% else %}
+        <span>—</span>
+        {% endif %}
+    </div>
     <div class="detail-item">
         <label>Referrer</label>
         <span>

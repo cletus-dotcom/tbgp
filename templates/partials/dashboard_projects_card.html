@@ -1,0 +1,70 @@
+{# Expects `project_overview` from dashboard_project_overview() (Admin/Staff only). #}
+{% set attention = project_overview['attention'] %}
+{% set upcoming = project_overview['events'] %}
+{% if attention['count'] or upcoming %}
+<div class="row g-3 mb-3">
+    <div class="col-lg-7">
+        <div class="dashboard-card section-card h-100 mb-0{% if attention['count'] %} notice-card-alert{% endif %}">
+            <div class="section-header">
+                <div>
+                    <h5>
+                        <i class="bi bi-exclamation-triangle"></i> Projects needing attention
+                        {% if attention['count'] %}<span class="badge bg-danger ms-1">{{ attention['count'] }}</span>{% endif %}
+                    </h5>
+                    <p class="section-subtitle">
+                        No update in {{ project_overview['stale_days'] }}+ days, {{ project_overview['stuck_days'] }}+ days in one status,
+                        or an overdue stage target, payment, or site visit.
+                    </p>
+                </div>
+                <a href="{{ url_for('main_routes.transactions_list', type='projects', attention='1') }}" class="btn btn-sm btn-brand">View all</a>
+            </div>
+            {% if attention['items'] %}
+            <ul class="list-unstyled mb-0 notice-dashboard-list">
+                {% for lead, reasons in attention['items'] %}
+                <li class="notice-dashboard-item">
+                    <a href="{{ url_for('main_routes.transaction_detail', lead_id=lead.lead_id) }}" class="notice-dashboard-link">
+                        <span class="trx-status trx-{{ lead.status or 'new' }}">{{ lead.reference_number }}</span>
+                        <span class="notice-dashboard-title">
+                            {{ lead.display_item|truncate(60) }}
+                            <span class="d-block small fw-normal text-danger-emphasis">{{ reasons|join(' · ') }}</span>
+                        </span>
+                        <span class="notice-dashboard-meta text-muted">{{ (lead.assigned_user.full_name or lead.assigned_user.username) if lead.assigned_user else 'Unassigned' }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-0">All open projects are up to date.</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="dashboard-card section-card h-100 mb-0">
+            <div class="section-header">
+                <div>
+                    <h5><i class="bi bi-calendar-event"></i> Site visits &amp; meetings</h5>
+                    <p class="section-subtitle">Next {{ project_overview['reminder_days'] }} days, plus past visits not yet marked done.</p>
+                </div>
+                <a href="{{ url_for('main_routes.project_calendar') }}" class="btn btn-sm btn-outline-light">Calendar</a>
+            </div>
+            {% if upcoming %}
+            <ul class="list-unstyled mb-0 notice-dashboard-list">
+                {% for event in upcoming %}
+                <li class="notice-dashboard-item">
+                    <a href="{{ url_for('main_routes.transaction_detail', lead_id=event.lead_id) }}#tab-schedule" class="notice-dashboard-link">
+                        <span class="notice-dashboard-title">
+                            {{ event.title|truncate(55) }}
+                            <span class="d-block small fw-normal text-muted">{{ event.lead.reference_number }}{% if event.location %} · {{ event.location|truncate(40) }}{% endif %}{% if event.assigned_user %} · {{ event.assigned_user.full_name or event.assigned_user.username }}{% endif %}</span>
+                        </span>
+                        <span class="notice-dashboard-meta {{ 'text-danger' if event.is_overdue else 'text-muted' }}">{{ event.starts_at.strftime('%b %d %I:%M %p') }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-0">Nothing scheduled.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}

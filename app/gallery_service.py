@@ -7,6 +7,7 @@ from datetime import datetime
 
 from app import db
 from app.models import CmsGalleryFolder
+from app.timeutil import manila_now
 
 GALLERY_STATUS_DRAFT = "draft"
 GALLERY_STATUS_PUBLISHED = "published"
@@ -112,7 +113,7 @@ def save_folder(data, folder=None):
     folder.status = data.get("status") or GALLERY_STATUS_DRAFT
     folder.sort_order = data.get("sort_order") or 0
     folder.images = data.get("images") or []
-    folder.updated_at = datetime.utcnow()
+    folder.updated_at = manila_now()
     db.session.add(folder)
     db.session.commit()
     return folder

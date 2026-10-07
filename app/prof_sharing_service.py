@@ -36,6 +36,7 @@ from app.models import (
     SharingBatch,
     SharingEntry,
 )
+from app.timeutil import manila_now
 
 
 def get_commission_levels(scheme=COMMISSION_SCHEME_CLIENT):
@@ -630,7 +631,7 @@ def generate_profit_sharing(billing_date):
 
     batch = SharingBatch(
         commission_date=billing_date,
-        generated_at=datetime.utcnow(),
+        generated_at=manila_now(),
         project_count=len(billings),
         total_commission=total_commission,
         total_client_pool=total_client_pool,

@@ -4,6 +4,11 @@
 
 {% block content %}
 <div class="site-admin-page">
+    <div class="alert alert-warning small">
+        <strong>Published listings are the approved TBGP ads that members share publicly.</strong>
+        Keep them generic: never include client names or contacts, exact project locations or addresses,
+        project lists, or transaction details. Use TBGP contact details only.
+    </div>
     <form method="post" class="site-admin-form"
           data-partner-image-upload-enabled="{{ 'true' if partner_image_upload_enabled else 'false' }}"
           {% if partner_image_upload_enabled %}data-partner-image-upload-url="{{ partner_image_upload_url }}"{% endif %}>

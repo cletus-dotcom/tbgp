@@ -1,0 +1,370 @@
+{# Project delivery workspace on the project detail page (staff). #}
+{% set scheduled_events = events|selectattr('status', 'equalto', 'scheduled')|list %}
+<div class="dashboard-card section-card mb-3" id="project-workspace">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-kanban"></i> Project delivery</h5>
+            <p class="section-subtitle mb-0">
+                Stage {{ status_labels.get(lead.status or 'new', lead.status) }} for <strong>{{ lead.days_in_status }}</strong> day(s)
+                {% if lead.awarded_contractor or lead.assigned_contractor %} · Contractor <strong>{{ lead.awarded_contractor.company_name if lead.awarded_contractor else lead.assigned_contractor }}</strong>{% endif %}
+                {% if lead.contract_amount %} · Contract <strong>{{ format_peso(lead.contract_amount) }}</strong>{% endif %}
+            </p>
+        </div>
+        {% if lead.progress_percent is not none %}
+        <div style="min-width: 12rem;">
+            <div class="prj-progress-label mb-1">Progress {{ lead.progress_percent }}%</div>
+            <div class="prj-progress"><span style="width: {{ lead.progress_percent }}%"></span></div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if attention_reasons %}
+    <div class="prj-attention mb-3">
+        <div class="fw-semibold text-danger-emphasis mb-1"><i class="bi bi-exclamation-triangle"></i> Needs attention</div>
+        <ul>{% for reason in attention_reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    <ul class="nav nav-tabs prj-tabs mb-3" role="tablist">
+        <li class="nav-item"><button class="nav-link active" type="button" data-bs-toggle="tab" data-bs-target="#tab-stages">Stages &amp; progress</button></li>
+        <li class="nav-item"><button class="nav-link" type="button" data-bs-toggle="tab" data-bs-target="#tab-documents">Documents <span class="badge bg-secondary">{{ documents|length }}</span></button></li>
+        <li class="nav-item"><button class="nav-link" type="button" data-bs-toggle="tab" data-bs-target="#tab-schedule">Site visits &amp; meetings <span class="badge bg-secondary">{{ scheduled_events|length }}</span></button></li>
+        <li class="nav-item"><button class="nav-link" type="button" data-bs-toggle="tab" data-bs-target="#tab-payments">Contract &amp; payments <span class="badge bg-secondary">{{ payments|length }}</span></button></li>
+    </ul>
+
+    <div class="tab-content">
+        {# ------------------------------------------------------------ stages #}
+        <div class="tab-pane fade show active" id="tab-stages" role="tabpanel">
+            <div class="row g-3">
+                <div class="col-lg-7">
+                    <form method="post" action="{{ url_for('main_routes.project_save_stages', lead_id=lead.lead_id) }}" class="trx-panel">
+                        <div class="trx-panel-title">Stage plan — target and reached dates</div>
+                        <p class="small text-muted">Reached dates fill in automatically when the status changes. Set target dates to get overdue alerts.</p>
+                        {% for row in stage_plan %}
+                        <div class="prj-stage state-{{ row.state }} mb-2 flex-wrap">
+                            <span class="prj-stage-label">
+                                <span class="trx-status trx-{{ row.stage }} me-1">&nbsp;</span>{{ row.label }}
+                                {% if row.state == 'current' %}<span class="badge bg-warning text-dark ms-1">Current · {{ row.days_in_stage }}d</span>{% endif %}
+                                {% if row.state == 'overdue' %}<span class="prj-flag ms-1">{{ row.days_late }}d late</span>{% endif %}
+                            </span>
+                            <label class="small text-muted">Target
+                                <input type="date" class="form-control form-control-sm d-inline-block w-auto" name="target_{{ row.stage }}"
+                                       value="{{ row.target_date.isoformat() if row.target_date else '' }}">
+                            </label>
+                            <label class="small text-muted">Reached
+                                <input type="date" class="form-control form-control-sm d-inline-block w-auto" name="reached_{{ row.stage }}"
+                                       value="{{ row.reached_on.isoformat() if row.reached_on else '' }}">
+                            </label>
+                        </div>
+                        {% endfor %}
+                        <div class="text-end"><button type="submit" class="btn btn-brand btn-sm"><i class="bi bi-save"></i> Save stage plan</button></div>
+                    </form>
+                </div>
+                <div class="col-lg-5">
+                    <form method="post" action="{{ url_for('main_routes.project_save_progress', lead_id=lead.lead_id) }}" class="trx-panel">
+                        <div class="trx-panel-title">Implementation progress</div>
+                        <label class="form-label" for="progress_percent">Percent complete</label>
+                        <div class="input-group mb-2">
+                            <input type="number" min="0" max="100" class="form-control" id="progress_percent" name="progress_percent"
+                                   value="{{ lead.progress_percent if lead.progress_percent is not none else '' }}" required>
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <label class="form-label" for="progress_note">Site update (optional)</label>
+                        <textarea class="form-control mb-2" id="progress_note" name="note" rows="3" placeholder="e.g. Pile caps 60% poured; rebar delivery delayed"></textarea>
+                        <button type="submit" class="btn btn-outline-light btn-sm w-100"><i class="bi bi-graph-up-arrow"></i> Update progress</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {# ------------------------------------------------------------ documents #}
+        <div class="tab-pane fade" id="tab-documents" role="tabpanel">
+            {% if documents %}
+            <div class="table-responsive mb-3">
+                <table class="table table-sm align-middle">
+                    <thead><tr><th></th><th>Document</th><th>Type</th><th>Uploaded</th><th>Contractor</th><th class="text-end"></th></tr></thead>
+                    <tbody>
+                        {% for document in documents %}
+                        <tr>
+                            <td style="width: 3.5rem;">
+                                {% if document.is_image and not document.external_url %}
+                                <img src="{{ url_for('main_routes.project_document_download', document_id=document.document_id) }}" alt="" class="prj-doc-thumb" loading="lazy">
+                                {% else %}
+                                <i class="bi {{ 'bi-link-45deg' if document.external_url else 'bi-file-earmark-text' }} fs-4"></i>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('main_routes.project_document_download', document_id=document.document_id) }}" target="_blank" rel="noopener">{{ document.title }}</a>
+                                <div class="small text-muted">
+                                    {% if document.external_url %}External link{% else %}{{ document.file_name }} · {{ '%.1f'|format((document.size_bytes or 0) / 1048576) }} MB{% endif %}
+                                </div>
+                            </td>
+                            <td class="small">{{ document_kinds.get(document.kind, document.kind) }}</td>
+                            <td class="small">{{ document.created_at.strftime('%Y-%m-%d %H:%M') if document.created_at else '' }}<br><span class="text-muted">{{ (document.uploaded_by.full_name or document.uploaded_by.username) if document.uploaded_by else '' }}</span></td>
+                            <td class="small">{{ 'Shared' if document.shared_with_contractor else 'Internal' }}</td>
+                            <td class="text-end">
+                                <form method="post" action="{{ url_for('main_routes.project_delete_document', document_id=document.document_id) }}" onsubmit="return confirm('Remove this document?');">
+                                    <button class="btn btn-outline-danger btn-sm" type="submit" title="Remove"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted small">No documents yet. Attach the client layout, BOQ, plans, quotation, contract, and site photos here.</p>
+            {% endif %}
+            <form method="post" enctype="multipart/form-data" action="{{ url_for('main_routes.project_add_document', lead_id=lead.lead_id) }}" class="trx-panel">
+                <div class="trx-panel-title">Add a document</div>
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label" for="doc_kind">Type</label>
+                        <select class="form-select form-select-sm" id="doc_kind" name="kind">
+                            {% for key, label in document_kinds.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="doc_title">Title (optional)</label>
+                        <input class="form-control form-control-sm" id="doc_title" name="title" maxlength="255">
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label" for="doc_file">File (max 10 MB)</label>
+                        <input type="file" class="form-control form-control-sm" id="doc_file" name="file">
+                    </div>
+                    <div class="col-md-7">
+                        <label class="form-label" for="doc_url">or link (Google Drive, Dropbox…)</label>
+                        <input type="url" class="form-control form-control-sm" id="doc_url" name="external_url" placeholder="https://">
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" value="1" id="doc_shared" name="shared_with_contractor">
+                            <label class="form-check-label small" for="doc_shared">Share with the contractor</label>
+                        </div>
+                    </div>
+                    <div class="col-md-2"><button type="submit" class="btn btn-brand btn-sm w-100"><i class="bi bi-upload"></i> Upload</button></div>
+                </div>
+            </form>
+        </div>
+
+        {# ------------------------------------------------------------ schedule #}
+        <div class="tab-pane fade" id="tab-schedule" role="tabpanel">
+            <div class="d-flex justify-content-end mb-2">
+                <a href="{{ url_for('main_routes.project_calendar') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-calendar3"></i> Open project calendar</a>
+            </div>
+            {% if events %}
+            <div class="table-responsive mb-3">
+                <table class="table table-sm align-middle">
+                    <thead><tr><th>When</th><th>What</th><th>Where / link</th><th>Assigned</th><th>Status</th><th class="text-end"></th></tr></thead>
+                    <tbody>
+                        {% for event in events %}
+                        <tr>
+                            <td class="small text-nowrap">{{ event.starts_at.strftime('%a %b %d, %Y %I:%M %p') }}{% if event.is_overdue %}<br><span class="prj-flag">Overdue</span>{% endif %}</td>
+                            <td><div class="fw-semibold">{{ event.title }}</div><div class="small text-muted">{{ event_kinds.get(event.kind, event.kind) }}</div>{% if event.outcome %}<div class="small">Outcome: {{ event.outcome }}</div>{% endif %}</td>
+                            <td class="small">{{ event.location or '' }}{% if event.meeting_link %}<br><a href="{{ event.meeting_link }}" target="_blank" rel="noopener">Join link</a>{% endif %}</td>
+                            <td class="small">{{ (event.assigned_user.full_name or event.assigned_user.username) if event.assigned_user else 'Unassigned' }}</td>
+                            <td><span class="badge {{ 'bg-success' if event.status == 'done' else ('bg-secondary' if event.status == 'cancelled' else 'bg-info text-dark') }}">{{ event_status_labels.get(event.status, event.status) }}</span></td>
+                            <td class="text-end">
+                                <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                    <a class="btn btn-outline-light btn-sm" href="{{ url_for('main_routes.project_event_ics', event_id=event.event_id) }}" title="Add to calendar (.ics)"><i class="bi bi-calendar-plus"></i></a>
+                                    {% if event.status == 'scheduled' %}
+                                    <button class="btn btn-outline-success btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#event-done-{{ event.event_id }}">Done</button>
+                                    <form method="post" action="{{ url_for('main_routes.project_event_action', event_id=event.event_id, action='cancelled') }}">
+                                        <button class="btn btn-outline-secondary btn-sm" type="submit">Cancel</button>
+                                    </form>
+                                    {% else %}
+                                    <form method="post" action="{{ url_for('main_routes.project_event_action', event_id=event.event_id, action='scheduled') }}">
+                                        <button class="btn btn-outline-secondary btn-sm" type="submit">Reopen</button>
+                                    </form>
+                                    {% endif %}
+                                    <form method="post" action="{{ url_for('main_routes.project_event_action', event_id=event.event_id, action='delete') }}" onsubmit="return confirm('Remove this schedule?');">
+                                        <button class="btn btn-outline-danger btn-sm" type="submit" title="Remove"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% if event.status == 'scheduled' %}
+                        <tr class="collapse" id="event-done-{{ event.event_id }}">
+                            <td colspan="6">
+                                <form method="post" action="{{ url_for('main_routes.project_event_action', event_id=event.event_id, action='done') }}" class="d-flex gap-2">
+                                    <input class="form-control form-control-sm" name="outcome" placeholder="Outcome / minutes (optional)">
+                                    <button class="btn btn-success btn-sm text-nowrap" type="submit">Mark done</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted small">No site visits or meetings scheduled.</p>
+            {% endif %}
+            <form method="post" action="{{ url_for('main_routes.project_add_event', lead_id=lead.lead_id) }}" class="trx-panel">
+                <div class="trx-panel-title">Schedule a site visit or meeting</div>
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <label class="form-label" for="event_kind">Type</label>
+                        <select class="form-select form-select-sm" id="event_kind" name="kind">
+                            {% for key, label in event_kinds.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label" for="event_title">Title (optional)</label>
+                        <input class="form-control form-control-sm" id="event_title" name="title" maxlength="255" placeholder="e.g. Ocular inspection with client">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="event_assignee">Assigned to</label>
+                        <select class="form-select form-select-sm" id="event_assignee" name="assigned_user_id">
+                            <option value="">— Unassigned —</option>
+                            {% set default_assignee = lead.site_engineer_user_id or session.get('user_id') %}
+                            {% for user_row in event_assignees %}
+                            <option value="{{ user_row.user_id }}" {{ 'selected' if user_row.user_id == default_assignee }}>{{ user_row.full_name or user_row.username }}{% if is_member_role(user_row.role) %} (member field agent){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="event_start">Starts</label>
+                        <input type="datetime-local" class="form-control form-control-sm" id="event_start" name="starts_at" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="event_end">Ends (optional)</label>
+                        <input type="datetime-local" class="form-control form-control-sm" id="event_end" name="ends_at">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="event_location">Location</label>
+                        <input class="form-control form-control-sm" id="event_location" name="location" maxlength="255" value="{{ lead.delivery_location or '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="event_link">Zoom / meeting link</label>
+                        <input type="url" class="form-control form-control-sm" id="event_link" name="meeting_link" placeholder="https://">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="event_notes">Notes</label>
+                        <input class="form-control form-control-sm" id="event_notes" name="notes">
+                    </div>
+                </div>
+                <div class="text-end mt-2"><button type="submit" class="btn btn-brand btn-sm"><i class="bi bi-calendar-plus"></i> Schedule</button></div>
+            </form>
+        </div>
+
+        {# ------------------------------------------------------------ contract / payments #}
+        <div class="tab-pane fade" id="tab-payments" role="tabpanel">
+            <div class="row g-3 mb-3">
+                <div class="col-lg-5">
+                    <form method="post" action="{{ url_for('main_routes.project_save_contract', lead_id=lead.lead_id) }}" class="trx-panel h-100">
+                        <div class="trx-panel-title">Contract</div>
+                        <label class="form-label" for="contract_amount">Contract amount (₱)</label>
+                        <input class="form-control form-control-sm mb-2" id="contract_amount" name="contract_amount" value="{{ lead.contract_amount if lead.contract_amount is not none else '' }}">
+                        <label class="form-label" for="contract_signed_on">Contract signed on</label>
+                        <input type="date" class="form-control form-control-sm mb-2" id="contract_signed_on" name="contract_signed_on" value="{{ lead.contract_signed_on.isoformat() if lead.contract_signed_on else '' }}">
+                        <label class="form-label" for="commission_percent">TBGP commission (% of each payment)</label>
+                        <input class="form-control form-control-sm mb-2" id="commission_percent" name="commission_percent"
+                               value="{{ lead.commission_percent if lead.commission_percent is not none else '' }}" placeholder="Default {{ payment_summary.commission_percent }}">
+                        <button type="submit" class="btn btn-outline-light btn-sm w-100"><i class="bi bi-save"></i> Save contract</button>
+                    </form>
+                </div>
+                <div class="col-lg-7">
+                    <div class="row g-2">
+                        <div class="col-6 col-md-4"><div class="prj-kpi"><div class="prj-kpi-label">Contract</div><div class="prj-kpi-value">{{ format_peso(payment_summary.contract) }}</div></div></div>
+                        <div class="col-6 col-md-4"><div class="prj-kpi"><div class="prj-kpi-label">Received</div><div class="prj-kpi-value">{{ format_peso(payment_summary.paid) }}</div><div class="prj-progress mt-1"><span style="width: {{ [payment_summary.paid_percent, 100]|min }}%"></span></div></div></div>
+                        <div class="col-6 col-md-4"><div class="prj-kpi"><div class="prj-kpi-label">Balance</div><div class="prj-kpi-value">{{ format_peso(payment_summary.balance) }}</div></div></div>
+                        <div class="col-6 col-md-6"><div class="prj-kpi"><div class="prj-kpi-label">Not yet scheduled</div><div class="prj-kpi-value">{{ format_peso(payment_summary.unscheduled) }}</div></div></div>
+                        <div class="col-12 col-md-6"><div class="prj-kpi"><div class="prj-kpi-label">Commission posted ({{ payment_summary.commission_percent }}%)</div><div class="prj-kpi-value">{{ format_peso(payment_summary.commission_posted) }}</div>
+                            {% if lead.commission_project_id %}<div class="small text-muted">Project commission #{{ lead.commission_project_id }}</div>{% endif %}</div></div>
+                    </div>
+                </div>
+            </div>
+
+            {% if payments %}
+            <div class="table-responsive mb-3">
+                <table class="table table-sm align-middle">
+                    <thead><tr><th>Milestone</th><th class="text-end">Amount</th><th>Due</th><th>Received</th><th class="text-end">Commission</th><th class="text-end"></th></tr></thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        <tr>
+                            <td><div class="fw-semibold">{{ payment.title }}</div>{% if payment.notes %}<div class="small text-muted">{{ payment.notes }}</div>{% endif %}</td>
+                            <td class="text-end">{{ format_peso(payment.amount) }}</td>
+                            <td class="small">{{ payment.due_date.isoformat() if payment.due_date else '—' }}{% if payment.is_overdue %}<br><span class="prj-flag">Overdue</span>{% endif %}</td>
+                            <td class="small">{% if payment.is_paid %}<span class="text-success">{{ payment.paid_on.isoformat() }}</span>{% if payment.reference %}<br><span class="text-muted">Ref {{ payment.reference }}</span>{% endif %}{% else %}—{% endif %}</td>
+                            <td class="text-end small">
+                                {{ format_peso(payment_commission(payment, lead)) }}
+                                {% if payment.billing_id %}<br><span class="badge bg-success">Posted</span>{% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                    {% if not payment.is_paid %}
+                                    <button class="btn btn-outline-success btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#pay-{{ payment.payment_id }}">Received</button>
+                                    {% elif not payment.billing_id %}
+                                    <form method="post" action="{{ url_for('main_routes.project_payment_action', payment_id=payment.payment_id, action='post') }}"
+                                          onsubmit="return confirm('Post {{ format_peso(payment_commission(payment, lead)) }} commission to Income Management?');">
+                                        <button class="btn btn-brand btn-sm" type="submit"><i class="bi bi-cash-coin"></i> Post commission</button>
+                                    </form>
+                                    <form method="post" action="{{ url_for('main_routes.project_payment_action', payment_id=payment.payment_id, action='unpaid') }}">
+                                        <button class="btn btn-outline-secondary btn-sm" type="submit">Unpaid</button>
+                                    </form>
+                                    {% else %}
+                                    <form method="post" action="{{ url_for('main_routes.project_payment_action', payment_id=payment.payment_id, action='unpost') }}"
+                                          onsubmit="return confirm('Remove the commission billing from Income Management?');">
+                                        <button class="btn btn-outline-secondary btn-sm" type="submit">Unpost</button>
+                                    </form>
+                                    {% endif %}
+                                    {% if not payment.billing_id %}
+                                    <form method="post" action="{{ url_for('main_routes.project_payment_action', payment_id=payment.payment_id, action='delete') }}" onsubmit="return confirm('Remove this milestone?');">
+                                        <button class="btn btn-outline-danger btn-sm" type="submit" title="Remove"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% if not payment.is_paid %}
+                        <tr class="collapse" id="pay-{{ payment.payment_id }}">
+                            <td colspan="6">
+                                <form method="post" action="{{ url_for('main_routes.project_payment_action', payment_id=payment.payment_id, action='paid') }}" class="row g-2 align-items-end">
+                                    <div class="col-sm-3"><label class="form-label small">Received on</label><input type="date" class="form-control form-control-sm" name="paid_on" value="{{ now.date().isoformat() }}"></div>
+                                    <div class="col-sm-3"><label class="form-label small">OR / reference</label><input class="form-control form-control-sm" name="reference"></div>
+                                    <div class="col-sm-4"><label class="form-label small">Commission override (₱, optional)</label><input class="form-control form-control-sm" name="commission_amount" placeholder="{{ payment_commission(payment, lead) }}"></div>
+                                    <div class="col-sm-2"><button class="btn btn-success btn-sm w-100" type="submit">Save</button></div>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted small">No payment milestones yet.</p>
+            {% endif %}
+
+            <div class="row g-3">
+                <div class="col-lg-6">
+                    <form method="post" action="{{ url_for('main_routes.project_add_payment', lead_id=lead.lead_id) }}" class="trx-panel h-100">
+                        <div class="trx-panel-title">Add a payment milestone</div>
+                        <div class="row g-2">
+                            <div class="col-12"><label class="form-label">Title</label><input class="form-control form-control-sm" name="title" maxlength="160" required placeholder="e.g. Progress billing 1"></div>
+                            <div class="col-6"><label class="form-label">Amount (₱)</label><input class="form-control form-control-sm" name="amount" required></div>
+                            <div class="col-6"><label class="form-label">Due date</label><input type="date" class="form-control form-control-sm" name="due_date"></div>
+                            <div class="col-12"><label class="form-label">Notes</label><input class="form-control form-control-sm" name="notes"></div>
+                        </div>
+                        <div class="text-end mt-2"><button type="submit" class="btn btn-outline-light btn-sm"><i class="bi bi-plus-lg"></i> Add milestone</button></div>
+                    </form>
+                </div>
+                <div class="col-lg-6">
+                    <form method="post" action="{{ url_for('main_routes.project_add_payment', lead_id=lead.lead_id) }}" class="trx-panel h-100">
+                        <input type="hidden" name="mode" value="schedule">
+                        <div class="trx-panel-title">Generate schedule from contract</div>
+                        <label class="form-label" for="schedule_percentages">Percentages of the contract amount</label>
+                        <input class="form-control form-control-sm mb-2" id="schedule_percentages" name="percentages" value="30, 40, 30" required>
+                        <p class="small text-muted">Creates Downpayment, Progress billing, and Final payment milestones. Set due dates afterwards.</p>
+                        <button type="submit" class="btn btn-outline-light btn-sm" {{ 'disabled' if not lead.contract_amount }}><i class="bi bi-magic"></i> Generate</button>
+                    </form>
+                </div>
+            </div>
+            <p class="small text-muted mt-3 mb-0">
+                <i class="bi bi-info-circle"></i> Posting a commission adds a billing to this project's record in Project Commission
+                (client ProF 50%, contractor's referrer 25%, admin pool 25%). Then run <strong>Generate Project Commission</strong> for that billing date.
+            </p>
+        </div>
+    </div>
+</div>

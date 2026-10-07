@@ -173,6 +173,10 @@
                         </div>
                     </div>
 
+                    {% with position_field_prefix='manual' %}
+                    {% include 'partials/member_positions_fields.html' %}
+                    {% endwith %}
+
                     <p class="text-muted small fw-semibold text-uppercase mb-2">Separation</p>
                     <div class="row g-3">
                         <div class="col-md-4">

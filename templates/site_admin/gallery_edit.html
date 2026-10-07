@@ -4,6 +4,15 @@
 
 {% block content %}
 <div class="site-admin-page">
+    <div class="alert alert-warning small">
+        <strong>Public page — approved content only.</strong>
+        Gallery folders appear on the public landing page. Never include client names, exact project locations or
+        addresses, signage, plate numbers, documents, or transaction details in titles, captions, or photos.
+        {% if not can_publish %}Staff save folders as drafts; a Site Admin or Admin reviews and publishes them.{% endif %}
+    </div>
+    {% if not can_publish and folder.status == 'published' %}
+    <div class="alert alert-info small">This folder is published. Only a Site Admin or Admin can change or delete it.</div>
+    {% endif %}
     <form method="post" class="site-admin-form"
           data-partner-image-upload-enabled="{{ 'true' if partner_image_upload_enabled else 'false' }}"
           {% if partner_image_upload_enabled %}data-partner-image-upload-url="{{ partner_image_upload_url }}"{% endif %}>
@@ -29,11 +38,14 @@
                     <label class="form-label" for="status">Status</label>
                     <select class="form-select" id="status" name="status">
                         {% for status in gallery_statuses %}
+                        {% if can_publish or status != 'published' or folder.status == 'published' %}
                         <option value="{{ status }}" {% if folder.status == status %}selected{% endif %}>
                             {{ status|capitalize }}
                         </option>
+                        {% endif %}
                         {% endfor %}
                     </select>
+                    {% if not can_publish %}<div class="form-text">Only a Site Admin or Admin can publish.</div>{% endif %}
                 </div>
                 <div class="col-12">
                     <label class="form-label" for="description">Description</label>

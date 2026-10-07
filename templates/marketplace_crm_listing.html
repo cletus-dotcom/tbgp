@@ -107,8 +107,6 @@
         </div>
     </div>
 
-    <div id="crmLeadStatusAlert" class="alert alert-danger d-none py-2 small" role="alert"></div>
-
     {% if stats.leads %}
     <div class="section-table-wrap">
         <table class="table table-hover section-table mb-0">
@@ -119,7 +117,7 @@
                     <th>Who inquired</th>
                     <th>Contact</th>
                     <th>Referred by</th>
-                    <th>Status / follow-up</th>
+                    <th>Status</th>
                     <th>Message</th>
                     <th></th>
                 </tr>
@@ -147,45 +145,15 @@
                         <span class="text-muted">Direct / none</span>
                         {% endif %}
                     </td>
-                    <td style="min-width: 12rem;">
-                        <select class="form-select form-select-sm lead-status-select mb-1"
-                                aria-label="Inquiry status for #{{ lead.lead_id }}">
-                            {% for value in lead_statuses %}
-                            <option value="{{ value }}" {% if (lead.status or 'new') == value %}selected{% endif %}>
-                                {{ lead_status_labels[value] }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <div class="lead-action-wrap {% if (lead.status or 'new') != 'in_progress' %}d-none{% endif %}">
-                            <label class="form-label small mb-0">Action Required</label>
-                            <select class="form-select form-select-sm lead-action-select"
-                                    aria-label="Action required for #{{ lead.lead_id }}">
-                                <option value="">Select…</option>
-                                {% for value in lead_actions %}
-                                <option value="{{ value }}" {% if lead.action_required == value %}selected{% endif %}>
-                                    {{ lead_action_labels[value] }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="lead-result-wrap {% if (lead.status or 'new') != 'closed' %}d-none{% endif %}">
-                            <label class="form-label small mb-0">Final Result</label>
-                            <select class="form-select form-select-sm lead-result-select"
-                                    aria-label="Final result for #{{ lead.lead_id }}">
-                                <option value="">Select…</option>
-                                {% for value in lead_results %}
-                                <option value="{{ value }}" {% if lead.final_result == value %}selected{% endif %}>
-                                    {{ lead_result_labels[value] }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                    <td>
+                        <span class="trx-status trx-{{ lead.status or 'new' }}">{{ lead_status_labels.get(lead.status or 'new', lead.status) }}</span>
                     </td>
                     <td class="small">{{ lead.message or '—' }}</td>
-                    <td class="text-end">
-                        <button type="button" class="btn btn-outline-light btn-sm lead-history-btn" title="History">
-                            <i class="bi bi-clock-history"></i>
-                        </button>
+                    <td class="text-end text-nowrap">
+                        <a href="{{ url_for('main_routes.transaction_detail', lead_id=lead.lead_id) }}"
+                           class="btn btn-outline-light btn-sm" title="Open transaction, follow-up and history">
+                            {{ lead.reference_number or 'Open' }} <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -198,11 +166,3 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
-{% include 'partials/marketplace_crm_lead_scripts.html' %}
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    window.TBGP_CRM_LEAD?.bind(document);
-});
-</script>
-{% endblock %}

@@ -28,10 +28,16 @@ def run_schema_migrations():
     db.create_all()
 
     from app.db_migrate import (
+        drop_project_bids_table,
+        merge_departments,
         migrate_ad_split_members_table,
         migrate_commission_levels_table,
         migrate_gallery_tables,
         migrate_marketplace_tables,
+        migrate_marketplace_transactions,
+        migrate_project_delivery,
+        migrate_project_team,
+        migrate_product_team,
         migrate_member_ledger_table,
         migrate_members_table,
         migrate_payout_ompd,
@@ -40,7 +46,11 @@ def run_schema_migrations():
         migrate_product_commissions_table,
         migrate_project_billings_table,
         migrate_project_commissions_table,
+        migrate_portal_notices_tables,
+        migrate_sanctions,
+        migrate_portal_positions_tables,
         migrate_sharing_entries_table,
+        migrate_timestamps_to_manila,
         migrate_users_table,
     )
 
@@ -51,6 +61,12 @@ def run_schema_migrations():
     migrate_ad_split_members_table()
     migrate_product_commission_ad_allocations_table()
     migrate_marketplace_tables()
+    migrate_marketplace_transactions()
+    migrate_project_delivery()
+    migrate_project_team()
+    migrate_product_team()
+    migrate_sanctions()
+    drop_project_bids_table()
     migrate_gallery_tables()
     migrate_member_ledger_table()
     migrate_payout_tables()
@@ -58,6 +74,10 @@ def run_schema_migrations():
     migrate_users_table()
     migrate_commission_levels_table()
     migrate_sharing_entries_table()
+    migrate_portal_notices_tables()
+    migrate_portal_positions_tables()
+    merge_departments()
+    migrate_timestamps_to_manila()
     logger.info("Schema migrations completed")
 
 

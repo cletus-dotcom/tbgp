@@ -1,0 +1,18 @@
+{% extends "dashboard_base.html" %}
+{% block page_title %}{{ trends_section }} — Trends & Analysis{% endblock %}
+{% block topbar_title %}Trends & Analysis · {{ trends_section }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-card section-card">
+    <div class="section-header">
+        <div>
+            <h5><i class="bi bi-graph-up-arrow"></i> {{ trends_section }}</h5>
+            <p class="section-subtitle">Trends &amp; Analysis</p>
+        </div>
+        <span class="badge bg-secondary">Coming soon</span>
+    </div>
+    <p class="mb-0 text-muted">
+        {{ trends_section }} trend and analysis tools will be added here later.
+    </p>
+</div>
+{% endblock %}
