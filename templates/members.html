@@ -556,6 +556,7 @@
     const importPreviewBody = document.getElementById('importPreviewBody');
     const importRowCount = document.getElementById('importRowCount');
     const importPreviewNote = document.getElementById('importPreviewNote');
+    const importPreviewWarnings = document.getElementById('importPreviewWarnings');
     const importSubmitBtn = document.getElementById('importSubmitBtn');
     const importProgressOverlay = document.getElementById('importProgressOverlay');
     const importProgressMessage = document.getElementById('importProgressMessage');
@@ -572,6 +573,10 @@
         if (importPreviewBody) importPreviewBody.innerHTML = '';
         if (importRowCount) importRowCount.textContent = '0 rows';
         if (importPreviewNote) importPreviewNote.textContent = '';
+        if (importPreviewWarnings) {
+            importPreviewWarnings.textContent = '';
+            importPreviewWarnings.classList.add('d-none');
+        }
         if (importSubmitBtn) importSubmitBtn.disabled = true;
     }
 
@@ -591,20 +596,44 @@
         }
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, ch => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        })[ch]);
+    }
+
+    function renderImportAction(row) {
+        const changes = row.changes || [];
+        if (row.action !== 'Update' || !changes.length) {
+            return `<span class="${row.action === 'Unchanged' ? 'text-muted' : ''}">${row.action}</span>`;
+        }
+        const detail = changes.map(c => `${c.field}: ${c.old || '(blank)'} → ${c.new}`).join('\n');
+        const fields = changes.map(c => c.field).join(', ');
+        return `Update<div class="small text-muted" title="${escapeHtml(detail)}">${escapeHtml(fields)}</div>`;
+    }
+
     function renderImportPreview(data) {
         if (!importPreviewBody || !importPreview) return;
         importPreviewBody.innerHTML = data.preview.map(row => `
             <tr>
                 <td>${row.member_id}</td>
-                <td>${row.full_name || '—'}</td>
+                <td>${escapeHtml(row.full_name) || '—'}</td>
                 <td>${row.batch}</td>
-                <td>${row.status || '—'}</td>
+                <td>${row.referrer_id ?? '—'}</td>
+                <td>${escapeHtml(row.status) || '—'}</td>
+                <td>${renderImportAction(row)}</td>
             </tr>
         `).join('');
         importRowCount.textContent = `${data.row_count} row${data.row_count === 1 ? '' : 's'}`;
+        const counts = `${data.new_count} new, ${data.update_count} to update, ${data.unchanged_count} unchanged.`;
         importPreviewNote.textContent = data.row_count > data.preview.length
-            ? `Showing first ${data.preview.length} of ${data.row_count} rows.`
-            : 'All rows parsed successfully.';
+            ? `Showing first ${data.preview.length} of ${data.row_count} rows. ${counts}`
+            : `All rows passed validation. ${counts}`;
+        const warnings = data.warnings || [];
+        if (importPreviewWarnings && warnings.length) {
+            importPreviewWarnings.textContent = `Check before importing:\n${warnings.map(w => `- ${w}`).join('\n')}`;
+            importPreviewWarnings.classList.remove('d-none');
+        }
         importPreview.classList.remove('d-none');
         if (importSubmitBtn) importSubmitBtn.disabled = false;
     }

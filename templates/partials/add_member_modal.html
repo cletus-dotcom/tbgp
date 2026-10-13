@@ -7,14 +7,16 @@
             </div>
             <form id="addMemberForm">
                 <div class="modal-body">
-                    <div id="addMemberAlert" class="alert alert-danger d-none py-2 small" role="alert"></div>
+                    <div id="addMemberAlert" class="alert alert-danger d-none py-2 small" role="alert" style="white-space: pre-line; max-height: 240px; overflow-y: auto;"></div>
 
                     <p class="text-muted small mb-3">
-                        Upload an Excel file (<code>.xlsx</code>) with a <code>members</code> sheet matching
+                        Upload an Excel file (<code>.xlsx</code>) with a <code>members</code> sheet, such as
                         the generated <a href="{{ url_for('main_routes.members_template') }}" class="text-brand">blank members template</a>.
-                        Required columns include
-                        <code>member_id</code>, <code>batch</code>, <code>referrer_id</code>,
-                        name fields, contact fields, beneficiary fields, and <code>status</code>.
+                        Required columns: <code>member_id</code>, <code>batch</code>, <code>referrer_id</code>,
+                        <code>last_name</code>, <code>first_name</code>, and <code>middle_name</code>; every other column is optional.
+                        Referrers may be existing members or members in the same file.
+                        For members that already exist, only fields whose values differ are updated;
+                        matching values and blank cells keep the current data.
                     </p>
 
                     <div class="mb-3">
@@ -34,13 +36,16 @@
                                         <th>ID</th>
                                         <th>Name</th>
                                         <th>Batch</th>
+                                        <th>Referrer</th>
                                         <th>Status</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="importPreviewBody"></tbody>
                             </table>
                         </div>
                         <p class="text-muted small mt-2 mb-0" id="importPreviewNote"></p>
+                        <div id="importPreviewWarnings" class="alert alert-warning d-none py-2 small mt-2 mb-0" style="white-space: pre-line; max-height: 160px; overflow-y: auto;"></div>
                     </div>
                 </div>
                 <div class="modal-footer">

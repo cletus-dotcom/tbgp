@@ -1,11 +1,14 @@
+import re
 from datetime import datetime
+from decimal import Decimal
 from io import BytesIO
 from math import isnan
 from pathlib import Path
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from app import db
 from app.config import (
-    MEMBER_LIFETIME_EARNINGS_CAP,
     MEMBER_SEPARATION_TYPES,
     MEMBER_STATUSES,
     MEMBERS_SHEET,
@@ -14,51 +17,64 @@ from app.config import (
 )
 from app.models import Member
 
-REQUIRED_COLUMNS = {
+REQUIRED_COLUMNS = (
     "member_id",
     "batch",
     "referrer_id",
-    "date_joined",
     "last_name",
     "first_name",
     "middle_name",
+)
+
+TEXT_COLUMNS = (
+    "membership_type",
     "suffix",
     "address",
     "phone",
     "email",
-    "birth_date",
     "gender",
     "civil_status",
     "highest_education",
     "occupation_income_source",
     "monthly_income",
-    "number_of_dependents",
     "beneficiary_name",
     "beneficiary_address",
     "beneficiary_phone",
-    "status",
-    "termination_date",
-    "termination_type",
-}
-
-OPTIONAL_COLUMNS = {
-    "membership_type",
-    "lifetime_cap_enabled",
-    "lifetime_cap_amount",
+    "beneficiary_relationship",
     "gcash_number",
     "bank_account_number",
     "bank_name",
-    "age",
     "id_picture_location",
-    "beneficiary_relationship",
-}
+)
+
+DATE_COLUMNS = ("date_joined", "birth_date", "termination_date")
+
+MAX_REPORTED_ISSUES = 25
+
+PLACEHOLDER_VALUES = {"none", "n/a", "na", "-", "--"}
+
+
+class MemberImportError(ValueError):
+    """Validation failed; nothing was written. Carries every row problem found."""
+
+    def __init__(self, errors, warnings=None):
+        self.errors = list(errors)
+        self.warnings = list(warnings or [])
+        count = len(self.errors)
+        shown = self.errors[:MAX_REPORTED_ISSUES]
+        lines = [f"{count} problem{'s' if count != 1 else ''} found; nothing was imported."]
+        lines += [f"- {msg}" for msg in shown]
+        if count > len(shown):
+            lines.append(f"- ...and {count - len(shown)} more.")
+        super().__init__("\n".join(lines))
 
 
 class SheetRows:
     """Lightweight tabular sheet data without building a pandas DataFrame."""
 
-    def __init__(self, rows):
+    def __init__(self, rows, row_numbers=None):
         self._rows = rows
+        self.row_numbers = row_numbers or [index + 2 for index in range(len(rows))]
 
     @property
     def columns(self):
@@ -101,7 +117,17 @@ def _parse_date(value):
     if not text:
         return None
 
-    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y", "%d/%m/%Y"):
+    for fmt in (
+        "%Y-%m-%d",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y/%m/%d",
+        "%m/%d/%Y",
+        "%m/%d/%y",
+        "%d/%m/%Y",
+        "%B %d, %Y",
+        "%b %d, %Y",
+        "%d-%b-%Y",
+    ):
         try:
             return datetime.strptime(text, fmt).date()
         except ValueError:
@@ -112,6 +138,8 @@ def _parse_date(value):
 def _clean_str(value):
     if _is_blank(value):
         return None
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
     text = str(value).strip()
     return text or None
 
@@ -196,7 +224,8 @@ def _read_excel_openpyxl(source, sheet_name=None):
 
     headers = [str(col).strip() if col is not None else "" for col in rows[0]]
     records = []
-    for row in rows[1:]:
+    row_numbers = []
+    for excel_row, row in enumerate(rows[1:], start=2):
         if row is None or all(_is_blank(cell) for cell in row):
             continue
         record = {}
@@ -209,12 +238,26 @@ def _read_excel_openpyxl(source, sheet_name=None):
             if first_value is None:
                 continue
         records.append(record)
-    return SheetRows(records)
+        row_numbers.append(excel_row)
+    return SheetRows(records, row_numbers)
 
 
 def _read_excel(source, sheet_name=None):
     """Read spreadsheet rows via openpyxl (avoids pandas Excel engine crashes)."""
     return _read_excel_openpyxl(source, sheet_name=sheet_name)
+
+
+HEADER_ALIASES = {
+    "surname": "last_name",
+    "given_name": "first_name",
+    "referrer": "referrer_id",
+    "referred_by": "referrer_id",
+}
+
+
+def _normalize_header(name):
+    column = re.sub(r"[^a-z0-9]+", "_", str(name or "").strip().lower()).strip("_")
+    return HEADER_ALIASES.get(column, column)
 
 
 def load_members_dataframe(source):
@@ -223,12 +266,25 @@ def load_members_dataframe(source):
     except ValueError:
         sheet = _read_excel(source)
 
-    missing = REQUIRED_COLUMNS - set(sheet.columns)
-    if missing:
-        raise ValueError(f"Missing columns in spreadsheet: {', '.join(sorted(missing))}")
-
     if sheet.empty:
         raise ValueError("The spreadsheet has no data rows.")
+
+    records = []
+    for record in sheet.to_dict("records"):
+        normalized = {}
+        for header, value in record.items():
+            column = _normalize_header(header)
+            if column and column not in normalized:
+                normalized[column] = value
+        records.append(normalized)
+    sheet = SheetRows(records, sheet.row_numbers)
+
+    missing = [column for column in REQUIRED_COLUMNS if column not in sheet.columns]
+    if missing:
+        raise ValueError(
+            f"Missing columns in spreadsheet: {', '.join(missing)}. "
+            f"Required columns: {', '.join(REQUIRED_COLUMNS)}."
+        )
 
     return sheet
 
@@ -291,138 +347,351 @@ def clear_members_and_dependents(*, commit=True):
         db.session.commit()
 
 
-def _clear_members_for_replace():
-    """Remove member rows and dependent records that block a full replace import."""
-    clear_members_and_dependents(commit=True)
-
-
-def _validate_choice(value, allowed, field_name):
-    if value is None:
+def _parse_whole_number(value):
+    """Integer from a cell (2003, 2003.0, "2,003"); None when blank. Raises ValueError otherwise."""
+    if _is_blank(value):
         return None
-    if value not in allowed:
-        raise ValueError(f"Invalid {field_name} '{value}'. Allowed: {', '.join(allowed)}.")
-    return value
+    if isinstance(value, bool):
+        raise ValueError(value)
+    if isinstance(value, int):
+        return value
+    number = float(str(value).strip().replace(",", ""))
+    if not number.is_integer():
+        raise ValueError(value)
+    return int(number)
 
 
-def _row_payload(row, include_lifetime_cap=False):
-    member_id = int(row["member_id"])
-    referrer_id = None
-    if not _is_blank(row.get("referrer_id")):
-        referrer_id = int(row["referrer_id"])
+def _column_limit(field):
+    column = Member.__table__.columns.get(field)
+    return getattr(column.type, "length", None) if column is not None else None
 
-    status = _validate_choice(
-        _clean_str(row.get("status")) or "Active",
-        MEMBER_STATUSES,
-        "status",
-    )
-    separation_type = _validate_choice(
-        _clean_str(row.get("termination_type")),
-        MEMBER_SEPARATION_TYPES,
-        "termination_type",
-    )
 
-    payload = {
-        "batch": int(row["batch"]),
-        "referrer_id": referrer_id,
-        "membership_type": _clean_str(row.get("membership_type")),
-        "date_joined": _parse_date(row.get("date_joined")),
-        "last_name": _clean_str(row.get("last_name")) or "",
-        "first_name": _clean_str(row.get("first_name")) or _clean_str(row.get("last_name")) or "N/A",
-        "middle_name": _clean_str(row.get("middle_name")),
-        "suffix": _clean_str(row.get("suffix")),
-        "address": _clean_str(row.get("address")),
-        "phone": _clean_str(row.get("phone")),
-        "email": _clean_str(row.get("email")),
-        "birth_date": _parse_date(row.get("birth_date")),
-        "gender": _clean_str(row.get("gender")),
-        "civil_status": _clean_str(row.get("civil_status")),
-        "highest_education": _clean_str(row.get("highest_education")),
-        "occupation_income_source": _clean_str(row.get("occupation_income_source")),
-        "monthly_income": _clean_str(row.get("monthly_income")),
-        "number_of_dependents": _parse_dependents(row.get("number_of_dependents")),
-        "beneficiary_name": _clean_str(row.get("beneficiary_name")),
-        "beneficiary_address": _clean_str(row.get("beneficiary_address")),
-        "beneficiary_phone": _clean_str(row.get("beneficiary_phone")),
-        "beneficiary_relationship": _clean_str(row.get("beneficiary_relationship")),
-        "gcash_number": _clean_str(row.get("gcash_number")),
-        "bank_account_number": _clean_str(row.get("bank_account_number")),
-        "bank_name": _clean_str(row.get("bank_name")),
-        "age": _parse_age(row.get("age")),
-        "id_picture_location": _clean_str(row.get("id_picture_location")),
-        "status": status,
-        "termination_date": _parse_date(row.get("termination_date")),
-        "termination_type": separation_type,
-    }
+def _match_choice(text, allowed):
+    return {item.lower(): item for item in allowed}.get(text.lower())
+
+
+def _is_placeholder(value):
+    return _is_blank(value) or str(value).strip().lower() in PLACEHOLDER_VALUES
+
+
+def _parse_member_row(row, line, include_lifetime_cap, errors, warnings, strict=True):
+    """Validate one sheet row. Returns {member_id, referrer_id, values} or None if unusable.
+
+    ``values`` only holds non-blank cells, so blank cells never erase data on existing members.
+    """
+    where = f"Row {line}"
+
+    def whole_number(field, required, minimum=1):
+        raw = row.get(field)
+        try:
+            value = _parse_whole_number(raw)
+        except (TypeError, ValueError):
+            errors.append(f"{where}: {field} '{_clean_str(raw)}' is not a whole number.")
+            return None
+        if value is None:
+            if required:
+                errors.append(f"{where}: {field} is required.")
+            return None
+        if value < minimum:
+            errors.append(f"{where}: {field} must be {minimum} or more.")
+            return None
+        return value
+
+    member_id = whole_number("member_id", True)
+    if member_id is not None:
+        where = f"Row {line} (member {member_id})"
+    batch = whole_number("batch", True, minimum=0)
+    referrer_id = whole_number("referrer_id", False)
+    if referrer_id is not None and referrer_id == member_id:
+        errors.append(f"{where}: a member cannot be their own referrer.")
+        referrer_id = None
+
+    values = {}
+    if batch is not None:
+        values["batch"] = batch
+
+    if _clean_str(row.get("last_name")) is None:
+        errors.append(f"{where}: last_name is required.")
+    if _clean_str(row.get("first_name")) is None:
+        if strict:
+            errors.append(f"{where}: first_name is required.")
+        elif _clean_str(row.get("last_name")):
+            row = {**row, "first_name": row.get("last_name")}
+            warnings.append(f"{where}: first_name is blank; last_name was used.")
+
+    for field in ("last_name", "first_name", "middle_name") + TEXT_COLUMNS:
+        text = _clean_str(row.get(field))
+        if text is None:
+            continue
+        limit = _column_limit(field)
+        if limit and len(text) > limit:
+            errors.append(f"{where}: {field} has {len(text)} characters; the limit is {limit}.")
+            continue
+        values[field] = text
+
+    for field in DATE_COLUMNS:
+        raw = row.get(field)
+        if _is_placeholder(raw):
+            continue
+        parsed = _parse_date(raw)
+        if parsed is None:
+            warnings.append(f"{where}: {field} '{_clean_str(raw)}' is not a date (use YYYY-MM-DD); left blank.")
+        else:
+            values[field] = parsed
+
+    for field, parser in (("number_of_dependents", _parse_dependents), ("age", _parse_age)):
+        raw = row.get(field)
+        if _is_placeholder(raw):
+            continue
+        parsed = parser(raw)
+        if parsed is None:
+            warnings.append(f"{where}: {field} '{_clean_str(raw)}' is not a valid number; left blank.")
+        else:
+            values[field] = parsed
+
+    for field, allowed in (("status", MEMBER_STATUSES), ("termination_type", MEMBER_SEPARATION_TYPES)):
+        text = _clean_str(row.get(field))
+        if text is None:
+            continue
+        match = _match_choice(text, allowed)
+        if match is None:
+            errors.append(f"{where}: {field} '{text}' must be one of: {', '.join(allowed)}.")
+        else:
+            values[field] = match
+
     if include_lifetime_cap:
-        payload.update({
-            "lifetime_cap_enabled": _parse_bool(row.get("lifetime_cap_enabled"), True),
-            "lifetime_cap_amount": _parse_decimal(
-                row.get("lifetime_cap_amount"),
-                float(MEMBER_LIFETIME_EARNINGS_CAP),
-            ),
-        })
-    return member_id, payload
-
-
-def preview_members_dataframe(df, limit=5):
-    rows = sorted(df.to_dict("records"), key=lambda r: (int(r["batch"]), int(r["member_id"])))
-    preview = []
-    for row in rows[:limit]:
-        member_id, payload = _row_payload(row)
-        preview.append({
-            "member_id": member_id,
-            "batch": payload["batch"],
-            "referrer_id": payload["referrer_id"],
-            "status": payload["status"],
-            "date_joined": payload["date_joined"].isoformat() if payload["date_joined"] else None,
-            "full_name": " ".join(
-                p for p in [
-                    payload["first_name"],
-                    payload["middle_name"],
-                    payload["last_name"],
-                    payload.get("suffix"),
-                ] if p
-            ),
-        })
-    return {"row_count": len(rows), "preview": preview}
-
-
-def import_members_dataframe(df, replace=False, actor_role=None):
-    if replace:
-        _clear_members_for_replace()
-
-    imported = 0
-    updated = 0
-    skipped_referrers = []
-    rows = sorted(df.to_dict("records"), key=lambda r: (int(r["batch"]), int(r["member_id"])))
-    member_ids = {int(row["member_id"]) for row in rows}
-    include_lifetime_cap = is_admin_role(actor_role)
-
-    with db.session.no_autoflush:
-        for row in rows:
-            member_id, payload = _row_payload(row, include_lifetime_cap=include_lifetime_cap)
-            referrer_id = payload["referrer_id"]
-            if referrer_id is not None and referrer_id not in member_ids:
-                skipped_referrers.append({"member_id": member_id, "referrer_id": referrer_id})
-                payload["referrer_id"] = None
-
-            if not payload["last_name"]:
-                raise ValueError(f"Row with member_id {member_id} is missing last name.")
-
-            member = db.session.get(Member, member_id)
-            if member:
-                for key, value in payload.items():
-                    setattr(member, key, value)
-                updated += 1
+        raw_enabled = row.get("lifetime_cap_enabled")
+        if not _is_blank(raw_enabled):
+            values["lifetime_cap_enabled"] = _parse_bool(raw_enabled)
+        raw_amount = row.get("lifetime_cap_amount")
+        if not _is_blank(raw_amount):
+            try:
+                amount = _parse_decimal(raw_amount, None)
+            except (TypeError, ValueError):
+                amount = None
+            if amount is None or amount < 0:
+                errors.append(f"{where}: lifetime_cap_amount '{_clean_str(raw_amount)}' is not a valid amount.")
             else:
-                db.session.add(Member(member_id=member_id, **payload))
-                imported += 1
+                values["lifetime_cap_amount"] = amount
 
-    db.session.commit()
-    result = {"imported": imported, "updated": updated, "total": Member.query.count()}
-    if skipped_referrers:
-        result["skipped_referrers"] = skipped_referrers
-    return result
+    if member_id is None:
+        return None
+    return {"line": line, "member_id": member_id, "referrer_id": referrer_id, "values": values}
+
+
+def _validate_members(sheet, replace=False, include_lifetime_cap=False, strict=True):
+    """Check every row and the referrer tree. Returns (entries, errors, warnings).
+
+    ``strict=False`` is for the legacy master workbook: unknown referrers are dropped and a
+    blank first name falls back to the last name, each with a warning instead of an error.
+    """
+    errors = []
+    warnings = []
+    entries = []
+    first_line = {}
+    for line, row in zip(sheet.row_numbers, sheet.to_dict("records")):
+        entry = _parse_member_row(row, line, include_lifetime_cap, errors, warnings, strict=strict)
+        if entry is None:
+            continue
+        member_id = entry["member_id"]
+        if member_id in first_line:
+            errors.append(f"Row {line}: member_id {member_id} repeats row {first_line[member_id]}.")
+            continue
+        first_line[member_id] = line
+        entries.append(entry)
+
+    existing = {} if replace else dict(db.session.query(Member.member_id, Member.referrer_id).all())
+    referrers = dict(existing)
+    for entry in entries:
+        member_id = entry["member_id"]
+        referrer_id = entry["referrer_id"]
+        where = f"Row {entry['line']} (member {member_id})"
+        if referrer_id is not None and referrer_id not in first_line and referrer_id not in existing:
+            message = f"{where}: referrer_id {referrer_id} is not in this file or among existing members."
+            if strict:
+                errors.append(message)
+            else:
+                warnings.append(f"{message} Imported without a referrer.")
+            entry["referrer_id"] = referrer_id = None
+        if referrer_id is not None or member_id not in referrers:
+            referrers[member_id] = referrer_id
+
+    for entry in entries:
+        member_id = entry["member_id"]
+        where = f"Row {entry['line']} (member {member_id})"
+        node = referrers.get(member_id)
+        for _ in range(len(referrers)):
+            if node is None:
+                break
+            if node == member_id:
+                errors.append(f"{where}: the referrer chain loops back to this member.")
+                break
+            node = referrers.get(node)
+
+        entry["is_new"] = member_id not in existing
+        batch = entry["values"].get("batch")
+        if batch and batch > 1 and referrers.get(member_id) is None:
+            warnings.append(f"{where}: batch {batch} member has no referrer_id.")
+
+    current = _load_members([entry["member_id"] for entry in entries if not entry["is_new"]])
+    for entry in entries:
+        member = current.get(entry["member_id"])
+        entry["changes"] = _member_changes(member, entry) if member is not None else {}
+        entry["current_status"] = member.status if member is not None else None
+        if entry["is_new"]:
+            entry["action"] = "Add"
+        else:
+            entry["action"] = "Update" if entry["changes"] else "Unchanged"
+
+    entries.sort(key=lambda item: (item["values"].get("batch") or 0, item["member_id"]))
+    errors.sort(key=_issue_row)
+    warnings.sort(key=_issue_row)
+    return entries, errors, warnings
+
+
+def _issue_row(message):
+    match = re.match(r"Row (\d+)", message)
+    return int(match.group(1)) if match else 0
+
+
+def _load_members(member_ids, chunk_size=500):
+    members = {}
+    for start in range(0, len(member_ids), chunk_size):
+        chunk = member_ids[start:start + chunk_size]
+        for member in Member.query.filter(Member.member_id.in_(chunk)).all():
+            members[member.member_id] = member
+    return members
+
+
+def _same_value(old, new):
+    if old is None or new is None:
+        return old is None and new is None
+    if isinstance(old, Decimal) or isinstance(new, (Decimal, float)):
+        try:
+            return Decimal(str(old)) == Decimal(str(new))
+        except (ArithmeticError, ValueError):
+            return False
+    if isinstance(old, datetime) and not isinstance(new, datetime):
+        old = old.date()
+    if isinstance(old, str) and isinstance(new, str):
+        return old.strip() == new.strip()
+    return old == new
+
+
+def _member_changes(member, entry):
+    """Fields whose sheet value differs from the stored value: {field: (old, new)}."""
+    changes = {}
+    for field, new in entry["values"].items():
+        old = getattr(member, field)
+        if not _same_value(old, new):
+            changes[field] = (old, new)
+    referrer_id = entry["referrer_id"]
+    if referrer_id is not None and referrer_id != member.referrer_id:
+        changes["referrer_id"] = (member.referrer_id, referrer_id)
+    return changes
+
+
+def _display_value(value):
+    if value is None:
+        return ""
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return f"{value:,.2f}"
+    return str(value)
+
+
+def preview_members_dataframe(df, limit=5, actor_role=None):
+    entries, errors, warnings = _validate_members(
+        df, include_lifetime_cap=is_admin_role(actor_role)
+    )
+    if errors:
+        raise MemberImportError(errors, warnings)
+
+    preview = []
+    for entry in sorted(entries, key=lambda item: item["action"] == "Unchanged")[:limit]:
+        values = entry["values"]
+        preview.append({
+            "member_id": entry["member_id"],
+            "batch": values.get("batch"),
+            "referrer_id": entry["referrer_id"],
+            "status": values.get("status") or entry["current_status"] or "Active",
+            "action": entry["action"],
+            "changes": [
+                {"field": field, "old": _display_value(old), "new": _display_value(new)}
+                for field, (old, new) in entry["changes"].items()
+            ],
+            "date_joined": values["date_joined"].isoformat() if values.get("date_joined") else None,
+            "full_name": " ".join(
+                part for part in (
+                    values.get("first_name"),
+                    values.get("middle_name"),
+                    values.get("last_name"),
+                    values.get("suffix"),
+                ) if part
+            ),
+        })
+    return {
+        "row_count": len(entries),
+        "new_count": sum(1 for entry in entries if entry["action"] == "Add"),
+        "update_count": sum(1 for entry in entries if entry["action"] == "Update"),
+        "unchanged_count": sum(1 for entry in entries if entry["action"] == "Unchanged"),
+        "preview": preview,
+        "warnings": warnings,
+    }
+
+
+def import_members_dataframe(df, replace=False, actor_role=None, strict=True):
+    entries, errors, warnings = _validate_members(
+        df, replace=replace, include_lifetime_cap=is_admin_role(actor_role), strict=strict
+    )
+    if errors:
+        raise MemberImportError(errors, warnings)
+
+    counts = {"Add": 0, "Update": 0, "Unchanged": 0}
+    try:
+        if replace:
+            clear_members_and_dependents(commit=False)
+
+        members = {}
+        with db.session.no_autoflush:
+            for entry in entries:
+                counts[entry["action"]] += 1
+                if entry["action"] == "Unchanged":
+                    continue
+                if entry["is_new"]:
+                    member = Member(member_id=entry["member_id"], status="Active")
+                    db.session.add(member)
+                    fields = entry["values"]
+                else:
+                    member = db.session.get(Member, entry["member_id"])
+                    fields = {field: new for field, (_old, new) in entry["changes"].items()}
+                    fields.pop("referrer_id", None)
+                for key, value in fields.items():
+                    setattr(member, key, value)
+                members[entry["member_id"]] = member
+
+        # Referrers are linked after every row exists, so file order never trips the self foreign key.
+        db.session.flush()
+        for entry in entries:
+            member = members.get(entry["member_id"])
+            if member is None or entry["referrer_id"] is None:
+                continue
+            if entry["is_new"] or "referrer_id" in entry["changes"]:
+                member.referrer_id = entry["referrer_id"]
+        db.session.commit()
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        detail = str(getattr(exc, "orig", None) or exc).strip().splitlines()[0]
+        raise ValueError(f"The database rejected the import; nothing was saved. {detail}") from exc
+
+    return {
+        "imported": counts["Add"],
+        "updated": counts["Update"],
+        "unchanged": counts["Unchanged"],
+        "total": Member.query.count(),
+        "warnings": warnings,
+    }
 
 
 def import_members_from_upload(file_storage, replace=False, actor_role=None):
@@ -430,9 +699,9 @@ def import_members_from_upload(file_storage, replace=False, actor_role=None):
     return import_members_dataframe(df, replace=replace, actor_role=actor_role)
 
 
-def preview_members_upload(file_storage, limit=5):
+def preview_members_upload(file_storage, limit=5, actor_role=None):
     df = load_members_dataframe(file_storage)
-    return preview_members_dataframe(df, limit=limit)
+    return preview_members_dataframe(df, limit=limit, actor_role=actor_role)
 
 
 def import_members_from_xlsx(path=None, replace=False, actor_role=None):
@@ -441,4 +710,4 @@ def import_members_from_xlsx(path=None, replace=False, actor_role=None):
         raise FileNotFoundError(f"Members file not found: {xlsx_path}")
 
     df = load_members_dataframe(xlsx_path)
-    return import_members_dataframe(df, replace=replace, actor_role=actor_role)
+    return import_members_dataframe(df, replace=replace, actor_role=actor_role, strict=False)

@@ -163,6 +163,7 @@ from app.accessibility_service import (
     save_user_accessibility_prefs,
 )
 from app.import_service import (
+    MemberImportError,
     clear_members_and_dependents,
     import_members_from_upload,
     import_members_from_xlsx,
@@ -1335,10 +1336,13 @@ def members_template():
         MEMBER_TEMPLATE_COLUMNS,
         reference_rows=[
             ["field", "allowed values / note"],
-            ["status", ", ".join(MEMBER_STATUSES)],
+            ["required columns", "member_id, batch, referrer_id, last_name, first_name, middle_name. All other columns are optional and may be removed."],
+            ["required values", "member_id, batch, last_name, first_name. middle_name may be blank."],
+            ["existing members", "Rows with an existing member_id update only the fields that differ; matching values and blank cells keep the current data."],
+            ["status", f"{', '.join(MEMBER_STATUSES)}. Blank defaults to Active for new members."],
             ["termination_type", ", ".join(MEMBER_SEPARATION_TYPES)],
             ["date fields", "Use YYYY-MM-DD format."],
-            ["referrer_id", "Leave blank only for batch 1 root members."],
+            ["referrer_id", "An existing member or a member in the same file. Leave blank only for batch 1 root members."],
             ["lifetime_cap_enabled", "Admin-only. Use true/false. Blank defaults to true."],
             ["lifetime_cap_amount", f"Admin-only threshold. Blank defaults to {MEMBER_LIFETIME_EARNINGS_CAP:,.2f}."],
             [
@@ -1366,8 +1370,10 @@ def preview_members():
         return jsonify({"status": "error", "msg": "Only .xlsx or .xls files are supported."}), 400
 
     try:
-        result = preview_members_upload(file)
+        result = preview_members_upload(file, actor_role=session.get("role"))
         return jsonify({"status": "success", **result})
+    except MemberImportError as exc:
+        return jsonify({"status": "error", "msg": str(exc), "errors": exc.errors, "warnings": exc.warnings}), 400
     except ValueError as exc:
         return jsonify({"status": "error", "msg": str(exc)}), 400
     except Exception as exc:
@@ -1390,10 +1396,13 @@ def add_member():
             "status": "success",
             "msg": (
                 f"Import complete: {result['imported']} added, "
-                f"{result['updated']} updated ({result['total']} total members)."
+                f"{result['updated']} updated, {result['unchanged']} unchanged "
+                f"({result['total']} total members)."
             ),
             **result,
         })
+    except MemberImportError as exc:
+        return jsonify({"status": "error", "msg": str(exc), "errors": exc.errors, "warnings": exc.warnings}), 400
     except ValueError as exc:
         return jsonify({"status": "error", "msg": str(exc)}), 400
     except Exception as exc:
