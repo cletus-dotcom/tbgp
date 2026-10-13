@@ -334,6 +334,29 @@ h1, h2, h3, h4, h5, h6,
     color: var(--text-white);
     background-color: rgba(240, 165, 0, 0.1);
 }
+.admin-users-table th.users-sort {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+.admin-users-table th.users-sort i {
+    font-size: 0.75em;
+    opacity: 0.45;
+}
+.admin-users-table th.users-sort:hover i,
+.admin-users-table th.users-sort.is-sorted i {
+    opacity: 1;
+}
+.admin-users-table th.users-sort:focus-visible {
+    outline: 2px solid rgba(240, 165, 0, 0.7);
+    outline-offset: -2px;
+}
+.admin-users-table mark.users-match {
+    padding: 0 0.1em;
+    border-radius: 0.2em;
+    color: inherit;
+    background-color: rgba(240, 165, 0, 0.35);
+}
 
 /* ── Nav tabs ── */
 .nav-tabs {

@@ -23,25 +23,64 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="d-flex justify-content-end mb-3">
-                    <button class="btn btn-brand" data-bs-toggle="modal" data-bs-target="#addUserModal">+ Add User</button>
+                <div class="users-toolbar row g-2 align-items-end mb-3">
+                    <div class="col-12 col-lg-5">
+                        <label class="form-label small mb-1" for="usersSearch">Search</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="search" id="usersSearch" class="form-control" autocomplete="off"
+                                placeholder="Username, name, role, department, duty, or linked company">
+                            <button type="button" class="btn btn-outline-secondary d-none" id="usersSearchClear" aria-label="Clear search"><i class="bi bi-x-lg"></i></button>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3 col-lg-2">
+                        <label class="form-label small mb-1" for="usersRoleFilter">Role</label>
+                        <select id="usersRoleFilter" class="form-select form-select-sm">
+                            <option value="">All roles</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3 col-lg-2">
+                        <label class="form-label small mb-1" for="usersStatusFilter">Status</label>
+                        <select id="usersStatusFilter" class="form-select form-select-sm">
+                            <option value="">All statuses</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2 col-lg-1">
+                        <label class="form-label small mb-1" for="usersPageSize">Show</label>
+                        <select id="usersPageSize" class="form-select form-select-sm">
+                            <option value="10">10</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="0">All</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2 d-flex justify-content-end">
+                        <button class="btn btn-brand btn-sm w-100" data-bs-toggle="modal" data-bs-target="#addUserModal">+ Add User</button>
+                    </div>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-striped align-middle text-center admin-users-table">
+                    <table class="table table-striped table-hover align-middle text-center admin-users-table">
                         <thead>
                             <tr>
-                                <th>Username</th>
-                                <th>Full Name</th>
-                                <th>Role</th>
-                                <th>Department</th>
-                                <th>Duties</th>
-                                <th>Actions</th>
+                                <th class="users-sort" data-sort="username" scope="col" tabindex="0" aria-sort="ascending">Username <i class="bi bi-sort-alpha-down"></i></th>
+                                <th class="users-sort" data-sort="full_name" scope="col" tabindex="0">Full Name <i class="bi bi-arrow-down-up"></i></th>
+                                <th class="users-sort" data-sort="role" scope="col" tabindex="0">Role <i class="bi bi-arrow-down-up"></i></th>
+                                <th class="users-sort" data-sort="department" scope="col" tabindex="0">Department <i class="bi bi-arrow-down-up"></i></th>
+                                <th class="users-sort" data-sort="duties" scope="col" tabindex="0">Duties <i class="bi bi-arrow-down-up"></i></th>
+                                <th class="users-sort" data-sort="status" scope="col" tabindex="0">Status <i class="bi bi-arrow-down-up"></i></th>
+                                <th scope="col">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
-                            <tr><td colspan="6" class="text-muted">Loading users...</td></tr>
+                            <tr><td colspan="7" class="text-muted">Loading users...</td></tr>
                         </tbody>
                     </table>
+                </div>
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span class="small text-muted" id="usersResultInfo" aria-live="polite"></span>
+                    <nav aria-label="Users pages">
+                        <ul class="pagination pagination-sm mb-0" id="usersPagination"></ul>
+                    </nav>
                 </div>
             </div>
         </div>
@@ -297,40 +336,277 @@
         toggleSupplierField(addUserRole, addUserSupplierWrap);
         toggleDutiesField(addUserRole, addUserDutiesWrap);
 
+        const USER_COLUMNS = 7;
+        const usersSearch = document.getElementById('usersSearch');
+        const usersSearchClear = document.getElementById('usersSearchClear');
+        const usersRoleFilter = document.getElementById('usersRoleFilter');
+        const usersStatusFilter = document.getElementById('usersStatusFilter');
+        const usersPageSize = document.getElementById('usersPageSize');
+        const usersResultInfo = document.getElementById('usersResultInfo');
+        const usersPagination = document.getElementById('usersPagination');
+        const userSortHeaders = document.querySelectorAll('#listUsersModal th.users-sort');
+        const userState = { all: [], sortKey: 'username', sortDir: 1, page: 1 };
+
+        function userRoleLabel(user) {
+            const linkedCompany = user.contractor_name || user.supplier_name;
+            return linkedCompany ? `${user.role} (${linkedCompany})` : (user.role || '');
+        }
+
+        function userDutiesLabel(user) {
+            return (user.duties || []).map(duty => dutyLabels[duty] || duty).join(', ');
+        }
+
+        function userSortValue(user, key) {
+            if (key === 'role') return userRoleLabel(user);
+            if (key === 'duties') return userDutiesLabel(user);
+            return user[key] || '';
+        }
+
+        function userSearchText(user) {
+            return [
+                user.username, user.full_name, userRoleLabel(user), user.department,
+                userDutiesLabel(user), user.status, user.member_id ? `member ${user.member_id}` : '',
+            ].join(' ').toLowerCase();
+        }
+
+        function searchTerms() {
+            return (usersSearch?.value || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+        }
+
+        function fillFilterOptions(select, values, allLabel) {
+            if (!select) return;
+            const current = select.value;
+            select.replaceChildren(new Option(allLabel, ''));
+            [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b))
+                .forEach(value => select.appendChild(new Option(value, value)));
+            select.value = [...select.options].some(option => option.value === current) ? current : '';
+        }
+
+        function filteredUsers() {
+            const terms = searchTerms();
+            const role = usersRoleFilter?.value || '';
+            const status = usersStatusFilter?.value || '';
+            const { sortKey, sortDir } = userState;
+            return userState.all
+                .filter(user => (!role || user.role === role)
+                    && (!status || (user.status || '') === status)
+                    && terms.every(term => userSearchText(user).includes(term)))
+                .sort((a, b) => {
+                    const left = userSortValue(a, sortKey);
+                    const right = userSortValue(b, sortKey);
+                    if (!left !== !right) return left ? -1 : 1;
+                    return sortDir * left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' });
+                });
+        }
+
+        function escapeRegExp(text) {
+            return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function appendCell(row, text, terms = []) {
+            const cell = document.createElement('td');
+            if (!text) {
+                cell.textContent = '-';
+            } else if (!terms.length) {
+                cell.textContent = text;
+            } else {
+                const pattern = new RegExp(`(${terms.map(escapeRegExp).join('|')})`, 'gi');
+                text.split(pattern).forEach((part, index) => {
+                    if (!part) return;
+                    if (index % 2) {
+                        const mark = document.createElement('mark');
+                        mark.className = 'users-match';
+                        mark.textContent = part;
+                        cell.appendChild(mark);
+                    } else {
+                        cell.appendChild(document.createTextNode(part));
+                    }
+                });
+            }
+            row.appendChild(cell);
+            return cell;
+        }
+
+        function messageRow(text, className = 'text-muted') {
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+            cell.colSpan = USER_COLUMNS;
+            cell.className = className;
+            cell.textContent = text;
+            row.appendChild(cell);
+            tbody.replaceChildren(row);
+            return cell;
+        }
+
+        function resetUserFilters() {
+            if (usersSearch) usersSearch.value = '';
+            if (usersRoleFilter) usersRoleFilter.value = '';
+            if (usersStatusFilter) usersStatusFilter.value = '';
+            usersSearchClear?.classList.add('d-none');
+            userState.page = 1;
+            renderUsersTable();
+            usersSearch?.focus();
+        }
+
+        function updateSortHeaders() {
+            userSortHeaders.forEach(th => {
+                const active = th.dataset.sort === userState.sortKey;
+                const icon = th.querySelector('i');
+                th.classList.toggle('is-sorted', active);
+                th.setAttribute('aria-sort', active ? (userState.sortDir > 0 ? 'ascending' : 'descending') : 'none');
+                if (icon) {
+                    icon.className = active
+                        ? (userState.sortDir > 0 ? 'bi bi-sort-alpha-down' : 'bi bi-sort-alpha-up-alt')
+                        : 'bi bi-arrow-down-up';
+                }
+            });
+        }
+
+        function pageButton(label, page, { active = false, disabled = false, ariaLabel = '' } = {}) {
+            const item = document.createElement('li');
+            item.className = `page-item${active ? ' active' : ''}${disabled ? ' disabled' : ''}`;
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'page-link';
+            button.textContent = label;
+            if (ariaLabel) button.setAttribute('aria-label', ariaLabel);
+            if (active) button.setAttribute('aria-current', 'page');
+            if (!disabled && !active && page) {
+                button.addEventListener('click', () => {
+                    userState.page = page;
+                    renderUsersTable();
+                });
+            } else {
+                button.tabIndex = -1;
+            }
+            item.appendChild(button);
+            return item;
+        }
+
+        function renderPagination(pages) {
+            if (!usersPagination) return;
+            usersPagination.replaceChildren();
+            if (pages <= 1) return;
+            const current = userState.page;
+            usersPagination.appendChild(pageButton('‹', current - 1, { disabled: current === 1, ariaLabel: 'Previous page' }));
+            const shown = new Set([1, pages, current - 1, current, current + 1].filter(p => p >= 1 && p <= pages));
+            let last = 0;
+            [...shown].sort((a, b) => a - b).forEach(page => {
+                if (page - last > 1) usersPagination.appendChild(pageButton('…', 0, { disabled: true }));
+                usersPagination.appendChild(pageButton(String(page), page, { active: page === current }));
+                last = page;
+            });
+            usersPagination.appendChild(pageButton('›', current + 1, { disabled: current === pages, ariaLabel: 'Next page' }));
+        }
+
+        function renderUsersTable() {
+            updateSortHeaders();
+            const total = userState.all.length;
+            if (!total) {
+                messageRow('No users found');
+                if (usersResultInfo) usersResultInfo.textContent = '';
+                renderPagination(0);
+                return;
+            }
+
+            const rows = filteredUsers();
+            const pageSize = Number(usersPageSize?.value || 0);
+            const pages = pageSize ? Math.max(1, Math.ceil(rows.length / pageSize)) : 1;
+            userState.page = Math.min(Math.max(userState.page, 1), pages);
+            const start = pageSize ? (userState.page - 1) * pageSize : 0;
+            const visible = pageSize ? rows.slice(start, start + pageSize) : rows;
+
+            if (!rows.length) {
+                const cell = messageRow('No users match your search. ');
+                const clear = document.createElement('button');
+                clear.type = 'button';
+                clear.className = 'btn btn-link btn-sm p-0 align-baseline';
+                clear.textContent = 'Clear filters';
+                clear.addEventListener('click', resetUserFilters);
+                cell.appendChild(clear);
+            } else {
+                renderUsers(visible, searchTerms());
+            }
+
+            if (usersResultInfo) {
+                const range = rows.length ? `${start + 1}–${start + visible.length} of ${rows.length}` : '0';
+                const filtered = rows.length !== total ? ` (filtered from ${total})` : '';
+                usersResultInfo.textContent = `Showing ${range} user${rows.length === 1 ? '' : 's'}${filtered}`;
+            }
+            renderPagination(pages);
+        }
+
         listUsersModal?.addEventListener('shown.bs.modal', async () => {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-muted">Loading...</td></tr>';
+            messageRow('Loading...');
             try {
                 const res = await fetch('/list_users');
                 const data = await res.json();
                 fillLinkOptions('.user-contractor-select', data.contractors);
                 fillLinkOptions('.user-supplier-select', data.suppliers);
-                if (data.users?.length) {
-                    renderUsers(data.users);
-                } else {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-muted">No users found</td></tr>';
-                }
+                userState.all = data.users || [];
+                fillFilterOptions(usersRoleFilter, userState.all.map(user => user.role), 'All roles');
+                fillFilterOptions(usersStatusFilter, userState.all.map(user => user.status), 'All statuses');
+                renderUsersTable();
+                usersSearch?.focus();
             } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-danger">Error: ${err.message}</td></tr>`;
+                messageRow(`Error: ${err.message}`, 'text-danger');
             }
         });
 
-        function appendCell(row, text) {
-            const cell = document.createElement('td');
-            cell.textContent = text || '-';
-            row.appendChild(cell);
-            return cell;
-        }
+        let userSearchTimer = null;
+        usersSearch?.addEventListener('input', () => {
+            usersSearchClear?.classList.toggle('d-none', !usersSearch.value);
+            clearTimeout(userSearchTimer);
+            userSearchTimer = setTimeout(() => {
+                userState.page = 1;
+                renderUsersTable();
+            }, 150);
+        });
+        usersSearchClear?.addEventListener('click', () => {
+            usersSearch.value = '';
+            usersSearchClear.classList.add('d-none');
+            userState.page = 1;
+            renderUsersTable();
+            usersSearch.focus();
+        });
+        [usersRoleFilter, usersStatusFilter, usersPageSize].forEach(select => {
+            select?.addEventListener('change', () => {
+                userState.page = 1;
+                renderUsersTable();
+            });
+        });
+        userSortHeaders.forEach(th => {
+            const sortBy = () => {
+                const key = th.dataset.sort;
+                userState.sortDir = userState.sortKey === key ? -userState.sortDir : 1;
+                userState.sortKey = key;
+                renderUsersTable();
+            };
+            th.addEventListener('click', sortBy);
+            th.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    sortBy();
+                }
+            });
+        });
 
-        function renderUsers(users) {
+        function renderUsers(users, terms = []) {
             tbody.replaceChildren();
             users.forEach(user => {
                 const row = document.createElement('tr');
-                appendCell(row, user.username);
-                appendCell(row, user.full_name);
-                const linkedCompany = user.contractor_name || user.supplier_name;
-                appendCell(row, linkedCompany ? `${user.role} (${linkedCompany})` : user.role);
-                appendCell(row, user.department);
-                appendCell(row, (user.duties || []).map(duty => dutyLabels[duty] || duty).join(', '));
+                appendCell(row, user.username, terms);
+                appendCell(row, user.full_name, terms);
+                appendCell(row, userRoleLabel(user), terms);
+                appendCell(row, user.department, terms);
+                appendCell(row, userDutiesLabel(user), terms);
+
+                const statusCell = document.createElement('td');
+                const badge = document.createElement('span');
+                badge.className = `badge ${user.status === 'Active' ? 'bg-success' : 'bg-secondary'}`;
+                badge.textContent = user.status || '-';
+                statusCell.appendChild(badge);
+                row.appendChild(statusCell);
 
                 const actionsCell = document.createElement('td');
                 if (user.can_manage) {
@@ -354,7 +630,10 @@
                         });
                         const data = await res.json();
                         alert(data.msg);
-                        if (data.status === 'success') row.remove();
+                        if (data.status === 'success') {
+                            userState.all = userState.all.filter(item => item.id !== user.id);
+                            renderUsersTable();
+                        }
                     });
                     actionsCell.appendChild(deleteBtn);
                 } else {

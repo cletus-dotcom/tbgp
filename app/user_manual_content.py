@@ -395,6 +395,7 @@ USER_MANUALS = {
                     "For Supplier users, choose the Linked supplier record so the supplier sees the product orders assigned to that company under My Orders.",
                     "Tick duties for Staff, Admin, or Member users; the Duties column lists them. Projects group: Projects Manager, Project Coordinator, Estimator / Quantity Surveyor, Site Engineer / Inspector. Products group: Products Manager, Account Officer / Sales Coordinator, Sourcing / Purchasing Officer, Pricing / Quotation Officer, Logistics / Delivery Coordinator, Sales Agent.",
                     "Members may hold the project field duties (coordinator, estimator, site engineer) and Sales Agent; manager and office product duties are for Staff and Admin. See Project Team and Duties and Product Team and Duties.",
+                    "In Manage Users, type in Search to filter by username, name, role, department, duty, or linked company as you type (matches are highlighted); narrow further with the Role and Status filters, click a column heading to sort, and use Show and the page buttons to page through long lists.",
                     "PortalAdmin and SiteAdmin accounts are protected from normal user management.",
                 ],
             },
